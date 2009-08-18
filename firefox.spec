@@ -28,7 +28,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 2
+%define release %mkrel 3
 %else
 # Old distros
 %define subrel 1
@@ -164,7 +164,7 @@ Files and macros mainly for building Firefox extensions.
 %patch2 -p1 -b .vendor
 # Temporary disabled. It prevents firefox from running. 
 #%patch3 -p1
-#%patch4 -p1 -b .homepage rediff
+%patch4 -p1 -b .homepage
 %patch5 -p1 -b .defaultbrowser
 # It was disabled because firefox3 hangs when using soundwrapper
 #%patch6 -p1
