@@ -14,6 +14,9 @@
 %define xulrunner_version %(rpm -q --whatprovides libxulrunner --queryformat %{VERSION})
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
+
+%define pluginsdir %{_libdir}/mozilla/plugins
+
 # libxul.so is provided by libxulrunnner1.9.
 %define _requires_exceptions libxul.so
 
@@ -25,7 +28,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 0.2
+%define release %mkrel 1
 %else
 # Old distros
 %define subrel 1
@@ -338,6 +341,17 @@ chmod 755 %{buildroot}%{mozillalibdir}/firefox-rebuild-databases.pl
 
 %find_lang %{name}
 
+mkdir -p %{buildroot}%{_sys_macros_dir}
+cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
+# Macros from %{name} package
+%%firefox_major              %{major}
+%%firefox_epoch              %{ff_epoch}
+%%firefox_version            %{realver}
+%%firefox_mozillapath        %{mozillalibdir}
+%%firefox_xulrunner_version  %{xulrunner_version}
+%%firefox_pluginsdir         %{pluginsdir}
+FIN
+
 %post
 %if %mdkversion < 200900
 %{update_menus}
@@ -373,4 +387,5 @@ fi
 %{_datadir}/applications/*.desktop
 %{_libdir}/%{name}-%{realver}*
 %dir %{_libdir}/mozilla
-%dir %{_libdir}/mozilla/plugins
+%dir %{pluginsdir}
+%{_sys_macros_dir}/%{name}.macros
