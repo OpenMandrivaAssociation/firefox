@@ -28,7 +28,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 1
+%define release %mkrel 2
 %else
 # Old distros
 %define subrel 1
@@ -149,6 +149,14 @@ sites, customising the software behaviour and so on. Firefox also includes
 features like 'tabbed browsing' (opening several web sites as sections within the 
 same window) and methods for controlling pop-up windows, cookies and downloaded 
 files.
+
+%package devel
+Group: Development/Other
+Summary: Development files for %{name}
+
+%description devel
+Files and macros mainly for building Firefox extensions.
+
 
 %prep
 %setup -qn mozilla-1.9.1
@@ -388,4 +396,6 @@ fi
 %{_libdir}/%{name}-%{realver}*
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
+
+%files devel
 %{_sys_macros_dir}/%{name}.macros
