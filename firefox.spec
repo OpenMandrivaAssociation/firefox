@@ -45,7 +45,6 @@ Group:		Networking/WWW
 Url:		http://www.mozilla.org/
 Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}-source.tar.bz2
 Source1:	%{SOURCE0}.asc
-Source3:	%{name}.png
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
 Source6:	firefox-searchengines-exalead.xml
@@ -76,7 +75,6 @@ BuildRequires:	nss-devel
 BuildRequires:	nspr-devel
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
-BuildRequires:	lcms-devel
 BuildRequires:	python-devel
 # (fhimpe) Starting from Firefox 3.0.1, at least sqlite 3.5.9 is needed
 # so only use system sqlite on Mandriva >= 2009.0
@@ -95,7 +93,7 @@ BuildRequires:	libgnome-vfs2-devel
 BuildRequires:	libgnome2-devel
 BuildRequires:	libgnomeui2-devel
 BuildRequires:	java-rpmbuild
-BuildRequires:  xulrunner-devel >= 1.9.1.2
+BuildRequires:  xulrunner-devel >= %xulrunner_version
 BuildRequires:	wget
 Provides:	webclient
 Requires:	indexhtml
@@ -130,8 +128,7 @@ Obsoletes:	%mklibname mozilla-firefox 2.0.0.16
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.17
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.18
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.19
-Requires:	%{mklibname xulrunner 1.9.1.2}
-#= %{xulrunner_version}
+Requires:	%{mklibname xulrunner %xulrunner_version}
 Suggests:	nspluginwrapper
 
 %description
@@ -150,11 +147,11 @@ features like 'tabbed browsing' (opening several web sites as sections within th
 same window) and methods for controlling pop-up windows, cookies and downloaded 
 files.
 
-%package devel
-Group: Development/Other
-Summary: Development files for %{name}
+%package	devel
+Summary:	Development files for %{name}
+Group:		Development/Other
 
-%description devel
+%description	devel
 Files and macros mainly for building Firefox extensions.
 
 
@@ -233,9 +230,8 @@ export BUILD_OFFICIAL=1
 	--enable-single-profile \
 	--enable-startup-notification \
 	--enable-system-cairo \
-	--enable-system-lcms \
 	--enable-reorder \
-	--enable-optimize=-O2 \
+	--enable-optimize \
 	--enable-safe-browsing \
 	--enable-xinerama \
 	--enable-canvas \
@@ -279,15 +275,22 @@ export BUILD_OFFICIAL=1
 
 %makeinstall_std
 
-# Create an own %_libdir/mozilla/plugins
-%{__mkdir} -p %{buildroot}%{_libdir}/mozilla/plugins
-
-mkdir -p %{buildroot}%{_datadir}/{pixmaps,applications}
-
-install -m 644 %{SOURCE3} %{buildroot}%{_datadir}/pixmaps/%{name}3.png
-install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/applications/%{name}.desktop
 ln -s firefox %{buildroot}%{_bindir}/mozilla-firefox
 sed -i "s,@LIBDIR@,%{_libdir}," %{buildroot}%{mozillalibdir}/%{name}
+
+# Create an own %_libdir/mozilla/plugins
+%{__mkdir_p} %{buildroot}%{_libdir}/mozilla/plugins
+
+# (tpg) desktop entry
+%{__mkdir_p} %{buildroot}%{_datadir}/applications
+install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/applications/%{name}.desktop
+
+# (tpg) icons
+%{__cp} other-licenses/branding/%{name}/default16.png %{buildroot}/%{mozillalibdir}/icons/
+for i in 16 22 24 32 48 256; do
+%{__mkdir_p} %{buildroot}{_iconsdir}/hicolor/"$i"x"$i"/apps
+%{__cp} other-licenses/branding/%{name}/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/firefox.png ;
+done
 
 cat << EOF >> %{buildroot}%{mozillalibdir}/defaults/profile/prefs.js
 user_pref("browser.search.selectedEngine","Ask.com");
@@ -389,7 +392,7 @@ fi
 %defattr(-,root,root)
 %{_bindir}/%{name}
 %{_bindir}/mozilla-firefox
-%{_datadir}/pixmaps/*.png
+%{_iconsdir}/hicolor/*/apps/*.png
 %ghost %{mozillalibdir}/components/compreg.dat
 %ghost %{mozillalibdir}/components/xpti.dat
 %{_datadir}/applications/*.desktop
