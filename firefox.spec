@@ -288,7 +288,7 @@ install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/applications/%{name}.desktop
 # (tpg) icons
 %{__cp} other-licenses/branding/%{name}/default16.png %{buildroot}/%{mozillalibdir}/icons/
 for i in 16 22 24 32 48 256; do
-%{__mkdir_p} %{buildroot}{_iconsdir}/hicolor/"$i"x"$i"/apps
+%{__mkdir_p} %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
 %{__cp} other-licenses/branding/%{name}/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/firefox.png ;
 done
 
