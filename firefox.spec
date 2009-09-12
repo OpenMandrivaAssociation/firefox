@@ -10,7 +10,7 @@
 %define major 3
 %define ff_epoch 0
 # (tpg) set version HERE !!!
-%define realver %{major}.5.2
+%define realver %{major}.5.3
 %define xulrunner_version %(rpm -q --whatprovides libxulrunner --queryformat %{VERSION})
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -43,7 +43,7 @@ Release:	%{release}
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.org/
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}-source.tar.bz2
+Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}.source.tar.bz2
 Source1:	%{SOURCE0}.asc
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
