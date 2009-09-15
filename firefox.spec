@@ -11,7 +11,7 @@
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}.5.3
-%define xulrunner_version %(rpm -q --whatprovides libxulrunner --queryformat %{VERSION})
+%define xulrunner_version 1.9.1.3
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
 
@@ -28,7 +28,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 4
+%define release %mkrel 1
 %else
 # Old distros
 %define subrel 1
