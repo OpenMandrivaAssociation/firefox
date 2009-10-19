@@ -58,6 +58,7 @@ Patch5:		firefox-3.0b3-check-default-browser.patch
 Patch6:		mozilla-firefox-run-mozilla.patch
 Patch14:	mozilla-firefox-1.5-software-update.patch
 #Patch15:	firefox-3.0.1-disable-classic-theme.patch
+Patch16:	firefox-3.5.3-default-mail-handler.patch
 BuildRequires:	gtk+2-devel
 BuildRequires:	libx11-devel
 BuildRequires:	unzip
@@ -168,6 +169,7 @@ Files and macros mainly for building Firefox extensions.
 #%patch14 -p1 -b .disable-software-update rediff
 # (salem)	this patch does not work properly on ff3.
 #%patch15 -p1 -b .disable-classic-theme
+%patch16 -p1 -b .default-mail-handler
 
 # (tpg) remove ff bookmarks, to use mdv ones
 rm -rf browser/locales/en-US/profile/bookmarks.html
