@@ -313,7 +313,7 @@ user_pref("browser.search.order.4","Yahoo");
 user_pref("browser.EULA.override", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
-user_pref("browser.CtrlTab.previews, true)
+user_pref("browser.ctrlTab.previews", true);
 EOF
 
 # search engines
