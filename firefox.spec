@@ -10,11 +10,10 @@
 %define major 3
 %define ff_epoch 0
 # (tpg) set version HERE !!!
-%define realver %{major}.5.6
-%define xulrunner_version 1.9.1.6
+%define realver %{major}.6
+%define xulrunner_version 1.9.2
 # (tpg) MOZILLA_FIVE_HOME
-%define mozillalibdir %{_libdir}/%{name}-%{realver}
-
+%define mozillalibdir %{_libdir}/%{name}-%{realver}b4
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner1.9.
@@ -28,7 +27,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 2
+%define release %mkrel -c b4 1
 %else
 # Old distros
 %define subrel 1
@@ -43,7 +42,7 @@ Release:	%{release}
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.org/
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}.source.tar.bz2
+Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}b4.source.tar.bz2
 Source1:	%{SOURCE0}.asc
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -71,7 +70,6 @@ BuildRequires:	libcairo-devel
 BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
-#(tpg) don't use system nss and nspr as they are not updated to latest version which supports ff3
 BuildRequires:	nss-devel
 BuildRequires:	nspr-devel
 BuildRequires:	startup-notification-devel
@@ -96,13 +94,13 @@ BuildRequires:	libgnomeui2-devel
 BuildRequires:	java-rpmbuild
 BuildRequires:  xulrunner-devel >= %xulrunner_version
 BuildRequires:	wget
+BuildRequires:	libnotify-devel
 Provides:	webclient
 Requires:	indexhtml
 Requires:       xdg-utils
 Suggests:	myspell-en_US
 Requires(post):	desktop-file-utils
 Requires(postun):	desktop-file-utils
-BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 # fixes bug #42096
 Requires:	mailcap
 # ff3 now provides /usr/bin/firefox and mozilla-firefox
@@ -129,8 +127,10 @@ Obsoletes:	%mklibname mozilla-firefox 2.0.0.16
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.17
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.18
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.19
+Requires:	xulrunner >= %{xulrunner_version}
 Requires:	%{mklibname xulrunner %xulrunner_version}
 Suggests:	nspluginwrapper
+BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
 %description
 The award-winning Web browser is now faster, more secure, and fully customizable 
@@ -155,15 +155,14 @@ Group:		Development/Other
 %description	devel
 Files and macros mainly for building Firefox extensions.
 
-
 %prep
-%setup -qn mozilla-1.9.1
+%setup -qn mozilla-1.9.2
 #%patch1 -p1 -b .lang rediff
 %patch2 -p1 -b .vendor
 # Temporary disabled. It prevents firefox from running. 
 #%patch3 -p1
-%patch4 -p1 -b .homepage
-%patch5 -p1 -b .defaultbrowser
+#%patch4 -p1 -b .homepage
+#%patch5 -p1 -b .defaultbrowser
 # It was disabled because firefox3 hangs when using soundwrapper
 #%patch6 -p1
 #%patch14 -p1 -b .disable-software-update rediff
@@ -206,6 +205,14 @@ export BUILD_OFFICIAL=1
 	--libdir=%{_libdir} \
 	--includedir=%{_includedir} \
 	--datadir=%{_datadir} \
+	--enable-application=browser \
+	--with-pthreads \
+	--with-system-jpeg \
+	--with-system-zlib \
+	--with-system-bz2 \
+	--with-system-png \
+	--with-system-nspr \
+	--with-system-nss \
 	--disable-ldap \
 	--disable-calendar \
 	--disable-mailnews \
@@ -222,13 +229,14 @@ export BUILD_OFFICIAL=1
 	--disable-crashreporter \
 	--disable-strip \
 	--enable-crypto \
+	--enable-gnomevfs \
+	--enable-gnomeui \
 	--enable-places \
 	--enable-storage \
 	--enable-default-toolkit=cairo-gtk2 \
 	--enable-official-branding \
 	--enable-svg \
 	--enable-svg-renderer=cairo \
-	--enable-application=browser \
 	--enable-single-profile \
 	--enable-startup-notification \
 	--enable-system-cairo \
@@ -240,29 +248,31 @@ export BUILD_OFFICIAL=1
 	--enable-pango \
 	--enable-xft \
 	--enable-image-encoder=all \
+	--enable-image-decoders=all \
 	--enable-extensions=default \
-	--enable-necko-protocols=all \
-	--enable-necko-small-buffers \
 %if %_use_syshunspell
 	--enable-system-hunspell \
 %endif
 	--enable-install-strip \
 	--enable-url-classifier \
+	--disable-faststart \
+	--enable-smil \
+	--disable-tree-freetype \
+	--disable-canvas3d \
+	--disable-coretext \
+	--enable-necko-protocols=all \
+	--disable-necko-wifi \
+	--disable-tests \
+	--disable-mochitest \
 	--with-distribution-id=com.mandriva \
-	--with-system-zlib \
-	--with-system-jpeg \
-	--with-system-png \
-	--with-pthreads \
 	--with-valgrind \
 	--enable-jemalloc \
-	--with-system-nspr \
-	--with-system-nss \
 %if %mdkversion >= 200900
 	--enable-system-sqlite \
 %else
 	--disable-system-sqlite \
 %endif
-	--enable-libxul \
+	--with-system-libxul \
         --with-libxul-sdk=`pkg-config --variable=sdkdir libxul` \
 	--with-java-include-path=%{java_home}/include \
 	--with-java-bin-path=%{java_home}/bin \
@@ -270,7 +280,7 @@ export BUILD_OFFICIAL=1
 
 %__perl -p -i -e 's|\-0|\-9|g' config/make-jars.pl
 
-%make -j1
+%make
 
 %install
 [ "%{buildroot}" != "/" ] && rm -rf %{buildroot}
@@ -300,7 +310,10 @@ user_pref("browser.search.order.1","Ask.com");
 user_pref("browser.search.order.2","Exalead");
 user_pref("browser.search.order.3","Google");
 user_pref("browser.search.order.4","Yahoo");
-user_pref("browser.EULA.override",true);
+user_pref("browser.EULA.override", true);
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
+user_pref("browser.CtrlTab.previews, true)
 EOF
 
 # search engines
