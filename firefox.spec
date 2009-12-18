@@ -13,7 +13,7 @@
 %define realver %{major}.6
 %define xulrunner_version 1.9.2
 # (tpg) MOZILLA_FIVE_HOME
-%define mozillalibdir %{_libdir}/%{name}-%{realver}b4
+%define mozillalibdir %{_libdir}/%{name}-%{realver}b5
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner1.9.
@@ -27,7 +27,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c b4 2
+%define release %mkrel -c b5 1
 %else
 # Old distros
 %define subrel 1
@@ -42,7 +42,7 @@ Release:	%{release}
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.org/
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}b4.source.tar.bz2
+Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}b5.source.tar.bz2
 Source1:	%{SOURCE0}.asc
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
