@@ -49,6 +49,7 @@ Source5:	firefox-searchengines-jamendo.xml
 Source6:	firefox-searchengines-exalead.xml
 Source7:	firefox-rebuild-databases.pl.in.generatechrome
 Source8:	firefox-searchengines-askcom.xml
+Source9:    kde.js
 Patch1:		mozilla-firefox-3.0.5-lang.patch
 Patch2:		mozilla-firefox-3.0.5-vendor.patch
 Patch3:		mozilla-firefox-1.5.0.6-systemproxy.patch
