@@ -27,7 +27,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c rc2 1
+%define release %mkrel -c rc2 2
 %else
 # Old distros
 %define subrel 1
@@ -59,6 +59,7 @@ Patch6:		mozilla-firefox-run-mozilla.patch
 Patch14:	mozilla-firefox-1.5-software-update.patch
 #Patch15:	firefox-3.0.1-disable-classic-theme.patch
 Patch16:	firefox-3.5.3-default-mail-handler.patch
+Patch17:    firefox-kde.patch
 BuildRequires:	gtk+2-devel
 BuildRequires:	libx11-devel
 BuildRequires:	unzip
@@ -170,7 +171,11 @@ Files and macros mainly for building Firefox extensions.
 # (salem)	this patch does not work properly on ff3.
 #%patch15 -p1 -b .disable-classic-theme
 %patch16 -p1 -b .default-mail-handler
-
+## KDE INTEGRATION
+# copy current files and patch them later to keep them in sync
+%patch17 -p1
+# install kde.js
+install -m 644 %{SOURCE9} browser/app/profile/kde.js
 # (tpg) remove ff bookmarks, to use mdv ones
 rm -rf browser/locales/en-US/profile/bookmarks.html
 touch browser/locales/en-US/profile/bookmarks.html
