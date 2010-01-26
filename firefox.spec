@@ -320,6 +320,7 @@ user_pref("browser.EULA.override", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
 user_pref("browser.ctrlTab.previews", true);
+user_pref("browser.tabs.insertRelatedAfterCurrent", false);
 EOF
 
 # search engines
