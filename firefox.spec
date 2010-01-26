@@ -321,6 +321,9 @@ user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
 user_pref("browser.ctrlTab.previews", true);
 user_pref("browser.tabs.insertRelatedAfterCurrent", false);
+user_pref("app.update.auto", false);
+user_pref("app.update.enabled", false);
+user_pref("app.update.autoInstallEnabled", false);
 EOF
 
 # search engines
