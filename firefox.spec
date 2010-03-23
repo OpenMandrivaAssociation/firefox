@@ -11,7 +11,7 @@
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}.6.2
-%define xulrunner_version 1.9.2
+%define xulrunner_version 1.9.2.2
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
 %define pluginsdir %{_libdir}/mozilla/plugins
@@ -72,7 +72,7 @@ BuildRequires:	libcairo-devel
 BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
-BuildRequires:	nss-devel >= 2:3.12.6
+BuildRequires:	nss-devel >= 2:3.12.4
 BuildRequires:	nspr-devel >= 2:4.8
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
