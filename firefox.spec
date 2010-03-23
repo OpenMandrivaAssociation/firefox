@@ -72,7 +72,7 @@ BuildRequires:	libcairo-devel
 BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
-BuildRequires:	nss-devel >= 2:3.12.4
+BuildRequires:	nss-devel >= 2:3.12.6
 BuildRequires:	nspr-devel >= 2:4.8
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
