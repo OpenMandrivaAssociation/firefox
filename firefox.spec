@@ -27,7 +27,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 2
+%define release %mkrel 3
 %else
 # Old distros
 %define subrel 1
@@ -49,7 +49,7 @@ Source5:	firefox-searchengines-jamendo.xml
 Source6:	firefox-searchengines-exalead.xml
 Source7:	firefox-rebuild-databases.pl.in.generatechrome
 Source8:	firefox-searchengines-askcom.xml
-Source9:    kde.js
+Source9:	kde.js
 Patch1:		mozilla-firefox-3.0.5-lang.patch
 Patch2:		mozilla-firefox-3.0.5-vendor.patch
 Patch3:		mozilla-firefox-1.5.0.6-systemproxy.patch
@@ -59,13 +59,15 @@ Patch6:		mozilla-firefox-run-mozilla.patch
 Patch14:	mozilla-firefox-1.5-software-update.patch
 #Patch15:	firefox-3.0.1-disable-classic-theme.patch
 Patch16:	firefox-3.5.3-default-mail-handler.patch
-Patch17:    firefox-kde.patch
+Patch17:	firefox-kde.patch
 BuildRequires:	gtk+2-devel
 BuildRequires:	libx11-devel
 BuildRequires:	unzip
 BuildRequires:	zip
 #(tpg) older versions doesn't support apng extension
+%if %mdkversion >= 200900
 BuildRequires:	libpng-devel >= 1.2.25-2
+%endif
 BuildRequires:	libjpeg-devel
 BuildRequires:	zlib-devel
 BuildRequires:	libcairo-devel
@@ -73,7 +75,7 @@ BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
 BuildRequires:	nss-devel >= 2:3.12.6
-BuildRequires:	nspr-devel >= 2:4.8
+BuildRequires:	nspr-devel >= 2:4.8.4
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
 BuildRequires:	python-devel
@@ -93,14 +95,24 @@ BuildRequires:	doxygen
 BuildRequires:	libgnome-vfs2-devel
 BuildRequires:	libgnome2-devel
 BuildRequires:	libgnomeui2-devel
+%if %mdkversion >= 200900
 BuildRequires:	java-rpmbuild
+%endif
+%if %mdkversion < 200900
+BuildRequires:	java-1.5.0-devel
+%endif
 BuildRequires:  xulrunner-devel >= %xulrunner_version
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
 Provides:	webclient
 Requires:	indexhtml
 Requires:       xdg-utils
-Suggests:	myspell-en_US
+%define ff_deps myspell-en_US nspluginwrapper
+%if %mdkversion >= 200810
+Suggests:	%{ff_deps}
+%else
+Requires:	%{ff_deps}
+%endif
 Requires(post):	desktop-file-utils
 Requires(postun):	desktop-file-utils
 # fixes bug #42096
@@ -131,7 +143,6 @@ Obsoletes:	%mklibname mozilla-firefox 2.0.0.18
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.19
 Requires:	xulrunner >= %{xulrunner_version}
 Requires:	%{mklibname xulrunner %xulrunner_version}
-Suggests:	nspluginwrapper
 BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
 %description
@@ -216,7 +227,11 @@ export BUILD_OFFICIAL=1
 	--with-system-jpeg \
 	--with-system-zlib \
 	--with-system-bz2 \
-	--with-system-png \
+%if %mdkversion >= 200900
+	--enable-system-png \
+%else
+	--disable-system-png \
+%endif
 	--with-system-nspr \
 	--with-system-nss \
 	--disable-ldap \
@@ -245,7 +260,11 @@ export BUILD_OFFICIAL=1
 	--enable-svg-renderer=cairo \
 	--enable-single-profile \
 	--enable-startup-notification \
+%if %mdkversion >= 200900
 	--enable-system-cairo \
+%else
+	--disable-system-cairo \
+%endif
 	--enable-reorder \
 	--enable-optimize \
 	--enable-safe-browsing \
