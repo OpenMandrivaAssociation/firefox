@@ -82,8 +82,8 @@ BuildRequires:	python-devel
 # (fhimpe) Starting from Firefox 3.0.1, at least sqlite 3.5.9 is needed
 # so only use system sqlite on Mandriva >= 2009.0
 # (eugeni) Starting from Firefox 3.0.11, at least sqlite 3.6.7 is required
-%if %mdkversion >= 200900
-BuildRequires:	libsqlite3-devel >= 3.6.7
+%if %mdkversion >= 200800
+BuildRequires:	libsqlite3-devel >= 3.6.16.1
 %endif
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
@@ -292,7 +292,7 @@ export BUILD_OFFICIAL=1
 	--with-distribution-id=com.mandriva \
 	--with-valgrind \
 	--enable-jemalloc \
-%if %mdkversion >= 200900
+%if %mdkversion >= 200800
 	--enable-system-sqlite \
 %else
 	--disable-system-sqlite \
