@@ -70,7 +70,6 @@ BuildRequires:	libpng-devel >= 1.2.25-2
 %endif
 BuildRequires:	libjpeg-devel
 BuildRequires:	zlib-devel
-BuildRequires:	libcairo-devel
 BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
@@ -104,6 +103,9 @@ BuildRequires:	java-1.5.0-devel
 BuildRequires:  xulrunner-devel >= %xulrunner_version
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
+%if %mdkversion >= 201000
+BuildRequires:	cairo-devel >= 1.8.8
+%endif
 Provides:	webclient
 Requires:	indexhtml
 Requires:       xdg-utils
@@ -260,7 +262,7 @@ export BUILD_OFFICIAL=1
 	--enable-svg-renderer=cairo \
 	--enable-single-profile \
 	--enable-startup-notification \
-%if %mdkversion >= 200900
+%if %mdkversion >= 201000
 	--enable-system-cairo \
 %else
 	--disable-system-cairo \
