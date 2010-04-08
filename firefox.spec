@@ -27,7 +27,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 4
+%define release %mkrel 5
 %else
 # Old distros
 %define subrel 1
@@ -345,7 +345,7 @@ user_pref("browser.tabs.insertRelatedAfterCurrent", false);
 user_pref("app.update.auto", false);
 user_pref("app.update.enabled", false);
 user_pref("app.update.autoInstallEnabled", false);
-user_pref("security.ssl.require_safe_negotiation", true);
+user_pref("security.ssl.require_safe_negotiation", false);
 EOF
 
 # search engines
