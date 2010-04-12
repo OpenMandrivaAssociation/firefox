@@ -82,6 +82,7 @@ BuildRequires:	python-devel
 # so only use system sqlite on Mandriva >= 2009.0
 # (eugeni) Starting from Firefox 3.0.11, at least sqlite 3.6.7 is required
 %if %mdkversion >= 200800
+Requires:	%{mklibname sqlite 3} >= 3.6.16.1
 BuildRequires:	libsqlite3-devel >= 3.6.16.1
 %endif
 BuildRequires:	valgrind
