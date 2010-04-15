@@ -19,6 +19,9 @@
 # libxul.so is provided by libxulrunnner1.9.
 %define _requires_exceptions libxul.so
 
+# this seems fragile, so require the exact version or later (#58754)
+%define sqlite3ver %(rpm -q --whatprovides sqlite3-devel --queryformat %{version})
+
 %if %mdkversion >= 200900
 %define _use_syshunspell 1
 %else
@@ -27,7 +30,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 7
+%define release %mkrel 8
 %else
 # Old distros
 %define subrel 1
@@ -82,7 +85,7 @@ BuildRequires:	python-devel
 # so only use system sqlite on Mandriva >= 2009.0
 # (eugeni) Starting from Firefox 3.0.11, at least sqlite 3.6.7 is required
 %if %mdkversion >= 200800
-Requires:	%{mklibname sqlite3_ 0} >= 3.6.16.1
+Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3ver}
 BuildRequires:	libsqlite3-devel >= 3.6.16.1
 %endif
 BuildRequires:	valgrind
