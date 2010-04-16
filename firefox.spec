@@ -20,7 +20,7 @@
 %define _requires_exceptions libxul.so
 
 # this seems fragile, so require the exact version or later (#58754)
-%define sqlite3ver %(rpm -q --whatprovides sqlite3-devel --queryformat %{version})
+%define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
 
 %if %mdkversion >= 200900
 %define _use_syshunspell 1
@@ -30,10 +30,10 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 8
+%define release %mkrel 9
 %else
 # Old distros
-%define subrel 1
+%define subrel 2
 %define release %mkrel 0
 %endif
 
@@ -85,7 +85,7 @@ BuildRequires:	python-devel
 # so only use system sqlite on Mandriva >= 2009.0
 # (eugeni) Starting from Firefox 3.0.11, at least sqlite 3.6.7 is required
 %if %mdkversion >= 200800
-Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3ver}
+Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 BuildRequires:	libsqlite3-devel >= 3.6.16.1
 %endif
 BuildRequires:	valgrind
