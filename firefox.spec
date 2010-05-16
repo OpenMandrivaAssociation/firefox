@@ -63,6 +63,9 @@ Patch14:	mozilla-firefox-1.5-software-update.patch
 #Patch15:	firefox-3.0.1-disable-classic-theme.patch
 Patch16:	firefox-3.5.3-default-mail-handler.patch
 Patch17:	firefox-kde.patch
+# (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
+# the default web browser" is used fix mdv bug#58784
+Patch18:	firefox-3.6.3-appname.patch
 BuildRequires:	gtk+2-devel
 BuildRequires:	libx11-devel
 BuildRequires:	unzip
@@ -193,6 +196,7 @@ Files and macros mainly for building Firefox extensions.
 %patch17 -p1
 # install kde.js
 install -m 644 %{SOURCE9} browser/app/profile/kde.js
+#%patch18 -p1 -b .appname
 # (tpg) remove ff bookmarks, to use mdv ones
 rm -rf browser/locales/en-US/profile/bookmarks.html
 touch browser/locales/en-US/profile/bookmarks.html
