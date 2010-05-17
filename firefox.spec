@@ -30,7 +30,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 9
+%define release %mkrel 10
 %else
 # Old distros
 %define subrel 2
@@ -196,7 +196,7 @@ Files and macros mainly for building Firefox extensions.
 %patch17 -p1
 # install kde.js
 install -m 644 %{SOURCE9} browser/app/profile/kde.js
-#%patch18 -p1 -b .appname
+%patch18 -p1 -b .appname
 # (tpg) remove ff bookmarks, to use mdv ones
 rm -rf browser/locales/en-US/profile/bookmarks.html
 touch browser/locales/en-US/profile/bookmarks.html
