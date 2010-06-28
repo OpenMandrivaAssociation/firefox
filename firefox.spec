@@ -33,8 +33,9 @@
 %define release %mkrel 1
 %else
 # Old distros
-%define subrel 1
-%define release %mkrel 0
+%define release %mkrel 1
+#define subrel 1
+#define release %mkrel 0
 %endif
 
 Summary:	Next generation web browser
