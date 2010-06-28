@@ -10,8 +10,8 @@
 %define major 3
 %define ff_epoch 0
 # (tpg) set version HERE !!!
-%define realver %{major}.6.4
-%define xulrunner_version 1.9.2.4
+%define realver %{major}.6.6
+%define xulrunner_version 1.9.2.6
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
 %define pluginsdir %{_libdir}/mozilla/plugins
