@@ -7,14 +7,17 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
-%define major 3
+%define major 4
 %define ff_epoch 0
 # (tpg) set version HERE !!!
-%define realver %{major}.6.8
-%define xulrunner_version 1.9.2.8
+%define realver %{major}.0
+%define prel b3
+%define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
-%define mozillalibdir %{_libdir}/%{name}-%{realver}
+%define mozillalibdir %{_libdir}/%{name}-%{realver}%prel
 %define pluginsdir %{_libdir}/mozilla/plugins
+
+
 
 # libxul.so is provided by libxulrunnner1.9.
 %define _requires_exceptions libxul.so
@@ -30,7 +33,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel 1
+%define release %mkrel -c %prel 1
 %else
 # Old distros
 %define subrel 1
@@ -45,7 +48,7 @@ Release:	%{release}
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.org/
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}.source.tar.bz2
+Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}%prel.source.tar.bz2
 Source1:	%{SOURCE0}.asc
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -79,8 +82,8 @@ BuildRequires:	zlib-devel
 BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
-BuildRequires:	nss-devel >= 2:3.12.6
-BuildRequires:	nspr-devel >= 2:4.8.4
+BuildRequires:	nss-devel >= 2:3.12.7
+BuildRequires:	nspr-devel >= 2:4.8.6
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
 BuildRequires:	python-devel
@@ -89,7 +92,8 @@ BuildRequires:	python-devel
 # (eugeni) Starting from Firefox 3.0.11, at least sqlite 3.6.7 is required
 %if %mdkversion >= 200800
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
-BuildRequires:	libsqlite3-devel >= 3.6.16.1
+# (tpg) older releases does not have SQLITE_ENABLE_UNLOCK_NOTIFY enabled
+BuildRequires:  libsqlite3-devel >= 3.7.0.1-2
 %endif
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
@@ -113,6 +117,7 @@ BuildRequires:	libnotify-devel
 %if %mdkversion >= 201000
 BuildRequires:	cairo-devel >= 1.8.8
 %endif
+BuildRequires:	yasm
 Provides:	webclient
 Requires:	indexhtml
 Requires:       xdg-utils
@@ -178,12 +183,12 @@ Group:		Development/Other
 Files and macros mainly for building Firefox extensions.
 
 %prep
-%setup -qn mozilla-1.9.2
+%setup -qn mozilla-central
 #%patch1 -p1 -b .lang rediff
 %patch2 -p1 -b .vendor
 # Temporary disabled. It prevents firefox from running. 
 #%patch3 -p1
-%patch4 -p1 -b .homepage
+#%patch4 -p1 -b .homepage
 %patch5 -p1 -b .defaultbrowser
 # It was disabled because firefox3 hangs when using soundwrapper
 #%patch6 -p1
@@ -193,11 +198,11 @@ Files and macros mainly for building Firefox extensions.
 %patch16 -p1 -b .default-mail-handler
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
-%patch17 -p1
+#%patch17 -p1
 # install kde.js
 install -m 644 %{SOURCE9} browser/app/profile/kde.js
 %patch18 -p1 -b .appname
-# (tpg) remove ff bookmarks, to use mdv ones
+# (tpg) remove ff bookmarks, use mdv ones
 rm -rf browser/locales/en-US/profile/bookmarks.html
 touch browser/locales/en-US/profile/bookmarks.html
 
@@ -243,7 +248,7 @@ export BUILD_OFFICIAL=1
 	--disable-system-png \
 %endif
 	--with-system-nspr \
-	--with-system-nss \
+	--without-system-nss \
 	--disable-ldap \
 	--disable-calendar \
 	--disable-mailnews \
@@ -275,13 +280,19 @@ export BUILD_OFFICIAL=1
 %else
 	--disable-system-cairo \
 %endif
-	--enable-reorder \
-	--enable-optimize \
+	--disable-javaxpcom \
+	--enable-optimize="-O2" \
 	--enable-safe-browsing \
 	--enable-xinerama \
 	--enable-canvas \
 	--enable-pango \
-	--enable-xft \
+	--enable-xtf \
+	--enable-wave \
+	--enable-webm \
+	--enable-ogg \
+	--enable-xpcom-fastload \
+	--enable-gio \
+	--enable-dbus \
 	--enable-image-encoder=all \
 	--enable-image-decoders=all \
 	--enable-extensions=default \
@@ -293,7 +304,7 @@ export BUILD_OFFICIAL=1
 	--disable-faststart \
 	--enable-smil \
 	--disable-tree-freetype \
-	--disable-canvas3d \
+	--enable-canvas3d \
 	--disable-coretext \
 	--enable-necko-protocols=all \
 	--disable-necko-wifi \
