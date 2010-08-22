@@ -118,6 +118,7 @@ BuildRequires:	libnotify-devel
 BuildRequires:	cairo-devel >= 1.8.8
 %endif
 BuildRequires:	yasm
+BuildRequires:	mesagl-devel
 Provides:	webclient
 Requires:	indexhtml
 Requires:       xdg-utils
