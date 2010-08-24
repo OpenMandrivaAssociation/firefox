@@ -11,7 +11,7 @@
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}.0
-%define prel b3
+%define prel b4
 %define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}%prel
@@ -33,7 +33,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 2
+%define release %mkrel -c %prel 1
 %else
 # Old distros
 %define subrel 1
