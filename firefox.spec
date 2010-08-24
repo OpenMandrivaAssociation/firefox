@@ -33,7 +33,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 1
+%define release %mkrel -c %prel 2
 %else
 # Old distros
 %define subrel 1
@@ -59,7 +59,6 @@ Source9:	kde.js
 Patch1:		mozilla-firefox-3.0.5-lang.patch
 Patch2:		mozilla-firefox-3.0.5-vendor.patch
 Patch3:		mozilla-firefox-1.5.0.6-systemproxy.patch
-Patch4:		firefox-3.0b3-homepage.patch
 Patch5:		firefox-3.0b3-check-default-browser.patch
 Patch6:		mozilla-firefox-run-mozilla.patch
 Patch14:	mozilla-firefox-1.5-software-update.patch
@@ -189,7 +188,6 @@ Files and macros mainly for building Firefox extensions.
 %patch2 -p1 -b .vendor
 # Temporary disabled. It prevents firefox from running. 
 #%patch3 -p1
-#%patch4 -p1 -b .homepage
 %patch5 -p1 -b .defaultbrowser
 # It was disabled because firefox3 hangs when using soundwrapper
 #%patch6 -p1
@@ -282,7 +280,7 @@ export BUILD_OFFICIAL=1
 	--disable-system-cairo \
 %endif
 	--disable-javaxpcom \
-	--enable-optimize="-O2" \
+	--enable-optimize \
 	--enable-safe-browsing \
 	--enable-xinerama \
 	--enable-canvas \
@@ -366,6 +364,7 @@ user_pref("app.update.auto", false);
 user_pref("app.update.enabled", false);
 user_pref("app.update.autoInstallEnabled", false);
 user_pref("security.ssl.require_safe_negotiation", false);
+user_pref("browser.startup.homepage","file:///usr/share/doc/HTML/index.html");
 EOF
 
 # search engines
