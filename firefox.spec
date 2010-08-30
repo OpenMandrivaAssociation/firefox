@@ -17,9 +17,7 @@
 %define mozillalibdir %{_libdir}/%{name}-%{realver}%prel
 %define pluginsdir %{_libdir}/mozilla/plugins
 
-
-
-# libxul.so is provided by libxulrunnner1.9.
+# libxul.so is provided by libxulrunnner2.0.
 %define _requires_exceptions libxul.so
 
 # this seems fragile, so require the exact version or later (#58754)
@@ -33,7 +31,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 1
+%define release %mkrel -c %prel 2
 %else
 # Old distros
 %define subrel 1
@@ -211,8 +209,6 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
-%define _disable_ld_no_undefined 1
-%define _disable_ld_as_needed 1
 %if %mdkversion >= 200900
 %setup_compile_flags
 %else
@@ -230,7 +226,7 @@ export BUILD_OFFICIAL=1
 # (fhimpe) javaxpcom does not build correctly with xulrunner (is it
 # actually needed/useful here when enabled already in xulrunner?)
 # https://bugzilla.mozilla.org/show_bug.cgi?id=448386
-./configure \
+./configure --build=%{_target_platform} \
 	--prefix=%{_prefix} \
 	--bindir=%{_bindir} \
 	--libdir=%{_libdir} \
