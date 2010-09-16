@@ -11,7 +11,7 @@
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}.0
-%define prel b5
+%define prel b6
 %define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}%prel
