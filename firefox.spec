@@ -1,6 +1,9 @@
 #
 # WARNING, READ FIRST:
 #
+# PLEASE svn cp SOURCES FROM xulrunner SOURCES INSTEAD
+# OF COMMITING AGAIN THE TARBALL
+#
 # This is a special package that needs special treatment. Due to the amount of
 # security updates it needs, it's common to ship new upstream versions instead of patching.
 # That means this package MUST be BUILDABLE for stable official releases.
