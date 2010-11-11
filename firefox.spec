@@ -111,7 +111,7 @@ BuildRequires:	java-rpmbuild
 %if %mdkversion < 200900
 BuildRequires:	java-1.5.0-devel
 %endif
-BuildRequires:  xulrunner-devel >= %xulrunner_version
+BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
 %if %mdkversion >= 201000
