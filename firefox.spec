@@ -15,7 +15,7 @@
 # (tpg) set version HERE !!!
 %define realver %{major}.0
 %define prel b7
-%define xulrunner_version 2.0%{?prel:-0.%prel}
+%define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}%{?prel}
 %define pluginsdir %{_libdir}/mozilla/plugins
@@ -34,7 +34,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 2
+%define release %mkrel -c %prel 3
 %else
 # Old distros
 %define subrel 1
@@ -111,7 +111,7 @@ BuildRequires:	java-rpmbuild
 %if %mdkversion < 200900
 BuildRequires:	java-1.5.0-devel
 %endif
-BuildRequires:  xulrunner-devel >= %xulrunner_version
+BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
 %if %mdkversion >= 201000
@@ -156,7 +156,7 @@ Obsoletes:	%mklibname mozilla-firefox 2.0.0.16
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.17
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.18
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.19
-Requires:	xulrunner >= %{xulrunner_version}
+Requires:	xulrunner >= %{xulrunner_version}%{?prel:-0.%prel}
 Requires:	%{mklibname xulrunner %xulrunner_version}
 BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
