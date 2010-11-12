@@ -15,9 +15,9 @@
 # (tpg) set version HERE !!!
 %define realver %{major}.0
 %define prel b7
-%define xulrunner_version 2.0
+%define xulrunner_version 2.0%{?prel:-0.%prel}
 # (tpg) MOZILLA_FIVE_HOME
-%define mozillalibdir %{_libdir}/%{name}-%{realver}%prel
+%define mozillalibdir %{_libdir}/%{name}-%{realver}%{?prel}
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner2.0.
@@ -34,7 +34,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 1
+%define release %mkrel -c %prel 2
 %else
 # Old distros
 %define subrel 1
@@ -111,7 +111,7 @@ BuildRequires:	java-rpmbuild
 %if %mdkversion < 200900
 BuildRequires:	java-1.5.0-devel
 %endif
-BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
+BuildRequires:  xulrunner-devel >= %xulrunner_version
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
 %if %mdkversion >= 201000
