@@ -34,7 +34,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 3
+%define release %mkrel -c %prel 4
 %else
 # Old distros
 %define subrel 1
@@ -119,6 +119,9 @@ BuildRequires:	cairo-devel >= 1.8.8
 %endif
 BuildRequires:	yasm
 BuildRequires:	mesagl-devel
+%if 0%{prel}
+Provides:	%{name} = %{epoch}:%{realver}-0.%{prel}
+%endif
 Provides:	webclient
 Requires:	indexhtml
 Requires:       xdg-utils
@@ -422,7 +425,7 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 # Macros from %{name} package
 %%firefox_major              %{major}
 %%firefox_epoch              %{ff_epoch}
-%%firefox_version            %{realver}
+%%firefox_version            %{realver}%{?prel:-0.%prel}
 %%firefox_mozillapath        %{mozillalibdir}
 %%firefox_xulrunner_version  %{xulrunner_version}
 %%firefox_pluginsdir         %{pluginsdir}
