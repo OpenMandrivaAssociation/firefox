@@ -119,7 +119,7 @@ BuildRequires:	cairo-devel >= 1.8.8
 %endif
 BuildRequires:	yasm
 BuildRequires:	mesagl-devel
-%if 0%{prel}
+%if %{prel}
 Provides:	%{name} = %{epoch}:%{realver}-0.%{prel}
 %endif
 Provides:	webclient
