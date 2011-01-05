@@ -83,10 +83,10 @@ BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
 BuildRequires:	nss-devel >= 2:3.12.7
-BuildRequires:	nspr-devel >= 2:4.8.6
+BuildRequires:	nspr-devel >= 2:4.8.7
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
-BuildRequires:	python-devel
+BuildRequires:	python
 # (fhimpe) Starting from Firefox 3.0.1, at least sqlite 3.5.9 is needed
 # so only use system sqlite on Mandriva >= 2009.0
 # (eugeni) Starting from Firefox 3.0.11, at least sqlite 3.6.7 is required
@@ -351,6 +351,7 @@ for i in 16 22 24 32 48 256; do
 %{__cp} other-licenses/branding/%{name}/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/firefox.png ;
 done
 
+install -D -m644 browser/app/profile/prefs.js %{buildroot}%{mozillalibdir}/defaults/profile/prefs.js
 cat << EOF >> %{buildroot}%{mozillalibdir}/defaults/profile/prefs.js
 user_pref("browser.search.selectedEngine","Ask.com");
 user_pref("browser.search.order.1","Ask.com");
