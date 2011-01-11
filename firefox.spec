@@ -430,8 +430,8 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 %%firefox_mozillapath        %{mozillalibdir}
 %%firefox_xulrunner_version  %{xulrunner_version}
 %%firefox_pluginsdir         %{pluginsdir}
-%%firefox_appid              {ec8030f7-c20a-464f-9b0e-13a3a9e97384}
-%%firefox_extdir             %(if [ "%_target_cpu" = "noarch" ]; then echo %{_datadir}/mozilla/extensions/%{firefox_appid}; else echo %{_libdir}/mozilla/extensions/%{firefox_appid}; fi)
+%%firefox_appid              \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
+%%firefox_extdir             %%(if [ "%%_target_cpu" = "noarch" ]; then echo %%{_datadir}/mozilla/extensions/%%{firefox_appid}; else echo %%{_libdir}/mozilla/extensions/%%{firefox_appid}; fi)
 FIN
 
 %post
