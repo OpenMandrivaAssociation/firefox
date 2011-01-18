@@ -34,7 +34,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 1
+%define release %mkrel -c %prel 2
 %else
 # Old distros
 %define subrel 1
@@ -82,7 +82,7 @@ BuildRequires:	zlib-devel
 BuildRequires:	glib2-devel
 BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
-BuildRequires:	nss-devel >= 2:3.12.7
+BuildRequires:	nss-devel >= 2:3.12.8
 BuildRequires:	nspr-devel >= 2:4.8.7
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
@@ -249,7 +249,7 @@ export BUILD_OFFICIAL=1
 	--disable-system-png \
 %endif
 	--with-system-nspr \
-	--without-system-nss \
+	--with-system-nss \
 	--disable-ldap \
 	--disable-calendar \
 	--disable-mailnews \
@@ -320,6 +320,7 @@ export BUILD_OFFICIAL=1
 	--disable-system-sqlite \
 %endif
 	--with-system-libxul \
+	--enable-chrome-format=jar \
         --with-libxul-sdk=`pkg-config --variable=sdkdir libxul` \
 	--with-java-include-path=%{java_home}/include \
 	--with-java-bin-path=%{java_home}/bin \
