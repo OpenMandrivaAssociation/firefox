@@ -165,7 +165,7 @@ BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
 %description
 The award-winning Web browser is now faster, more secure, and fully customizable 
-to your online life. With Firefox(R) 3, we've added powerful new features that 
+to your online life. With Firefox(R), we've added powerful new features that 
 make your online experience even better. It is an 'open source' product which is 
 freely available, and is acquiring a growing proportion of international web 
 browser usage.
