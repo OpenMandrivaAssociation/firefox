@@ -14,7 +14,7 @@
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}.0
-%define prel b9
+%define prel b10
 %define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}%{?prel}
@@ -34,7 +34,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 3
+%define release %mkrel -c %prel 1
 %else
 # Old distros
 %define subrel 1
@@ -63,7 +63,6 @@ Patch3:		mozilla-firefox-1.5.0.6-systemproxy.patch
 Patch5:		firefox-3.0b3-check-default-browser.patch
 Patch6:		mozilla-firefox-run-mozilla.patch
 Patch14:	mozilla-firefox-1.5-software-update.patch
-#Patch15:	firefox-3.0.1-disable-classic-theme.patch
 Patch16:	firefox-3.5.3-default-mail-handler.patch
 Patch17:	firefox-kde.patch
 # (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
@@ -93,7 +92,7 @@ BuildRequires:	python
 %if %mdkversion >= 200800
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 # (tpg) older releases does not have SQLITE_ENABLE_UNLOCK_NOTIFY enabled
-BuildRequires:  libsqlite3-devel >= 3.7.0.1-2
+BuildRequires:  libsqlite3-devel >= 3.7.4
 %endif
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
@@ -197,7 +196,6 @@ Files and macros mainly for building Firefox extensions.
 #%patch6 -p1
 #%patch14 -p1 -b .disable-software-update rediff
 # (salem)	this patch does not work properly on ff3.
-#%patch15 -p1 -b .disable-classic-theme
 %patch16 -p1 -b .default-mail-handler
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
@@ -243,6 +241,7 @@ export BUILD_OFFICIAL=1
 	--with-system-jpeg \
 	--with-system-zlib \
 	--with-system-bz2 \
+	--with-system-libevent \
 %if %mdkversion >= 200900
 	--enable-system-png \
 %else
@@ -314,7 +313,7 @@ export BUILD_OFFICIAL=1
 	--with-distribution-id=com.mandriva \
 	--with-valgrind \
 	--enable-jemalloc \
-%if %mdkversion >= 200800
+%if %mdkversion >= 201100
 	--enable-system-sqlite \
 %else
 	--disable-system-sqlite \
