@@ -23,15 +23,6 @@
 # libxul.so is provided by libxulrunnner2.0.
 %define _requires_exceptions libxul.so
 
-# this seems fragile, so require the exact version or later (#58754)
-%define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
-
-%if %mdkversion >= 200900
-%define _use_syshunspell 1
-%else
-%define _use_syshunspell 0
-%endif
-
 %if %mandriva_branch == Cooker
 # Cooker
 %define release %mkrel -c %prel 1
@@ -69,37 +60,16 @@ Patch17:	firefox-kde.patch
 # the default web browser" is used fix mdv bug#58784
 Patch18:	firefox-3.6.3-appname.patch
 BuildRequires:	gtk+2-devel
-BuildRequires:	libx11-devel
 BuildRequires:	unzip
 BuildRequires:	zip
 #(tpg) older versions doesn't support apng extension
-%if %mdkversion >= 200900
-BuildRequires:	libpng-devel >= 1.2.25-2
+%if %mdkversion > 201100
+BuildRequires:	libpng-devel >= 1.4.1
 %endif
-BuildRequires:	libjpeg-devel
-BuildRequires:	zlib-devel
-BuildRequires:	glib2-devel
-BuildRequires:	libIDL2-devel
 BuildRequires:	makedepend
-BuildRequires:	nss-devel >= 2:3.12.8
-BuildRequires:	nspr-devel >= 2:4.8.7
-BuildRequires:	startup-notification-devel
-BuildRequires:	dbus-glib-devel
 BuildRequires:	python
-# (fhimpe) Starting from Firefox 3.0.1, at least sqlite 3.5.9 is needed
-# so only use system sqlite on Mandriva >= 2009.0
-# (eugeni) Starting from Firefox 3.0.11, at least sqlite 3.6.7 is required
-%if %mdkversion >= 200800
-Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
-# (tpg) older releases does not have SQLITE_ENABLE_UNLOCK_NOTIFY enabled
-BuildRequires:  libsqlite3-devel >= 3.7.4
-%endif
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
-BuildRequires:	libxt-devel
-%if %_use_syshunspell
-BuildRequires:	hunspell-devel
-%endif
 BuildRequires:	doxygen
 BuildRequires:	libgnome-vfs2-devel
 BuildRequires:	libgnome2-devel
@@ -130,8 +100,6 @@ Suggests:	%{ff_deps}
 %else
 Requires:	%{ff_deps}
 %endif
-Requires(post):	desktop-file-utils
-Requires(postun):	desktop-file-utils
 # fixes bug #42096
 Requires:	mailcap
 # ff3 now provides /usr/bin/firefox and mozilla-firefox
@@ -242,10 +210,10 @@ export BUILD_OFFICIAL=1
 	--with-system-zlib \
 	--with-system-bz2 \
 	--with-system-libevent \
-%if %mdkversion >= 200900
-	--enable-system-png \
+%if %mdkversion > 201100
+	--with-system-png \
 %else
-	--disable-system-png \
+	--without-system-png \
 %endif
 	--with-system-nspr \
 	--with-system-nss \
@@ -296,9 +264,7 @@ export BUILD_OFFICIAL=1
 	--enable-image-encoder=all \
 	--enable-image-decoders=all \
 	--enable-extensions=default \
-%if %_use_syshunspell
 	--enable-system-hunspell \
-%endif
 	--enable-install-strip \
 	--enable-url-classifier \
 	--disable-faststart \
