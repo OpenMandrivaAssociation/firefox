@@ -39,7 +39,7 @@ Epoch:		%{ff_epoch}
 Release:	%{release}
 License:	MPLv1+
 Group:		Networking/WWW
-Url:		http://www.mozilla.org/
+Url:		http://www.firefox.com/
 Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}%prel.source.tar.bz2
 Source1:	%{SOURCE0}.asc
 Source4:	%{name}.desktop
