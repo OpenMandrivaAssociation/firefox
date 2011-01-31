@@ -25,7 +25,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 1
+%define release %mkrel -c %prel 2
 %else
 # Old distros
 %define subrel 1
@@ -109,6 +109,7 @@ Obsoletes:	mozilla-firefox < 3.0
 Provides:	mozilla-firefox = %{epoch}:%{version}-%{release}
 Obsoletes:	mozilla-firefox-theme-gnome
 Obsoletes:	mozilla-firefox-theme-kdeff <= 0.4
+Obsoletes:	firefox-ext-weave-sync
 # since 3.0.1-2 we do not have ff libification anymore
 Obsoletes:	%{mklibname firefox 3} < 3.0.1-2
 # (salem) while we dont have a better solution, we need to obsolete them all
