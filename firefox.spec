@@ -14,7 +14,7 @@
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}.0
-%define prel b10
+%define prel b11
 %define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}%{?prel}
@@ -25,7 +25,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 2
+%define release %mkrel -c %prel 1
 %else
 # Old distros
 %define subrel 1
@@ -83,8 +83,8 @@ BuildRequires:	java-1.5.0-devel
 BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
-%if %mdkversion >= 201000
-BuildRequires:	cairo-devel >= 1.8.8
+%if %mdkversion >= 201100
+BuildRequires:	cairo-devel >= 1.10
 %endif
 BuildRequires:	yasm
 BuildRequires:	mesagl-devel
@@ -244,7 +244,7 @@ export BUILD_OFFICIAL=1
 	--enable-svg-renderer=cairo \
 	--enable-single-profile \
 	--enable-startup-notification \
-%if %mdkversion >= 201000
+%if %mdkversion >= 201100
 	--enable-system-cairo \
 %else
 	--disable-system-cairo \
