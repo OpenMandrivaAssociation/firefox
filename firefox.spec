@@ -206,6 +206,7 @@ export BUILD_OFFICIAL=1
 	--includedir=%{_includedir} \
 	--datadir=%{_datadir} \
 	--enable-application=browser \
+	--disable-elf-hack \
 	--with-pthreads \
 	--with-system-jpeg \
 	--with-system-zlib \
