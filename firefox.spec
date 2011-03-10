@@ -155,7 +155,7 @@ Group:		Development/Other
 Files and macros mainly for building Firefox extensions.
 
 %prep
-%setup -qn mozilla-central
+%setup -qn mozilla-2.0
 #%patch1 -p1 -b .lang rediff
 %patch2 -p1 -b .vendor
 # Temporary disabled. It prevents firefox from running. 
