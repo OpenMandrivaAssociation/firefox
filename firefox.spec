@@ -17,7 +17,7 @@
 %define prel rc1
 %define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
-%define mozillalibdir %{_libdir}/%{name}-%{realver}%{?prel}
+%define mozillalibdir %{_libdir}/%{name}-%{realver}
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner2.0.
