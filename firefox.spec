@@ -25,7 +25,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 1
+%define release %mkrel -c %prel 2
 %else
 # Old distros
 %define subrel 1
@@ -168,7 +168,7 @@ Files and macros mainly for building Firefox extensions.
 %patch16 -p1 -b .default-mail-handler
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
-#%patch17 -p1
+%patch17 -p1
 # install kde.js
 install -m 644 %{SOURCE9} browser/app/profile/kde.js
 %patch18 -p1 -b .appname
