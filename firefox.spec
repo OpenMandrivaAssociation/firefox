@@ -14,7 +14,6 @@
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}.0
-%define prel rc2
 %define xulrunner_version 2.0
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -25,7 +24,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release %mkrel -c %prel 3
+%define release %mkrel 1
 %else
 # Old distros
 %define subrel 1
@@ -40,7 +39,7 @@ Release:	%{release}
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.firefox.com/
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}%prel.source.tar.bz2
+Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}.source.tar.bz2
 Source1:	%{SOURCE0}.asc
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -80,7 +79,7 @@ BuildRequires:	java-rpmbuild
 %if %mdkversion < 200900
 BuildRequires:	java-1.5.0-devel
 %endif
-BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
+BuildRequires:  xulrunner-devel >= %xulrunner_version
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
 %if %mdkversion >= 201100
@@ -88,9 +87,6 @@ BuildRequires:	cairo-devel >= 1.10
 %endif
 BuildRequires:	yasm
 BuildRequires:	mesagl-devel
-%if %{prel}
-Provides:	%{name} = %{epoch}:%{realver}-0.%{prel}
-%endif
 Provides:	webclient
 Requires:	indexhtml
 Requires:       xdg-utils
@@ -127,7 +123,7 @@ Obsoletes:	%mklibname mozilla-firefox 2.0.0.16
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.17
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.18
 Obsoletes:	%mklibname mozilla-firefox 2.0.0.19
-Requires:	xulrunner >= %{xulrunner_version}%{?prel:-0.%prel}
+Requires:	xulrunner >= %{xulrunner_version}
 Requires:	%{mklibname xulrunner %xulrunner_version}
 BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
@@ -394,7 +390,7 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 # Macros from %{name} package
 %%firefox_major              %{major}
 %%firefox_epoch              %{ff_epoch}
-%%firefox_version            %{realver}%{?prel:-0.%prel}
+%%firefox_version            %{realver}
 %%firefox_mozillapath        %{mozillalibdir}
 %%firefox_xulrunner_version  %{xulrunner_version}
 %%firefox_pluginsdir         %{pluginsdir}
