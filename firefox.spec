@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 0
+%define release 1
 %else
 # Old distros
 %define subrel 1
@@ -77,7 +77,7 @@ Suggests:	%{ff_deps}
 #Requires:	mailcap
 
 #Conflicts with stable firefox
-Conflicts:	firefox
+#Conflicts:	firefox
 #Obsoletes:	firefox
 
 BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
