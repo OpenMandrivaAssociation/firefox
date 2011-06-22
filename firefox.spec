@@ -248,11 +248,7 @@ if [ ! -r /etc/sysconfig/oem ]; then
   ln -s -f ../../../../share/mdk/bookmarks/mozilla/$bookmark  %{mozillalibdir}/defaults/profile/bookmarks.html
 fi
 
-%clean
-[ "%{buildroot}" != "/" ] && rm -rf %{buildroot}
-
 %files -f %{name}.lang
-%defattr(-,root,root)
 %{_bindir}/firefox
 %{_iconsdir}/hicolor/*/apps/*.png
 %{_datadir}/applications/*.desktop
