@@ -66,7 +66,7 @@ BuildRequires:	libnotify-devel
 %if %mdkversion >= 201100
 BuildRequires:	cairo-devel >= 1.10
 %endif
-BuildRequires:	yasm
+BuildRequires:	yasm >= 1.0.1
 BuildRequires:	mesagl-devel
 Provides:	webclient
 #Requires:	indexhtml
