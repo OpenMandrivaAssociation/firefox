@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 1
+%define release 2
 %else
 # Old distros
 %define subrel 1
@@ -96,7 +96,7 @@ Files and macros mainly for building Firefox extensions.
 %setup -qn mozilla-%{firefox_channel}
 
 # disabled for tests
-#%patch1 -p1 -b .lang rediff
+%patch1 -p1 -b .lang rediff
 %patch2 -p1 -b .vendor
 %patch3 -p1 -b .defaultbrowser
 ## KDE INTEGRATION
