@@ -1,5 +1,5 @@
 %define major 5
-%define realver %{major}.0
+%define realver %{major}.0.1
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 2
+%define release 1
 %else
 # Old distros
 %define subrel 1
@@ -37,7 +37,7 @@ Patch41:	mozilla-kde.patch
 # (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
 # the default web browser" is used fix mdv bug#58784
 Patch5:		firefox-3.6.3-appname.patch
-
+Patch6:		firefox-5.0-asciidel.patch
 BuildRequires:	gtk+2-devel
 BuildRequires:	libnspr-devel >= 4.8.7
 BuildRequires:	nss-devel
@@ -49,7 +49,7 @@ BuildRequires:	libiw-devel
 BuildRequires:	unzip
 BuildRequires:	zip
 #(tpg) older versions doesn't support apng extension
-%if %mdkversion > 201100
+%if %mdkversion > 201200
 BuildRequires:	libpng-devel >= 1.4.1
 %endif
 BuildRequires:	makedepend
@@ -99,6 +99,7 @@ Files and macros mainly for building Firefox extensions.
 %patch1 -p1 -b .lang
 %patch2 -p1 -b .vendor
 %patch3 -p1 -b .defaultbrowser
+%patch6 -p1 -b .wintitle
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
 %patch4 -p1 -b .kde
