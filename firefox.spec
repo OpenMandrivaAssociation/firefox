@@ -147,7 +147,7 @@ ac_add_options --disable-debug
 #ac_add_options --enable-update-channel=beta
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
-%if %mdkversion > 201100
+%if %mdkversion > 201200
 ac_add_options --with-system-png
 %else
 ac_add_options --without-system-png
