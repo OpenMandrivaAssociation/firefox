@@ -1,5 +1,5 @@
-%define major 5
-%define realver %{major}.0.1
+%define major 6
+%define realver %{major}.0
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 1
+%define release 0
 %else
 # Old distros
 %define subrel 1
@@ -103,7 +103,7 @@ Files and macros mainly for building Firefox extensions.
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
 %patch4 -p1 -b .kde
-%patch41 -p1 -b .kdemoz
+%patch41 -F 1 -p1 -b .kdemoz
 # install kde.js
 install -m 644 %{SOURCE9} browser/app/profile/kde.js
 
