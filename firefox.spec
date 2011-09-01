@@ -1,5 +1,5 @@
 %define major 6
-%define realver %{major}.0
+%define realver %{major}.0.1
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -23,7 +23,6 @@ License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.firefox.com/
 Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{realver}/source/firefox-%{realver}.source.tar.bz2
-Source1:	%{SOURCE0}.asc
 Source4:	firefox.desktop
 Source5:	firefox-searchengines-jamendo.xml
 Source6:	firefox-searchengines-exalead.xml
