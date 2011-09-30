@@ -1,5 +1,5 @@
-%define major 6
-%define realver %{major}.0.2
+%define major 7
+%define realver %{major}.0.1
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -123,7 +123,7 @@ popd
 
 # (gmoro) please dont enable all options by hand
 # we need to trust firefox defaults
-export MOZCONFIG=./mozconfig
+export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
