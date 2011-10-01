@@ -31,6 +31,8 @@ Source9:	kde.js
 Patch1:		firefox-lang.patch
 Patch2:		firefox-vendor.patch
 Patch3:		firefox-disable-check-default-browser.patch
+# NOTE: P4 and P41 stems from suse. you can also find updated ones here:
+# http://svnweb.mageia.org/packages/cauldron/firefox/current/SOURCES/
 Patch4:		firefox-kde.patch
 Patch41:	mozilla-kde.patch
 # (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
