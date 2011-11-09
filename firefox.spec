@@ -1,5 +1,5 @@
-%define major 7
-%define realver %{major}.0.1
+%define major 8
+%define realver %{major}.0
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -14,6 +14,12 @@
 %define subrel 1
 %define release %mkrel 0
 %endif
+
+# this seems fragile, so require the exact version or later (#58754)
+%define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
+# this one as well (#59759)
+%define nss_libname %mklibname nss 3
+%define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
 
 Summary:	Mozilla Firefox web browser
 Name:		firefox
@@ -40,18 +46,21 @@ Patch41:	mozilla-kde.patch
 Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
 BuildRequires:	gtk+2-devel
-BuildRequires:	libnspr-devel >= 4.8.7
-BuildRequires:	nss-devel
-BuildRequires:	nss-static-devel
-BuildRequires:	sqlite3-devel
+Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
+BuildRequires:	sqlite3-devel >= 3.7.1
+Requires:	%{nss_libname} >= 2:%{nss_version}
+BuildRequires:  nspr-devel >= 2:4.8.8
+BuildRequires:  nss-devel >= 2:3.13.1
+BuildRequires:  nss-static-devel >= 2:3.13.1
+BuildRequires:	sqlite3-devel >= 3.7.1
 BuildRequires:	libproxy-devel
 BuildRequires:	libalsa-devel
 BuildRequires:	libiw-devel
 BuildRequires:	unzip
 BuildRequires:	zip
 #(tpg) older versions doesn't support apng extension
-%if %mdkversion > 201200
-BuildRequires:	libpng-devel >= 1.4.1
+%if %mdkversion >= 201101
+BuildRequires:	libpng-devel >= 1.4.8
 %endif
 BuildRequires:	makedepend
 BuildRequires:	python
@@ -74,13 +83,6 @@ Provides:	webclient
 Requires:       xdg-utils
 %define ff_deps myspell-en_US nspluginwrapper
 Suggests:	%{ff_deps}
-
-#Requires:	mailcap
-
-#Conflicts with stable firefox
-#Conflicts:	firefox
-#Obsoletes:	firefox
-
 BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
 %description
@@ -115,14 +117,7 @@ install -m 644 %{SOURCE9} browser/app/profile/kde.js
 rm -rf browser/locales/en-US/profile/bookmarks.html
 touch browser/locales/en-US/profile/bookmarks.html
 
-# needed to regenerate certdata.c
-pushd security/nss/lib/ckfw/builtins
-perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
-popd
-
-
 %build
-
 # (gmoro) please dont enable all options by hand
 # we need to trust firefox defaults
 export MOZCONFIG=`pwd`/mozconfig
@@ -139,28 +134,28 @@ ac_add_options --includedir="%{_includedir}"
 ac_add_options --datadir="%{_datadir}"
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
+ac_add_options --with-system-jpeg
 ac_add_options --with-system-zlib
+%if %mdkversion >= 201101
+ac_add_options --with-system-png
+%else
+ac_add_options --disable-system-png
+%endif
+ac_add_options --with-system-bz2
+ac_add_options --enable-system-sqlite
 ac_add_options --disable-installer
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
+ac_add_options --disable-strip
 #ac_add_options --enable-chrome-format=jar
 #ac_add_options --enable-update-channel=beta
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
-%if %mdkversion > 201200
-ac_add_options --with-system-png
-%else
-ac_add_options --without-system-png
-%endif
-ac_add_options --with-system-jpeg
-
 %if %mdkversion >= 201100
 ac_add_options --enable-system-cairo
-ac_add_options --enable-system-sqlite
 %else
 ac_add_options --disable-system-cairo
-ac_add_options --disable-system-sqlite
 %endif
 ac_add_options --with-distribution-id=com.mandriva
 ac_add_options --disable-crashreporter
