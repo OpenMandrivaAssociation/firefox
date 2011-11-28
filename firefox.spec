@@ -221,8 +221,6 @@ cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/searchplugins/askcom.xml
 sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/searchplugins/askcom.xml
 sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/searchplugins/exalead.xml
 
-%find_lang %{name}
-
 mkdir -p %{buildroot}%{_sys_macros_dir}
 cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 # Macros from %{name} package
@@ -245,7 +243,7 @@ if [ ! -r /etc/sysconfig/oem ]; then
   ln -s -f ../../../../share/mdk/bookmarks/mozilla/$bookmark  %{mozillalibdir}/defaults/profile/bookmarks.html
 fi
 
-%files -f %{name}.lang
+%files
 %{_bindir}/firefox
 %{_iconsdir}/hicolor/*/apps/*.png
 %{_datadir}/applications/*.desktop
