@@ -67,7 +67,7 @@ BuildRequires:	python
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
 BuildRequires:	doxygen
-BuildRequires:	libgnome-vfs2-devel
+BuildRequires:	gnome-vfs2-devel
 BuildRequires:	libgnome2-devel
 BuildRequires:	libgnomeui2-devel
 BuildRequires:	java-rpmbuild
