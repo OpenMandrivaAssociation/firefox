@@ -83,7 +83,6 @@ Provides:	webclient
 Requires:       xdg-utils
 %define ff_deps myspell-en_US nspluginwrapper
 Suggests:	%{ff_deps}
-BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
 %description
 Mozilla Firefox is a web browser
@@ -247,7 +246,7 @@ fi
 %{_bindir}/firefox
 %{_iconsdir}/hicolor/*/apps/*.png
 %{_datadir}/applications/*.desktop
-%{_libdir}/%{name}-%{realver}*
+%{_libdir}/%{name}-%{realver}/
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
 
