@@ -45,6 +45,7 @@ Patch41:	mozilla-kde.patch
 # the default web browser" is used fix mdv bug#58784
 Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
+Patch7:		firefox-9.0-libpng15x.diff
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 BuildRequires:	sqlite3-devel >= 3.7.1
@@ -104,6 +105,7 @@ Files and macros mainly for building Firefox extensions.
 %patch2 -p1 -b .vendor
 %patch3 -p1 -b .defaultbrowser
 %patch6 -p1 -b .wintitle
+%patch7 -p1 -b .libpng15x
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
 %patch4 -p1 -b .kde
