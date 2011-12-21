@@ -1,5 +1,5 @@
-%define major 8
-%define realver %{major}.0.1
+%define major 9
+%define realver %{major}.0
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 2
+%define release 1
 %else
 # Old distros
 %define subrel 1
@@ -52,10 +52,12 @@ Requires:	%{nss_libname} >= 2:%{nss_version}
 BuildRequires:  nspr-devel >= 2:4.8.8
 BuildRequires:  nss-devel >= 2:3.13.1
 BuildRequires:  nss-static-devel >= 2:3.13.1
-BuildRequires:	sqlite3-devel >= 3.7.1
+BuildRequires:	sqlite3-devel >= 3.7.7.1
 BuildRequires:	libproxy-devel
 BuildRequires:	libalsa-devel
 BuildRequires:	libiw-devel
+BuildRequires:	libevent-devel >= 1.4.7
+BuildRequires:	libvpx-devel >= 0.9.5
 BuildRequires:	unzip
 BuildRequires:	zip
 #(tpg) older versions doesn't support apng extension
@@ -135,6 +137,8 @@ ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-jpeg
 ac_add_options --with-system-zlib
+ac_add_options --with-system-libevent
+ac_add_options --with-system-libvpx
 %if %mdkversion >= 201101
 ac_add_options --with-system-png
 %else
