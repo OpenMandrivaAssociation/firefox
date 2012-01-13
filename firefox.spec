@@ -1,5 +1,5 @@
 %define major 9
-%define realver %{major}.0
+%define realver %{major}.0.1
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -215,6 +215,21 @@ user_pref("app.update.enabled", false);
 user_pref("app.update.autoInstallEnabled", false);
 user_pref("security.ssl.require_safe_negotiation", false);
 user_pref("browser.startup.homepage","file:///usr/share/doc/HTML/index.html");
+EOF
+
+# files in this directory are read on every startup, and can change/add
+# preferences for existing profiles
+# extensions.autoDisableScopes is a new preference added in firefox 8
+# it defines "scopes" where newly installed addons are disabled by default
+# this is an additive bit field, and the value defaults to 15 (1+2+4+8)
+# we need to remove system scope (8) from it so language packs and other addons
+# which are installed systemwide won't get marked as 3rd party and disabled
+# documentation: http://kb.mozillazine.org/About:config_entries#Extensions.
+# or in toolkit/mozapps/extensions/AddonManager.jsm
+# we also need to disable the "disable addon selection dialog"
+cat << EOF > %{buildroot}%{mozillalibdir}/defaults/pref/mandriva.js
+pref("extensions.autoDisableScopes", 0);
+pref("extensions.shownSelectionUI", true);
 EOF
 
 # search engines
