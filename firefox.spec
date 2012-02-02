@@ -57,7 +57,7 @@ BuildRequires:	libproxy-devel
 BuildRequires:	libalsa-devel
 BuildRequires:	libiw-devel
 BuildRequires:	libevent-devel >= 1.4.7
-BuildRequires:	libvpx-devel >= 0.9.5
+BuildRequires:	libvpx-devel >= 0.9.7
 BuildRequires:	unzip
 BuildRequires:	zip
 #(tpg) older versions doesn't support apng extension
