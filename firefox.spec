@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 1
+%define release 0.1
 %else
 # Old distros
 %define subrel 1
@@ -106,8 +106,8 @@ Files and macros mainly for building Firefox extensions.
 %patch6 -p1 -b .wintitle
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
-%patch4 -p1 -b .kde
-%patch41 -F 1 -p1 -b .kdemoz
+# %%patch4 -p1 -b .kde
+# %%patch41 -F 1 -p1 -b .kdemoz
 # install kde.js
 install -m 644 %{SOURCE9} browser/app/profile/kde.js
 
