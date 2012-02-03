@@ -11,7 +11,7 @@
 %define release 0.2
 %else
 # Old distros
-%define subrel 1
+%define subrel 2
 %define release %mkrel 0
 %endif
 
@@ -150,7 +150,7 @@ ac_add_options --disable-installer
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
-ac_add_options --disable-strip
+ac_add_options --enable-strip
 #ac_add_options --enable-chrome-format=jar
 #ac_add_options --enable-update-channel=beta
 ac_add_options --enable-official-branding
@@ -163,6 +163,7 @@ ac_add_options --disable-system-cairo
 ac_add_options --with-distribution-id=com.mandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-optimize="%{optflags}"
+ac_add_options --disable-cpp-exceptions
 EOF
 
 make -f client.mk build
