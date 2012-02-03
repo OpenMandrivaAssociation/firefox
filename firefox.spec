@@ -162,6 +162,7 @@ ac_add_options --disable-system-cairo
 %endif
 ac_add_options --with-distribution-id=com.mandriva
 ac_add_options --disable-crashreporter
+ac_add_options --enable-optimize="%{optflags}"
 EOF
 
 make -f client.mk build
