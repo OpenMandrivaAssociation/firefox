@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 0.1
+%define release 0.2
 %else
 # Old distros
 %define subrel 1
@@ -53,7 +53,7 @@ BuildRequires:  nspr-devel >= 2:4.8.8
 BuildRequires:  nss-devel >= 2:3.13.1
 BuildRequires:  nss-static-devel >= 2:3.13.1
 BuildRequires:	sqlite3-devel >= 3.7.7.1
-BuildRequires:	libproxy-devel
+BuildRequires:	libproxy-devel >= 0.4.4
 BuildRequires:	libalsa-devel
 BuildRequires:	libiw-devel
 BuildRequires:	libevent-devel >= 1.4.7
