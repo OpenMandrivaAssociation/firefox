@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 0.2
+%define release 1
 %else
 # Old distros
 %define subrel 2
@@ -47,7 +47,6 @@ Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
-BuildRequires:	sqlite3-devel >= 3.7.1
 Requires:	%{nss_libname} >= 2:%{nss_version}
 BuildRequires:  nspr-devel >= 2:4.8.8
 BuildRequires:  nss-devel >= 2:3.13.1
@@ -56,8 +55,6 @@ BuildRequires:	sqlite3-devel >= 3.7.7.1
 BuildRequires:	libproxy-devel >= 0.4.4
 BuildRequires:	libalsa-devel
 BuildRequires:	libiw-devel
-BuildRequires:	libevent-devel >= 1.4.7
-BuildRequires:	libvpx-devel >= 0.9.7
 BuildRequires:	unzip
 BuildRequires:	zip
 #(tpg) older versions doesn't support apng extension
@@ -75,6 +72,8 @@ BuildRequires:	libgnomeui2-devel
 BuildRequires:	java-rpmbuild
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
+BuildRequires:	libevent-devel >= 1.4.7
+BuildRequires:	libvpx-devel >= 0.9.7
 %if %mdkversion >= 201100
 BuildRequires:	cairo-devel >= 1.10
 %endif
@@ -83,8 +82,8 @@ BuildRequires:	mesagl-devel
 Provides:	webclient
 #Requires:	indexhtml
 Requires:       xdg-utils
-%define ff_deps myspell-en_US nspluginwrapper
-Suggests:	%{ff_deps}
+Suggests:	ff_deps myspell-en_US nspluginwrapper
+BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
 %description
 Mozilla Firefox is a web browser
@@ -104,6 +103,7 @@ Files and macros mainly for building Firefox extensions.
 %patch2 -p1 -b .vendor
 %patch3 -p1 -b .defaultbrowser
 %patch6 -p1 -b .wintitle
+
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
 # %%patch4 -p1 -b .kde
@@ -125,8 +125,8 @@ export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
-mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
-mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
+#mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 ac_add_options --sysconfdir="%{_sysconfdir}"
@@ -148,11 +148,10 @@ ac_add_options --with-system-bz2
 ac_add_options --enable-system-sqlite
 ac_add_options --disable-installer
 ac_add_options --disable-updater
+ac_add_options --with-pthreads
 ac_add_options --disable-tests
 ac_add_options --disable-debug
 ac_add_options --enable-strip
-#ac_add_options --enable-chrome-format=jar
-#ac_add_options --enable-update-channel=beta
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 %if %mdkversion >= 201100
@@ -162,22 +161,45 @@ ac_add_options --disable-system-cairo
 %endif
 ac_add_options --with-distribution-id=com.mandriva
 ac_add_options --disable-crashreporter
-ac_add_options --enable-optimize="%{optflags}"
+ac_add_options --enable-optimize
 ac_add_options --disable-cpp-exceptions
 EOF
 
-make -f client.mk build
+# Mozilla builds with -Wall with exception of a few warnings which show up
+# everywhere in the code; so, don't override that.
+#
+# Disable C++ exceptions since Mozilla code is not exception-safe
+#
+MOZ_OPT_FLAGS=$(echo $RPM_OPT_FLAGS | sed -e 's/-Wall//' -e 's/-fexceptions/-fno-exceptions/g')
+export CFLAGS=$MOZ_OPT_FLAGS
+export CXXFLAGS=$MOZ_OPT_FLAGS
+export PREFIX="%{_prefix}"
+export LIBDIR="%{_libdir}"
+
+MOZ_SMP_FLAGS=-j1
+# On x86 architectures, Mozilla can build up to 4 jobs at once in parallel,
+# however builds tend to fail on other arches when building in parallel.
+%ifarch %{ix86} x86_64
+[ -z "$RPM_BUILD_NCPUS" ] && \
+     RPM_BUILD_NCPUS="`/usr/bin/getconf _NPROCESSORS_ONLN`"
+[ "$RPM_BUILD_NCPUS" -ge 2 ] && MOZ_SMP_FLAGS=-j2
+[ "$RPM_BUILD_NCPUS" -ge 4 ] && MOZ_SMP_FLAGS=-j4
+%endif
+
+export LDFLAGS="%{ldflags}"
+make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS"
 
 %install
 
-make -C %{_builddir}/obj/browser/installer STRIP=/bin/true
+%makeinstall_std STRIP=/bin/true
 
-# Copy files to buildroot
-%{__mkdir_p} %{buildroot}%{mozillalibdir}
-cp -rf %{_builddir}/obj/dist/firefox/* %{buildroot}%{mozillalibdir}
+%{__mkdir_p} %{buildroot}%{_bindir}
+ln -snf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
 
-%{__mkdir_p}  %{buildroot}%{_bindir}
-ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
+# don't package two identical binaries
+pushd %{buildroot}%{mozillalibdir}
+    ln -snf firefox-bin firefox
+popd
 
 # Create an own %_libdir/mozilla/plugins
 %{__mkdir_p} %{buildroot}%{_libdir}/mozilla/plugins
@@ -207,14 +229,13 @@ user_pref("browser.search.order.3","Google");
 user_pref("browser.search.order.4","Yahoo");
 user_pref("browser.EULA.override", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
-user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
 user_pref("browser.ctrlTab.previews", true);
 user_pref("browser.tabs.insertRelatedAfterCurrent", false);
 user_pref("app.update.auto", false);
 user_pref("app.update.enabled", false);
 user_pref("app.update.autoInstallEnabled", false);
 user_pref("security.ssl.require_safe_negotiation", false);
-user_pref("browser.startup.homepage","file:///usr/share/doc/HTML/index.html");
+user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
 EOF
 
 # files in this directory are read on every startup, and can change/add
@@ -228,8 +249,25 @@ EOF
 # or in toolkit/mozapps/extensions/AddonManager.jsm
 # we also need to disable the "disable addon selection dialog"
 cat << EOF > %{buildroot}%{mozillalibdir}/defaults/pref/mandriva.js
-pref("extensions.autoDisableScopes", 0);
+pref("app.update.auto", false);
+pref("app.update.autoInstallEnabled", false);
+pref("app.update.enabled", false);
+pref("browser.backspace_action", 2);
+pref("browser.ctrlTab.previews", true);
+pref("browser.display.use_system_colors", true);
+pref("browser.download.folderList", 1);
+pref("browser.link.open_external", 3);
+pref("browser.search.order.1","Ask.com");
+pref("browser.search.order.2","Exalead");
+pref("browser.search.order.3","Google");
+pref("browser.search.order.4","Yahoo");
+pref("browser.search.selectedEngine","Ask.com");
+pref("browser.shell.checkDefaultBrowser", false);
+pref("browser.tabs.insertRelatedAfterCurrent", false);
+pref("dom.ipc.plugins.enabled.nswrapper*", false);
+pref("extensions.autoDisableScope", 0);
 pref("extensions.shownSelectionUI", true);
+pref("network.manage-offline-status", true);
 EOF
 
 # search engines
@@ -252,6 +290,11 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 %%firefox_extdir             %%(if [ "%%_target_cpu" = "noarch" ]; then echo %%{_datadir}/mozilla/extensions/%%{firefox_appid}; else echo %%{_libdir}/mozilla/extensions/%%{firefox_appid}; fi)
 FIN
 
+# the %%makeinstall_std macro also installs devel files that we don't need (yet?)
+rm -rf %{buildroot}%{_includedir}
+rm -rf %{buildroot}%{_libdir}/firefox-devel*
+rm -rf %{buildroot}%{_datadir}/idl
+
 %post
 unset DISPLAY
 if [ ! -r /etc/sysconfig/oem ]; then
@@ -267,7 +310,7 @@ fi
 %{_bindir}/firefox
 %{_iconsdir}/hicolor/*/apps/*.png
 %{_datadir}/applications/*.desktop
-%{_libdir}/%{name}-%{realver}/
+%{_libdir}/%{name}-%{realver}*
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
 
