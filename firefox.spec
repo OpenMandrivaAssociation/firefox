@@ -82,6 +82,8 @@ BuildRequires:	mesagl-devel
 Provides:	webclient
 #Requires:	indexhtml
 Requires:       xdg-utils
+# https://qa.mandriva.com/show_bug.cgi?id=65237
+Requires:       gtk2-modules
 Suggests:	ff_deps myspell-en_US nspluginwrapper
 BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
