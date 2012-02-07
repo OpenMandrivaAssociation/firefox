@@ -11,7 +11,7 @@
 %define release 1
 %else
 # Old distros
-%define subrel 2
+%define subrel 3
 %define release %mkrel 0
 %endif
 
@@ -164,6 +164,7 @@ ac_add_options --disable-system-cairo
 ac_add_options --with-distribution-id=com.mandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-optimize
+ac_add_options --enable-startup-notification
 ac_add_options --disable-cpp-exceptions
 EOF
 
@@ -172,9 +173,9 @@ EOF
 #
 # Disable C++ exceptions since Mozilla code is not exception-safe
 #
-MOZ_OPT_FLAGS=$(echo $RPM_OPT_FLAGS | sed -e 's/-Wall//' -e 's/-fexceptions/-fno-exceptions/g')
-export CFLAGS=$MOZ_OPT_FLAGS
-export CXXFLAGS=$MOZ_OPT_FLAGS
+MOZ_OPT_FLAGS=$(echo "$RPM_OPT_FLAGS" | sed -e 's/-Wall//' -e 's/-fexceptions/-fno-exceptions/g')
+export CFLAGS="$MOZ_OPT_FLAGS"
+export CXXFLAGS="$MOZ_OPT_FLAGS"
 export PREFIX="%{_prefix}"
 export LIBDIR="%{_libdir}"
 
@@ -189,7 +190,11 @@ MOZ_SMP_FLAGS=-j1
 %endif
 
 export LDFLAGS="%{ldflags}"
-make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS"
+# several modules in FF10 compile appending a MOZ_OPTIMIZE_FLAGS which, for Linux Firefox, is defined
+# in configure files as "-Os -freorder-blocks -$MOZ_OPTIMIZE_SIZE_TWEAK", thus overriding locally the optimization
+# levels of CFLAGS and CXXFLAGS.
+# We pass it as "-O2" (as -O2 also implies -freorder-blocks).
+make -f client.mk build MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS" MOZ_OPTIMIZE_FLAGS="-O2"
 
 %install
 
