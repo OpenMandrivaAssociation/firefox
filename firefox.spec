@@ -66,7 +66,11 @@ BuildRequires:	python
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
 BuildRequires:	doxygen
+%if %mdkversion >= 201200
 BuildRequires:	gnome-vfs2-devel
+%else
+BuildRequires:	libgnome-vfs2-devel
+%endif
 BuildRequires:	libgnome2-devel
 BuildRequires:	libgnomeui2-devel
 BuildRequires:	java-rpmbuild
@@ -79,6 +83,7 @@ BuildRequires:	cairo-devel >= 1.10
 %endif
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	mesagl-devel
+BuildRequires:	startup-notification-devel >= 0.8
 Provides:	webclient
 #Requires:	indexhtml
 Requires:       xdg-utils
