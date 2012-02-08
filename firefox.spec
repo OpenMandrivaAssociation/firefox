@@ -8,10 +8,10 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 1
+%define release 2
 %else
 # Old distros
-%define subrel 3
+%define subrel 4
 %define release %mkrel 0
 %endif
 
@@ -45,6 +45,7 @@ Patch41:	mozilla-kde.patch
 # the default web browser" is used fix mdv bug#58784
 Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
+Patch7:		firefox-10.0-no_optimizarion_override.diff
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{nss_libname} >= 2:%{nss_version}
@@ -112,6 +113,7 @@ Files and macros mainly for building Firefox extensions.
 %patch2 -p1 -b .vendor
 %patch3 -p1 -b .defaultbrowser
 %patch6 -p1 -b .wintitle
+%patch7 -p0 -b .no_optimizarion_override
 
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
@@ -197,11 +199,7 @@ MOZ_SMP_FLAGS=-j1
 %endif
 
 export LDFLAGS="%{ldflags}"
-# several modules in FF10 compile appending a MOZ_OPTIMIZE_FLAGS which, for Linux Firefox, is defined
-# in configure files as "-Os -freorder-blocks -$MOZ_OPTIMIZE_SIZE_TWEAK", thus overriding locally the optimization
-# levels of CFLAGS and CXXFLAGS.
-# We pass it as "-O2" (as -O2 also implies -freorder-blocks).
-make -f client.mk build MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS" MOZ_OPTIMIZE_FLAGS="-O2"
+make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS"
 
 %install
 
