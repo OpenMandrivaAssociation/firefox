@@ -8,10 +8,10 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 2
+%define release 3
 %else
 # Old distros
-%define subrel 4
+%define subrel 5
 %define release %mkrel 0
 %endif
 
@@ -88,7 +88,7 @@ BuildRequires:	startup-notification-devel >= 0.8
 Provides:	webclient
 #Requires:	indexhtml
 Requires:       xdg-utils
-%if %mdkversion >= 201100
+%if %mdkversion >= 201200
 # https://qa.mandriva.com/show_bug.cgi?id=65237
 Requires:       gtk2-modules
 %endif
