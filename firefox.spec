@@ -1,5 +1,5 @@
 %define major 10
-%define realver %{major}.0
+%define realver %{major}.0.1
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -8,10 +8,10 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 3
+%define release 1
 %else
 # Old distros
-%define subrel 5
+%define subrel 1
 %define release %mkrel 0
 %endif
 
