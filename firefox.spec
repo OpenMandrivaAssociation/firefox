@@ -50,6 +50,7 @@ Patch8:		firefox-10.0.2-libvpx-1.0.0.diff
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{nss_libname} >= 2:%{nss_version}
+BuildRequires:	autoconf2.1
 BuildRequires:  nspr-devel >= 2:4.8.8
 BuildRequires:  nss-devel >= 2:3.13.1
 BuildRequires:  nss-static-devel >= 2:3.13.1
