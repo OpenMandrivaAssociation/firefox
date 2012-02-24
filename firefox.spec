@@ -46,6 +46,7 @@ Patch41:	mozilla-kde.patch
 Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
 Patch7:		firefox-10.0-no_optimizarion_override.diff
+Patch8:		firefox-10.0.2-libvpx-1.0.0.diff
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{nss_libname} >= 2:%{nss_version}
@@ -114,6 +115,7 @@ Files and macros mainly for building Firefox extensions.
 %patch3 -p1 -b .defaultbrowser
 %patch6 -p1 -b .wintitle
 %patch7 -p0 -b .no_optimizarion_override
+%patch8 -p0 -b .libvpx-1.0.0
 
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
