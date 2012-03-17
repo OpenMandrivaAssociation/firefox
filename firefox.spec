@@ -1,5 +1,5 @@
-%define major 10
-%define realver %{major}.0.2
+%define major 11
+%define realver %{major}.0
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 2
+%define release 1
 %else
 # Old distros
 %define subrel 1
@@ -51,9 +51,9 @@ BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{nss_libname} >= 2:%{nss_version}
 BuildRequires:	autoconf2.1
-BuildRequires:  nspr-devel >= 2:4.8.8
-BuildRequires:  nss-devel >= 2:3.13.1
-BuildRequires:  nss-static-devel >= 2:3.13.1
+BuildRequires:  nspr-devel >= 2:4.9.0
+BuildRequires:  nss-devel >= 2:3.13.2
+BuildRequires:  nss-static-devel >= 2:3.13.2
 BuildRequires:	sqlite3-devel >= 3.7.7.1
 BuildRequires:	libproxy-devel >= 0.4.4
 BuildRequires:	libalsa-devel
@@ -116,7 +116,10 @@ Files and macros mainly for building Firefox extensions.
 %patch3 -p1 -b .defaultbrowser
 %patch6 -p1 -b .wintitle
 %patch7 -p0 -b .no_optimizarion_override
+
+%if %mdkversion >= 201200
 %patch8 -p0 -b .libvpx-1.0.0
+%endif
 
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
