@@ -1,4 +1,4 @@
-%define major 11
+%define major 12
 %define realver %{major}.0
 
 # (tpg) MOZILLA_FIVE_HOME
@@ -54,7 +54,7 @@ BuildRequires:	autoconf2.1
 BuildRequires:  nspr-devel >= 2:4.9.0
 BuildRequires:  nss-devel >= 2:3.13.2
 BuildRequires:  nss-static-devel >= 2:3.13.2
-BuildRequires:	sqlite3-devel >= 3.7.7.1
+BuildRequires:	sqlite3-devel >= 3.7.10
 BuildRequires:	libproxy-devel >= 0.4.4
 BuildRequires:	libalsa-devel
 BuildRequires:	libiw-devel
@@ -80,7 +80,7 @@ BuildRequires:	java-rpmbuild
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
 BuildRequires:	libevent-devel >= 1.4.7
-BuildRequires:	libvpx-devel >= 0.9.7
+BuildRequires:	libvpx-devel >= 1.0.0
 %if %mdkversion >= 201100
 BuildRequires:	cairo-devel >= 1.10
 %endif
@@ -188,7 +188,11 @@ EOF
 #
 # Disable C++ exceptions since Mozilla code is not exception-safe
 #
+%ifarch i686
+MOZ_OPT_FLAGS=$(echo "$RPM_OPT_FLAGS -march=i686 -msse -msse2 -mfpmath=sse" | sed -e 's/-Wall//' -e 's/-fexceptions/-fno-exceptions/g' -e 's/-O2/-O3/g')
+%else
 MOZ_OPT_FLAGS=$(echo "$RPM_OPT_FLAGS" | sed -e 's/-Wall//' -e 's/-fexceptions/-fno-exceptions/g')
+%endif
 export CFLAGS="$MOZ_OPT_FLAGS"
 export CXXFLAGS="$MOZ_OPT_FLAGS"
 export PREFIX="%{_prefix}"
@@ -205,11 +209,19 @@ MOZ_SMP_FLAGS=-j1
 %endif
 
 export LDFLAGS="%{ldflags}"
+
+%ifarch i686
+make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS" MOZ_OPTIMIZE_FLAGS="-O3"
+%else
 make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS"
+%endif
 
 %install
-
+%if %mdkversion <= 201020
+%makeinstall_std STRIP=/bin/strip
+%else
 %makeinstall_std STRIP=/bin/true
+%endif
 
 %{__mkdir_p} %{buildroot}%{_bindir}
 ln -snf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
@@ -334,3 +346,4 @@ fi
 
 %files devel
 %{_sys_macros_dir}/%{name}.macros
+
