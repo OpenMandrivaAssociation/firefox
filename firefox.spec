@@ -46,47 +46,49 @@ Patch41:	mozilla-kde.patch
 Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
 Patch7:		firefox-10.0-no_optimizarion_override.diff
-Patch8:		firefox-10.0.2-libvpx-1.0.0.diff
-BuildRequires:	gtk+2-devel
-Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
-Requires:	%{nss_libname} >= 2:%{nss_version}
-BuildRequires:	autoconf2.1
-BuildRequires:  nspr-devel >= 2:4.9.0
-BuildRequires:  nss-devel >= 2:3.13.2
-BuildRequires:  nss-static-devel >= 2:3.13.2
-BuildRequires:	sqlite3-devel >= 3.7.10
-BuildRequires:	libproxy-devel >= 0.4.4
-BuildRequires:	libalsa-devel
-BuildRequires:	libiw-devel
-BuildRequires:	unzip
-BuildRequires:	zip
-#(tpg) older versions doesn't support apng extension
-%if %mdkversion >= 201101
-BuildRequires:	libpng-devel >= 1.4.8
-%endif
-BuildRequires:	makedepend
-BuildRequires:	python
-BuildRequires:	valgrind
-BuildRequires:	rootcerts
-BuildRequires:	doxygen
-%if %mdkversion >= 201200
-BuildRequires:	gnome-vfs2-devel
-%else
-BuildRequires:	libgnome-vfs2-devel
-%endif
-BuildRequires:	libgnome2-devel
-BuildRequires:	libgnomeui2-devel
-BuildRequires:	java-rpmbuild
+# https://bugzilla.mozilla.org/show_bug.cgi?id=722975
+Patch8:         firefox_add_ifdefs_to_gfx_thebes_gfxPlatform.cpp.patch
+
+BuildRequires:  doxygen
+BuildRequires:  java-rpmbuild
+BuildRequires:  makedepend
+BuildRequires:  valgrind
+BuildRequires:  python
+BuildRequires:  rootcerts
+BuildRequires:  unzip
 BuildRequires:	wget
-BuildRequires:	libnotify-devel
-BuildRequires:	libevent-devel >= 1.4.7
-BuildRequires:	libvpx-devel >= 1.0.0
-%if %mdkversion >= 201100
-BuildRequires:	cairo-devel >= 1.10
+BuildRequires:  yasm >= 1.0.1
+BuildRequires:  zip
+BuildRequires:  bzip2-devel
+BuildRequires:  nss-static-devel >= 2:3.13.3
+BuildRequires:  pkgconfig(alsa)
+BuildRequires:  pkgconfig(dbus-glib-1)
+BuildRequires:  pkgconfig(gl)
+BuildRequires:  pkgconfig(gtk+-2.0)
+BuildRequires:  pkgconfig(libevent) >= 1.4.7
+BuildRequires:  pkgconfig(libgnomeui-2.0)
+BuildRequires:  pkgconfig(libIDL-2.0)
+BuildRequires:  pkgconfig(libnotify)
+BuildRequires:  pkgconfig(libproxy-1.0) >= 0.4.4
+BuildRequires:  pkgconfig(libstartup-notification-1.0)
+BuildRequires:  pkgconfig(nspr)
+BuildRequires:  pkgconfig(nss)
+BuildRequires:  pkgconfig(pango)
+BuildRequires:  pkgconfig(sqlite3) >= 3.7.7.1
+BuildRequires:  pkgconfig(vpx) >= 0.9.7
+BuildRequires:  pkgconfig(xt)
+BuildRequires:  pkgconfig(zlib)
+%if %_use_syshunspell
+BuildRequires:  pkgconfig(hunspell)
 %endif
-BuildRequires:	yasm >= 1.0.1
-BuildRequires:	mesagl-devel
-BuildRequires:	startup-notification-devel >= 0.8
+%if %mdkversion > 201100
+BuildRequires:  pkgconfig(cairo) >= 1.10
+BuildRequires:  pkgconfig(libpng) >= 1.4.8
+BuildRequires:  pkgconfig(valgrind)
+%else
+BuildRequires:  gnome-vfs2-devel
+%endif
+
 Provides:	webclient
 #Requires:	indexhtml
 Requires:       xdg-utils
@@ -94,8 +96,10 @@ Requires:       xdg-utils
 # https://qa.mandriva.com/show_bug.cgi?id=65237
 Requires:       gtk2-modules
 %endif
-Suggests:	ff_deps myspell-en_US nspluginwrapper
-BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
+Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
+Requires:	%{nss_libname} >= 2:%{nss_version}
+Suggests:	ff_deps myspell-en_US
+Suggests:	nspluginwrapper
 
 %description
 Mozilla Firefox is a web browser
@@ -116,10 +120,7 @@ Files and macros mainly for building Firefox extensions.
 %patch3 -p1 -b .defaultbrowser
 %patch6 -p1 -b .wintitle
 %patch7 -p0 -b .no_optimizarion_override
-
-%if %mdkversion >= 201200
-%patch8 -p0 -b .libvpx-1.0.0
-%endif
+%patch8 -p1
 
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
@@ -156,10 +157,15 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-libvpx
-%if %mdkversion >= 201101
+%if %mdkversion >= 201100
 ac_add_options --with-system-png
+ac_add_options --enable-system-cairo
+ac_add_options --enable-gio
+ac_add_options --disable-gnomevfs
 %else
 ac_add_options --disable-system-png
+ac_add_options --disable-system-cairo
+ac_add_options --enable-gnomevfs
 %endif
 ac_add_options --with-system-bz2
 ac_add_options --enable-system-sqlite
@@ -171,11 +177,6 @@ ac_add_options --disable-debug
 ac_add_options --enable-strip
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
-%if %mdkversion >= 201100
-ac_add_options --enable-system-cairo
-%else
-ac_add_options --disable-system-cairo
-%endif
 ac_add_options --with-distribution-id=com.mandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-optimize
