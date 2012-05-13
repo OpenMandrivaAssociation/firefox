@@ -62,6 +62,7 @@ BuildRequires:	wget
 BuildRequires:  yasm >= 1.0.1
 BuildRequires:  zip
 BuildRequires:  bzip2-devel
+BuildRequires:  libiw-devel
 BuildRequires:  nss-static-devel >= 2:3.13.3
 BuildRequires:  pkgconfig(alsa)
 BuildRequires:  pkgconfig(dbus-glib-1)
