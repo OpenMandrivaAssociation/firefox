@@ -6,6 +6,8 @@
 %define pluginsdir %{_libdir}/mozilla/plugins
 %define firefox_channel release
 
+%define _use_syshunspell 0
+
 %if %mandriva_branch == Cooker
 # Cooker
 %define release 1
@@ -168,6 +170,9 @@ ac_add_options --disable-system-cairo
 ac_add_options --enable-gnomevfs
 %endif
 ac_add_options --with-system-bz2
+%if %_use_syshunspell
+ac_add_options --enable-system-hunspell
+%endif
 ac_add_options --enable-system-sqlite
 ac_add_options --disable-installer
 ac_add_options --disable-updater
@@ -250,6 +255,12 @@ done
 rm -f %{buildroot}%{mozillalibdir}/README.txt
 rm -f %{buildroot}%{mozillalibdir}/removed-files
 rm -f %{buildroot}%{mozillalibdir}/precomplete
+
+%if %_use_syshunspell
+# Use the system hunspell dictionaries
+rm -rf %{buildroot}%{mozillalibdir}/dictionaries
+ln -s %{_datadir}/dict/mozilla %{buildroot}%{mozillalibdir}/dictionaries
+%endif
 
 install -D -m644 browser/app/profile/prefs.js %{buildroot}%{mozillalibdir}/defaults/profile/prefs.js
 cat << EOF >> %{buildroot}%{mozillalibdir}/defaults/profile/prefs.js
