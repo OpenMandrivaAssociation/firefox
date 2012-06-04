@@ -333,6 +333,11 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 %%firefox_extdir             %%(if [ "%%_target_cpu" = "noarch" ]; then echo %%{_datadir}/mozilla/extensions/%%{firefox_appid}; else echo %%{_libdir}/mozilla/extensions/%%{firefox_appid}; fi)
 FIN
 
+# global configuration file
+mkdir -p %{buildroot}%{_sysconfdir}/%{name}
+touch %{buildroot}%{_sysconfdir}/%{name}/all.js
+ln -s %{buildroot}%{_sysconfdir}/%{name}/all.js %{buildroot}%{mozillalibdir}/defaults/pref/all.js
+
 # the %%makeinstall_std macro also installs devel files that we don't need (yet?)
 rm -rf %{buildroot}%{_includedir}
 rm -rf %{buildroot}%{_libdir}/firefox-devel*
@@ -356,6 +361,7 @@ fi
 %{_libdir}/%{name}-%{realver}*
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
+%config(noreplace) %{_sysconfdir}/%{name}/all.js
 
 %files devel
 %{_sys_macros_dir}/%{name}.macros
