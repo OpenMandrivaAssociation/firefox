@@ -47,6 +47,7 @@ Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
 Patch7:		firefox-10.0-no_optimizarion_override.diff
 Patch9:		firefox-13.0-nspr_header_fix.diff
+Patch10:	firefox-13-fix-cairo-build.patch
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{nss_libname} >= 2:%{nss_version}
@@ -123,6 +124,7 @@ perl -pi -e "s|VPX_CODEC_USE_INPUT_FRAGMENTS|VPX_CODEC_USE_INPUT_PARTITION|g" co
 %endif
 
 %patch9 -p0
+%patch10 -p1
 
 ## KDE INTEGRATION
 # copy current files and patch them later to keep them in sync
