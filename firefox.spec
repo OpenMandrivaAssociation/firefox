@@ -46,7 +46,6 @@ Patch41:	mozilla-kde.patch
 Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
 Patch7:		firefox-10.0-no_optimizarion_override.diff
-Patch8:		firefox-10.0.2-libvpx-1.0.0.diff
 Patch9:		firefox-13.0-nspr_header_fix.diff
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
@@ -118,9 +117,7 @@ Files and macros mainly for building Firefox extensions.
 %patch6 -p1 -b .wintitle
 %patch7 -p0 -b .no_optimizarion_override
 
-%if %mdkversion >= 201200
-%patch8 -p0 -b .libvpx-1.0.0
-%else
+%if %mdkversion < 201200
 # the bundled libvpx is 0.9.2 + mozilla patches. this is fixed in 0.9.7
 perl -pi -e "s|VPX_CODEC_USE_INPUT_FRAGMENTS|VPX_CODEC_USE_INPUT_PARTITION|g" configure*
 %endif
