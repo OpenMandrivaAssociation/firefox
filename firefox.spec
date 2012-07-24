@@ -1,4 +1,4 @@
-%define major 13
+%define major 14
 %define realver %{major}.0.1
 
 # (tpg) MOZILLA_FIVE_HOME
@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 2
+%define release 1
 %else
 # Old distros
 %define subrel 1
@@ -121,6 +121,7 @@ Files and macros mainly for building Firefox extensions.
 %if %mdkversion < 201200
 # the bundled libvpx is 0.9.2 + mozilla patches. this is fixed in 0.9.7
 perl -pi -e "s|VPX_CODEC_USE_INPUT_FRAGMENTS|VPX_CODEC_USE_INPUT_PARTITION|g" configure*
+perl -pi -e "s|vpx >= 1.0.0|vpx >= 0.9.7|g" configure*
 %endif
 
 %patch9 -p0
@@ -218,16 +219,16 @@ export LDFLAGS="%{ldflags}"
 make -f client.mk clean
 
 %ifarch i686
-make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS" MOZ_OPTIMIZE_FLAGS="-O3"
+make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS" MOZ_OPTIMIZE_FLAGS="-O3" MOZ_PKG_FATAL_WARNINGS=0
 %else
-make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS"
+make -f client.mk build STRIP="/bin/true" MOZ_MAKE_FLAGS="$MOZ_SMP_FLAGS" MOZ_PKG_FATAL_WARNINGS=0
 %endif
 
 %install
 %if %mdkversion <= 201020
-%makeinstall_std -C objdir STRIP=/bin/strip
+%makeinstall_std -C objdir STRIP=/bin/strip MOZ_PKG_FATAL_WARNINGS=0
 %else
-%makeinstall_std -C objdir STRIP=/bin/true
+%makeinstall_std -C objdir STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 %endif
 
 %{__mkdir_p} %{buildroot}%{_bindir}
