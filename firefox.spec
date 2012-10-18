@@ -1,5 +1,5 @@
-%define major 15
-%define realver %{major}.0
+%define major 16
+%define realver %{major}.0.1
 
 # (tpg) MOZILLA_FIVE_HOME
 %define mozillalibdir %{_libdir}/%{name}-%{realver}
