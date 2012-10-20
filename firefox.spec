@@ -51,7 +51,7 @@ BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{nss_libname} >= 2:%{nss_version}
 BuildRequires:	autoconf2.1
-BuildRequires:  nspr-devel >= 2:4.9.0
+BuildRequires:  nspr-devel >= 2:4.9.2
 BuildRequires:  nss-devel >= 2:3.13.2
 BuildRequires:  nss-static-devel >= 2:3.13.2
 BuildRequires:	sqlite3-devel >= 3.7.10
