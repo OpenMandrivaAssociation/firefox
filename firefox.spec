@@ -67,6 +67,7 @@ BuildRequires:	libpng-devel >= 1.4.8
 BuildRequires:	makedepend
 BuildRequires:	python
 BuildRequires:  python-distribute
+BuildRequires:  python-virtualenv
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
 BuildRequires:	doxygen
