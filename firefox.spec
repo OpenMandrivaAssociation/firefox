@@ -47,6 +47,8 @@ Patch5:		firefox-3.6.3-appname.patch
 Patch6:		firefox-5.0-asciidel.patch
 Patch7:		firefox-10.0-no_optimizarion_override.diff
 Patch10:	firefox-13-fix-cairo-build.patch
+Patch36:	iceape-2.12-system-virtualenv.patch
+
 BuildRequires:	gtk+2-devel
 Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{nss_libname} >= 2:%{nss_version}
@@ -118,6 +120,7 @@ Files and macros mainly for building Firefox extensions.
 %patch3 -p1 -b .defaultbrowser
 %patch6 -p1 -b .wintitle
 %patch7 -p0 -b .no_optimizarion_override
+%patch36 -p2 -b .system-virtualenv
 
 %if %mdkversion < 201200
 # the bundled libvpx is 0.9.2 + mozilla patches. this is fixed in 0.9.7
