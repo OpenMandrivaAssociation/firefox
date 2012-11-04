@@ -8,7 +8,7 @@
 
 %if %mandriva_branch == Cooker
 # Cooker
-%define release 1
+%define release 2
 %else
 # Old distros
 %define subrel 1
@@ -50,15 +50,13 @@ Patch10:	firefox-13-fix-cairo-build.patch
 Patch36:	iceape-2.12-system-virtualenv.patch
 Patch37:	firefox-16.0.1-bytecode_fix.patch
 BuildRequires:	gtk+2-devel
-Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
-Requires:	%{nss_libname} >= 2:%{nss_version}
 BuildRequires:	autoconf2.1
-BuildRequires:  nspr-devel >= 2:4.9.2
-BuildRequires:  nss-devel >= 2:3.13.2
-BuildRequires:  nss-static-devel >= 2:3.13.2
+BuildRequires:	nspr-devel >= 2:4.9.2
+BuildRequires:	nss-devel >= 2:3.13.2
+BuildRequires:	nss-static-devel >= 2:3.13.2
 BuildRequires:	sqlite3-devel >= 3.7.10
-BuildRequires:	libproxy-devel >= 0.4.4
-BuildRequires:	libalsa-devel
+BuildRequires:	pkgconfig(libproxy-1.0)
+BuildRequires:	pkgconfig(alsa)
 BuildRequires:	libiw-devel
 BuildRequires:	unzip
 BuildRequires:	zip
@@ -68,13 +66,13 @@ BuildRequires:	libpng-devel >= 1.4.8
 %endif
 BuildRequires:	makedepend
 BuildRequires:	python
-BuildRequires:  python-distribute
-BuildRequires:  python-virtualenv
+BuildRequires:	python-distribute
+BuildRequires:	python-virtualenv
 BuildRequires:	valgrind
 BuildRequires:	rootcerts
 BuildRequires:	doxygen
 %if %mdkversion >= 201200
-BuildRequires:	gnome-vfs2-devel
+#BuildRequires:	gnome-vfs2-devel
 %else
 BuildRequires:	libgnome-vfs2-devel
 %endif
@@ -88,27 +86,38 @@ BuildRequires:	libvpx-devel >= 0.9.7
 %if %mdkversion >= 201100
 BuildRequires:	cairo-devel >= 1.10
 %endif
+%if %mdkversion >= 201100
+BuildRequires:	gstreamer0.10-devel
+BuildRequires:	libgstreamer0.10-plugins-base-devel
+%endif
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	mesagl-devel
 BuildRequires:	startup-notification-devel >= 0.8
+BuildRequires:	libxscrnsaver-devel
+BuildRequires:	libxinerama-devel
+BuildRequires:	libxt-devel
+BuildRequires:	python-ply
+BuildRequires:	hunspell-devel
 Provides:	webclient
 #Requires:	indexhtml
-Requires:       xdg-utils
+Requires:	xdg-utils
 %if %mdkversion >= 201200
 # https://qa.mandriva.com/show_bug.cgi?id=65237
-Requires:       gtk2-modules
+Requires:	gtk2-modules
 %endif
+Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
+Requires:	%{nss_libname} >= 2:%{nss_version}
 Suggests:	ff_deps myspell-en_US nspluginwrapper
 BuildRoot:	%{_tmppath}/%{name}-%{version}-buildroot
 
 %description
 Mozilla Firefox is a web browser
 
-%package	devel
+%package devel
 Summary:	Development files for %{name}
 Group:		Development/Other
 
-%description	devel
+%description devel
 Files and macros mainly for building Firefox extensions.
 
 %prep
@@ -146,15 +155,21 @@ rm -rf browser/locales/en-US/profile/bookmarks.html
 touch browser/locales/en-US/profile/bookmarks.html
 
 %build
+#(tpg) do not use serverbuild or serverbuild_hardened macros
+# because compile will fail of missing -fPIC  :)
+%setup_compile_flags
+
 # (gmoro) please dont enable all options by hand
 # we need to trust firefox defaults
 export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
-#mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
-#mk_add_options MOZ_OBJDIR=@TOPSRCDIR@
+mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
 mk_add_options MOZ_OBJDIR=`pwd`/objdir
+ac_add_options --host=%{_host}
+ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 ac_add_options --sysconfdir="%{_sysconfdir}"
@@ -167,6 +182,16 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-libvpx
+ac_add_options --enable-system-pixman
+%if %mdkversion >= 201200
+ac_add_options --disable-gnomevfs
+ac_add_options --enable-gio
+%else
+ac_add_options --enable-gnomevfs
+%endif
+ac_add_options --enable-system-hunspell
+ac_add_options --with-system-libevent
+ac_add_options --with-system-ply
 %if %mdkversion >= 201101
 ac_add_options --with-system-png
 %else
@@ -192,6 +217,8 @@ ac_add_options --disable-crashreporter
 ac_add_options --enable-optimize
 ac_add_options --enable-startup-notification
 ac_add_options --disable-cpp-exceptions
+ac_add_options --enable-gstreamer
+ac_add_options --enable-system-ffi
 EOF
 
 # Mozilla builds with -Wall with exception of a few warnings which show up
@@ -219,7 +246,6 @@ MOZ_SMP_FLAGS=-j1
 [ "$RPM_BUILD_NCPUS" -ge 4 ] && MOZ_SMP_FLAGS=-j4
 %endif
 
-export LDFLAGS="%{ldflags}"
 make -f client.mk clean
 
 %ifarch i686
