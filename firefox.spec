@@ -96,7 +96,7 @@ BuildRequires:	startup-notification-devel >= 0.8
 BuildRequires:	libxscrnsaver-devel
 BuildRequires:	libxinerama-devel
 BuildRequires:	libxt-devel
-BuildRequires:	python-ply
+#BuildRequires:	python-ply
 BuildRequires:	hunspell-devel
 Provides:	webclient
 #Requires:	indexhtml
@@ -191,7 +191,7 @@ ac_add_options --enable-gnomevfs
 %endif
 ac_add_options --enable-system-hunspell
 ac_add_options --with-system-libevent
-ac_add_options --with-system-ply
+ac_add_options --without-system-ply
 %if %mdkversion >= 201101
 ac_add_options --with-system-png
 %else
