@@ -1,0 +1,44 @@
+--- a/toolkit/mozapps/installer/packager.mk
++++ b/toolkit/mozapps/installer/packager.mk
+@@ -928,17 +928,17 @@ ifdef INSTALL_SDK # Here comes the hard 
+ 	(cd $(DIST)/idl && tar $(TAR_CREATE_FLAGS) - .) | \
+ 	  (cd $(DESTDIR)$(idldir) && tar -xf -)
+ # SDK directory is the libs + a bunch of symlinks
+ 	$(NSINSTALL) -D $(DESTDIR)$(sdkdir)/sdk/lib
+ 	$(NSINSTALL) -D $(DESTDIR)$(sdkdir)/sdk/bin
+ 	if test -f $(DIST)/include/xpcom-config.h; then \
+ 	  $(SYSINSTALL) $(IFLAGS1) $(DIST)/include/xpcom-config.h $(DESTDIR)$(sdkdir); \
+ 	fi
+-	find $(DIST)/sdk -name "*.pyc" | xargs rm
++	find $(DIST)/sdk -name "*.pyc" | xargs rm -f
+ 	(cd $(DIST)/sdk/lib && tar $(TAR_CREATE_FLAGS) - .) | (cd $(DESTDIR)$(sdkdir)/sdk/lib && tar -xf -)
+ 	(cd $(DIST)/sdk/bin && tar $(TAR_CREATE_FLAGS) - .) | (cd $(DESTDIR)$(sdkdir)/sdk/bin && tar -xf -)
+ 	$(RM) -f $(DESTDIR)$(sdkdir)/lib $(DESTDIR)$(sdkdir)/bin $(DESTDIR)$(sdkdir)/include $(DESTDIR)$(sdkdir)/include $(DESTDIR)$(sdkdir)/sdk/idl $(DESTDIR)$(sdkdir)/idl
+ 	ln -s $(sdkdir)/sdk/lib $(DESTDIR)$(sdkdir)/lib
+ 	ln -s $(installdir) $(DESTDIR)$(sdkdir)/bin
+ 	ln -s $(includedir) $(DESTDIR)$(sdkdir)/include
+ 	ln -s $(idldir) $(DESTDIR)$(sdkdir)/idl
+ endif # INSTALL_SDK
+@@ -949,17 +949,17 @@ make-sdk:
+ 	$(RM) -rf $(DIST)/$(MOZ_APP_NAME)-sdk
+ 	$(NSINSTALL) -D $(DIST)/$(MOZ_APP_NAME)-sdk/bin
+ 	(cd $(DIST)/sdk-stage && tar $(TAR_CREATE_FLAGS) - .) | \
+ 	  (cd $(DIST)/$(MOZ_APP_NAME)-sdk/bin && tar -xf -)
+ 	$(NSINSTALL) -D $(DIST)/$(MOZ_APP_NAME)-sdk/host/bin
+ 	(cd $(DIST)/host/bin && tar $(TAR_CREATE_FLAGS) - .) | \
+ 	  (cd $(DIST)/$(MOZ_APP_NAME)-sdk/host/bin && tar -xf -)
+ 	$(NSINSTALL) -D $(DIST)/$(MOZ_APP_NAME)-sdk/sdk
+-	find $(DIST)/sdk -name "*.pyc" | xargs rm
++	find $(DIST)/sdk -name "*.pyc" | xargs rm -f
+ 	(cd $(DIST)/sdk && tar $(TAR_CREATE_FLAGS) - .) | \
+ 	  (cd $(DIST)/$(MOZ_APP_NAME)-sdk/sdk && tar -xf -)
+ 	$(NSINSTALL) -D $(DIST)/$(MOZ_APP_NAME)-sdk/include
+ 	(cd $(DIST)/include && tar $(TAR_CREATE_FLAGS) - .) | \
+ 	  (cd $(DIST)/$(MOZ_APP_NAME)-sdk/include && tar -xf -)
+ 	$(NSINSTALL) -D $(DIST)/$(MOZ_APP_NAME)-sdk/idl
+ 	(cd $(DIST)/idl && tar $(TAR_CREATE_FLAGS) - .) | \
+ 	  (cd $(DIST)/$(MOZ_APP_NAME)-sdk/idl && tar -xf -)
+
+
+
+
