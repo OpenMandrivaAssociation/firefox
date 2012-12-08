@@ -13,3 +13,4 @@ diff -up mozilla-release/browser/base/Makefile.in.fu mozilla-release/browser/bas
  DEFINES += \
  	-DMOZ_APP_VERSION=$(MOZ_APP_VERSION) \
 
+

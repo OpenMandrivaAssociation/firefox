@@ -1,0 +1,21 @@
+--- mozilla/netwerk/protocol/http/HttpChannelParent.cpp	2012-03-13 06:33:04.000000000 +0100
++++ mozilla/netwerk/protocol/http/HttpChannelParent.cpp-new	2012-03-27 15:47:38.000000000 +0200
+@@ -333,10 +333,17 @@ HttpChannelParent::RecvUpdateAssociatedC
+   return true;
+ }
+ 
+-// Bug 621446 investigation, we don't want conditional PR_Aborts bellow to be
++// Bug 621446 investigation, we don't want conditional PR_Aborts below to be
+ // merged to a single address.
++#ifdef _MSC_VER
+ #pragma warning(disable : 4068)
++#endif
++// Compiling with a version of GCC <= 4.4 fails with an internal compiler
++// error.
++#if !defined(__GNUC__) || \
++  (__GNUC__ >= 5) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
+ #pragma GCC optimize ("O0")
++#endif
+ 
+ bool
+ HttpChannelParent::RecvRedirect2Verify(const nsresult& result, 

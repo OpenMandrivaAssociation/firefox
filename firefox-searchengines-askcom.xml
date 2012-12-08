@@ -1,0 +1,11 @@
+<SearchPlugin xmlns="http://www.mozilla.org/2006/browser/search/" xmlns:os="http://a9.com/-/spec/opensearch/1.1/">
+<os:ShortName>Ask.com</os:ShortName>
+<os:Description>Get more with each search.</os:Description>
+<os:InputEncoding>UTF-8</os:InputEncoding>
+<os:Image width="16" height="16">data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAACMuAAAjLgAAAAAAAAAAAAD/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8fH5/5+f1v9pab7/QkKr/0JCqv9dXbT/h4fI/8fH6P//////////////////////////////////////s7Pg/xgYpv8GBqP/Bgaj/wYGof8GBp//Bgac/wYGlv8GBoz/MTGZ/6+v2v//////////////////////x8ft/wkJrv+Dg93/JSXH/wYGwf8GBr//BQW+/wUFuf8FBbT/BQWp/wUFnP8FBYv/QkKh/+3t+P///////////1lZzP8FBbv/wMDx/9DQ9v8FBdP/wMD0/6Gh7f/AwPL/goLk/yQkyP8zM8H/BASm/wQEk/8nJ5T/4eHy//////81NcT/BAS9/0ND2f///////////+/v/f+wsPP/kJDt///////v7/z/0ND1/6Gh5v+wsOT/AwOV/0FBoP//////TU3L/wQEvP8EBMv/wMD1/8DA9//Q0Pj/cnLq/2Fh6f//////r6/z////////////YmLY/wMDrP8DA4//nZ3R/5qa4v8EBLv/BATJ/0ND4f//////4OD7/0JC4//v7/3/sLD1/zEx5f///////////2Ji4/8EBMD/AwOk/0tLsP/8/P7/ODjJ/wQExv8EBNT/wMD3//////9DQ+n/goLw//////+BgfD/7+/9/9/f+//v7/3/FBTT/wMDs/81NbD//////9jY9P8bG8j/BATP/0ND4///////Q0Pq/wQE4/8EBOP/BATj/8DA+P+RkfP/U1Pr/zMz3f8DA7z/XFzG////////////3t73/zIy0v8EBNH/wMD1/wQE2v8EBNz/BATd/wQE3v+RkfH/wMD2/wQE2v8EBM//Bga+/83N7///////////////////////oKDp/1FR2v8EBMz/BATP/wQE0P8EBNH/YmLi//////8EBMv/Dw/G/6ys5//////////////////////////////////8/P7/vr7v/4aG4f9QUNb/Q0PU/0ND1P9fX9j/l5fk/+vr+f//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//8AAP//AAD//w==</os:Image>
+<UpdateInterval>7</UpdateInterval>
+<SearchForm>http://www.ask.com</SearchForm>
+<os:Url type="text/html" method="GET" template="http://www.ask.com/web?q={searchTerms}&amp;o=@DISTRO_VALUE@&amp;l=dis"></os:Url>
+<os:Url type="application/x-suggestions+json" method="GET" template="http://ss.ask.com/query?q={searchTerms}&amp;li=ff">
+</os:Url>
+</SearchPlugin>

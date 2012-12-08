@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+    <ShortName>Yahoo</ShortName>
+    <Tags>Bing</Tags>
+    <Description>Bing. Search by Microsoft.</Description>
+    <Contact>msosa@microsoft.com</Contact>
+    <InputEncoding>UTF-8</InputEncoding>
+    <SyndicationRight>limited</SyndicationRight>
+    <Image width="16" height="16" type="image/x-icon">http://www.yahoo.com/favicon.ico</Image>
+    <Url type="text/html" template="http://search.yahoo.com/search?q={searchTerms}&amp;form=OSDSRC"/>
+    <Url type="application/x-suggestions+json" template="http://api.yahoo.com/osjson.aspx?query={searchTerms}&amp;language={language}&amp;form=OSDJAS" />
+</OpenSearchDescription>

@@ -1,0 +1,12 @@
+<SearchPlugin xmlns="http://www.mozilla.org/2006/browser/search/" xmlns:os="http://a9.com/-/spec/opensearch/1.1/">
+<os:ShortName>Jamendo</os:ShortName>
+<os:Description>Jamendo Search</os:Description>
+<os:InputEncoding>ISO-8859-1</os:InputEncoding>
+<os:Image width="16" height="16">data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH1QYPDS8GqqPMwQAAAclJREFUeNpj/P//f+L68wvOP2YgBJKN5OYEGDA/1PdfcOYBw///BNH5Zx+efP7JyFC+GpeRTIyMbqriRtICLExMn37+fvLx+603n1kY/vzBpSHOVNFERujX339ff/0R52JT4Od0VRbFpyFMT/b4g9erzj/8/vsvHwerND+XojAPC8Pv37g0fPr28+nbz7eevf3/n4GBgeEKAwMDAwMzg4EXw79/WBEnK7O5gujnrz8fvv4IF2Ri+P0bF9pw+vavX79N5YR4mRnggsyM2q6M//5hRb9//2ZiYHTXlWNnZLx4/yVEkJlR04nh31/s6O/fJ28+akgJaUgJ3nz8+t2nrwz//jIzqjlAHDcnw7M7zlGUm/3Wkzdfvn1n+PuP4d+/P7///Pn9R1dOjJ2J8dydZwz//iFC6dGrD6x6ChnuRuluRq8/fb3x5M2cneduPX2rJi4gwc/Fxw5VycyoaA2x4cjlBzcfvxbk4RQT5JEQ5FEUF2RjZlIQ49eSE7n3/O22kzdevPnI8O8fI6NzGWYMRDoZGKtKf/j649+//8/eftp15tazt58gUoxxzUsW7znHQBxIcDNmvrBv7b0nby7dfkIwtSZ4mM6rigIAJxY/knh2MaAAAAAASUVORK5CYII=</os:Image>
+<UpdateInterval>7</UpdateInterval>
+<UpdateUrl>http://mycroft.mozdev.org/update.php/id0/jamendo.src</UpdateUrl>
+<IconUpdateUrl>http://mycroft.mozdev.org/update.php/id0/jamendo.png</IconUpdateUrl>
+<SearchForm>http://www.jamendo.com/index.php</SearchForm>
+<os:Url type="text/html" method="GET" template="http://www.jamendo.com/index.php?p=search&amp;search_string={searchTerms}&amp;sourceid=mozilla-search">
+</os:Url>
+</SearchPlugin>

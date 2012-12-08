@@ -1,0 +1,11 @@
+--- gfx/2d/Logging.h.str	2011-09-27 03:53:32.000000000 +0200
++++ gfx/2d/Logging.h	2011-09-27 03:53:43.000000000 +0200
+@@ -87,7 +87,7 @@
+   }
+ #else
+   if (aLevel >= sGfxLogLevel) {
+-    printf(aString.c_str());
++    printf("%s",aString.c_str());
+   }
+ #endif
+ }
