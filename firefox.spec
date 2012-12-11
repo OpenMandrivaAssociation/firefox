@@ -65,8 +65,7 @@ Patch4:		firefox-17.0-nss-binary.patch
 Patch5:         firefox-6.0-appname.patch
 Patch6:		firefox-7.0-fix-str-fmt.patch
 Patch7:		mozilla-firefox-run-mozilla.patch
-Patch8:		firefox-17.0-disable-check-default-browser.patch
-Patch9:         firefox-5.0-asciidel.patch
+Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
 Patch11:	firefox-17.0-kde.patch
@@ -177,7 +176,6 @@ Files and macros mainly for building Firefox extensions.
 %patch5 -p1 -b .appname
 # It was disabled because firefox3 hangs when using soundwrapper
 #patch7 -p1
-%patch8 -p1 -b .disable-software-update
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
 %patch14 -p1
@@ -329,6 +327,7 @@ user_pref("dom.ipc.plugins.enabled.nswrapper*", false);
 user_pref("extensions.autoDisableScopes", 0);
 user_pref("extensions.shownSelectionUI", true);
 user_pref("network.manage-offline-status", true);
+user_pref("browser.shell.checkDefaultBrowser", false);
 EOF
 
 # display icon for Firefox button
