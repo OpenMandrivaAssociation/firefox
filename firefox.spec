@@ -106,6 +106,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	wget
 BuildRequires:	libnotify-devel
+BuildRequires:	libevent-devel
 BuildRequires:	cairo-devel >= 1.10
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	libvpx-devel
