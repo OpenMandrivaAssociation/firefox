@@ -29,17 +29,13 @@
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
 %define nspr_version %(pkg-config --modversion nspr &>/dev/null && pkg-config --modversion nspr 2>/dev/null |sed -e 's!\.0!!' || echo 0)
 
-%define _use_syshunspell 0
-
-%define release 1
-
 %define update_channel  release
 
 Summary:	Next generation web browser
 Name:		firefox
 Version:	%{major}
 Epoch:		%{ff_epoch}
-Release:	%{release}
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -57,12 +53,12 @@ Source10:	firefox-searchengines-yandex.xml
 Source11:	firefox-searchengines-google.xml
 Source12:	firefox-searchengines-bing.xml
 Patch1:		firefox-6.0-lang.patch
-Patch2:         firefox-vendor.patch
+Patch2:		firefox-vendor.patch
 Patch3:		mozilla-firefox-1.5.0.6-systemproxy.patch
 Patch4:		firefox-17.0-nss-binary.patch
 # (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
 # the default web browser" is used fix mdv bug#58784
-Patch5:         firefox-6.0-appname.patch
+Patch5:		firefox-6.0-appname.patch
 Patch6:		firefox-7.0-fix-str-fmt.patch
 Patch7:		mozilla-firefox-run-mozilla.patch
 Patch9:		firefox-5.0-asciidel.patch
@@ -103,9 +99,7 @@ BuildRequires:	libffi-devel
 %endif
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	libxt-devel
-%if %_use_syshunspell
 BuildRequires:	hunspell-devel
-%endif
 BuildRequires:	doxygen
 # BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
 BuildRequires:	pkgconfig(libproxy-1.0)
@@ -122,6 +116,7 @@ BuildRequires:	gstreamer0.10-devel
 BuildRequires:	libgstreamer0.10-plugins-base-devel
 BuildRequires:	pkgconfig(opus)
 
+
 %if 0%{?prel}
 Provides:	%{name} = %{epoch}:%{realver}-0.%{prel}
 %else
@@ -134,7 +129,7 @@ Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
 Requires:	%{mklibname nss 3} >= 2:%{nss_version}
 Requires:	%{mklibname nspr 4} >= 2:%{nspr_version}
 Requires:	indexhtml
-Requires:       xdg-utils
+Requires:	xdg-utils
 # fixes bug #42096
 Requires:	mailcap
 Suggests:	hunspell-en
@@ -203,6 +198,10 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
+#(tpg) do not use serverbuild or serverbuild_hardened macros
+# because compile will fail of missing -fPIC  :)
+%setup_compile_flags
+
 export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
 mk_add_options MOZILLA_OFFICIAL=1
@@ -221,7 +220,10 @@ ac_add_options --datadir="%{_datadir}"
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
+ac_add_options --with-system-libevent
 ac_add_options --with-system-libvpx
+ac_add_options --enable-system-pixman
+ac_add_options --enable-system-hunspell
 ac_add_options --enable-webm
 ac_add_options --enable-gio
 ac_add_options --disable-gnomevfs
@@ -232,6 +234,7 @@ ac_add_options --disable-debug
 #ac_add_options --enable-update-channel=beta
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
+ac_add_options --with-system-bz2
 ac_add_options --with-system-png
 ac_add_options --with-system-jpeg
 ac_add_options --enable-system-cairo
