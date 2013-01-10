@@ -88,7 +88,7 @@ BuildRequires:	nspr-devel >= 2:4.8.9
 BuildRequires:	startup-notification-devel
 BuildRequires:	dbus-glib-devel
 BuildRequires:	python
-BuildRequires:	sqlite3-devel >= 3.7.7.1
+BuildRequires:	pkgconfig(sqlite3) >= 3.7.7.1
 %ifnarch %arm %mips
 BuildRequires:	valgrind
 BuildRequires:	java-rpmbuild
