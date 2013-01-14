@@ -7,7 +7,7 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
-%define major 17.0.1
+%define major 18.0
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}
@@ -35,7 +35,7 @@ Summary:	Next generation web browser
 Name:		firefox
 Version:	%{major}
 Epoch:		%{ff_epoch}
-Release:	4
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -64,10 +64,9 @@ Patch7:		mozilla-firefox-run-mozilla.patch
 Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-17.0-kde.patch
-Patch12:	mozilla-17.0-kde.patch
+Patch11:	firefox-18.0-kde.patch
+Patch12:	mozilla-18.0-kde.patch
 Patch13:	firefox-13-fix-nspr-include.patch
-Patch14:	firefox-13-fix-cairo-build.patch
 Patch34:	xulrunner_nojit.patch
 # (cjw) use system virtualenv
 Patch36:	firefox-17.0-virtualenv.patch
@@ -174,7 +173,6 @@ Files and macros mainly for building Firefox extensions.
 #patch7 -p1
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
-%patch14 -p1
 
 ## KDE INTEGRATION
 # Disable kde integration , need refactoring
