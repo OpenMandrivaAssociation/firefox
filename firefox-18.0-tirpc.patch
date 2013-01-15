@@ -1,0 +1,12 @@
+--- media/mtransport/third_party/nrappkit/src/registry/registry_int.h.orig	2013-01-15 10:51:24.692369744 +0000
++++ media/mtransport/third_party/nrappkit/src/registry/registry_int.h	2013-01-15 10:51:37.836368972 +0000
+@@ -58,6 +58,9 @@
+ #include <sys/types.h>
+ #include <r_types.h>
+ #ifndef NO_REG_RPC
++#ifdef LINUX
++#define _BSD_SOURCE
++#endif
+ #include <rpc/rpc.h>
+ #endif
+ 

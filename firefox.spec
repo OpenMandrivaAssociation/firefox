@@ -61,6 +61,7 @@ Patch4:		firefox-17.0-nss-binary.patch
 Patch5:		firefox-6.0-appname.patch
 Patch6:		firefox-7.0-fix-str-fmt.patch
 Patch7:		mozilla-firefox-run-mozilla.patch
+Patch8:		firefox-18.0-tirpc.patch
 Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
@@ -171,6 +172,7 @@ Files and macros mainly for building Firefox extensions.
 %patch5 -p1 -b .appname
 # It was disabled because firefox3 hangs when using soundwrapper
 #patch7 -p1
+%patch8 -p0 -b .tirpc
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
 
