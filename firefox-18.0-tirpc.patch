@@ -1,13 +1,10 @@
---- ./media/mtransport/third_party/nrappkit/src/registry/registry_int.h.tirpc	2013-01-04 23:44:40.000000000 +0000
-+++ ./media/mtransport/third_party/nrappkit/src/registry/registry_int.h	2013-01-15 11:45:50.583945287 +0000
-@@ -55,6 +55,10 @@
- #ifndef __REGISTRY_INT_H__
- #define __REGISTRY_INT_H__
+--- media/mtransport/third_party/nrappkit/nrappkit.gyp.orig	2013-01-15 12:38:17.315083776 +0000
++++ media/mtransport/third_party/nrappkit/nrappkit.gyp	2013-01-15 12:38:46.756082054 +0000
+@@ -217,6 +217,7 @@
+                      'RETSIGTYPE=void',
+                      'TIME_WITH_SYS_TIME_H=1',
+                      '__UNUSED__="__attribute__((unused))"',
++                     'NO_REG_RPC'
+                  ],
  
-+#ifdef LINUX
-+#define _BSD_SOURCE
-+#endif
-+
- #include <sys/types.h>
- #include <r_types.h>
- #ifndef NO_REG_RPC
+ 		 'include_dirs': [
