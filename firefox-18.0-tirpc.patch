@@ -1,12 +1,13 @@
---- media/mtransport/third_party/nrappkit/src/registry/registry_int.h.orig	2013-01-15 10:51:24.692369744 +0000
-+++ media/mtransport/third_party/nrappkit/src/registry/registry_int.h	2013-01-15 10:51:37.836368972 +0000
-@@ -58,6 +58,9 @@
- #include <sys/types.h>
- #include <r_types.h>
- #ifndef NO_REG_RPC
+--- ./media/mtransport/third_party/nrappkit/src/registry/registry_int.h.tirpc	2013-01-04 23:44:40.000000000 +0000
++++ ./media/mtransport/third_party/nrappkit/src/registry/registry_int.h	2013-01-15 11:45:50.583945287 +0000
+@@ -55,6 +55,10 @@
+ #ifndef __REGISTRY_INT_H__
+ #define __REGISTRY_INT_H__
+ 
 +#ifdef LINUX
 +#define _BSD_SOURCE
 +#endif
- #include <rpc/rpc.h>
- #endif
- 
++
+ #include <sys/types.h>
+ #include <r_types.h>
+ #ifndef NO_REG_RPC
