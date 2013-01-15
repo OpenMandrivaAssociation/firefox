@@ -115,7 +115,7 @@ BuildRequires:	python-virtualenv
 BuildRequires:	gstreamer0.10-devel
 BuildRequires:	libgstreamer0.10-plugins-base-devel
 BuildRequires:	pkgconfig(opus)
-
+BuildRequires:  pkgconfig(libtirpc)
 
 %if 0%{?prel}
 Provides:	%{name} = %{epoch}:%{realver}-0.%{prel}
