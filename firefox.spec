@@ -35,7 +35,7 @@ Summary:	Next generation web browser
 Name:		firefox
 Version:	%{major}
 Epoch:		%{ff_epoch}
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -115,8 +115,8 @@ BuildRequires:	libvpx-devel
 BuildRequires:	autoconf2.1
 BuildRequires:	libiw-devel
 BuildRequires:	python-virtualenv
-BuildRequires:	gstreamer0.10-devel
-BuildRequires:	libgstreamer0.10-plugins-base-devel
+BuildRequires:	gstreamer1.0-devel
+BuildRequires:	libgstreamer1.0-plugins-base-devel
 BuildRequires:	pkgconfig(opus)
 
 %if 0%{?prel}
