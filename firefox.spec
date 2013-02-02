@@ -83,7 +83,7 @@ BuildRequires:	unzip
 BuildRequires:	zip
 BuildRequires:	libxinerama-devel
 BuildRequires:	libxscrnsaver-devel
-BuildRequires:	libjpeg-devel
+BuildRequires:	jpeg-devel
 BuildRequires:	libpng-devel >= 2:1.4
 BuildRequires:	zlib-devel
 BuildRequires:	glib2-devel
