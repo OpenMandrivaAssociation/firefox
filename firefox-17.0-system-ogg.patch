@@ -1,0 +1,352 @@
+diff -uNrp mozilla-esr17.system-ogg/config/Makefile.in mozilla-esr17/config/Makefile.in
+--- mozilla-esr17.system-ogg/config/Makefile.in	2013-01-07 15:52:15.000000000 -0500
++++ mozilla-esr17/config/Makefile.in	2013-01-21 13:13:51.939343447 -0500
+@@ -100,6 +100,7 @@ export:: $(export-preqs)
+ 		-DMOZ_NATIVE_JPEG=$(MOZ_NATIVE_JPEG) \
+ 		-DMOZ_NATIVE_LIBEVENT=$(MOZ_NATIVE_LIBEVENT) \
+ 		-DMOZ_NATIVE_LIBVPX=$(MOZ_NATIVE_LIBVPX) \
++		-DMOZ_NATIVE_OGG=$(MOZ_NATIVE_OGG) \
+ 		$(srcdir)/system-headers | $(PERL) $(topsrcdir)/nsprpub/config/make-system-wrappers.pl system_wrappers
+ 	$(INSTALL) system_wrappers $(DIST)
+ 
+diff -uNrp mozilla-esr17.system-ogg/config/system-headers mozilla-esr17/config/system-headers
+--- mozilla-esr17.system-ogg/config/system-headers	2013-01-07 15:52:15.000000000 -0500
++++ mozilla-esr17/config/system-headers	2013-01-21 13:13:51.945347209 -0500
+@@ -1061,6 +1061,16 @@ ogg/os_types.h
+ nestegg/nestegg.h
+ cubeb/cubeb.h
+ #endif
++#if MOZ_NATIVE_OGG==1
++vorbis/codec.h
++theora/theoradec.h
++ogg/ogg.h
++ogg/os_types.h
++opus/opus_defines.h
++opus/opus.h
++opus/opus_multistream.h
++opus/opus_types.h
++#endif
+ gst/gst.h
+ gst/app/gstappsink.h
+ gst/app/gstappsrc.h
+diff -uNrp mozilla-esr17.system-ogg/configure.in mozilla-esr17/configure.in
+--- mozilla-esr17.system-ogg/configure.in	2013-01-07 15:52:15.000000000 -0500
++++ mozilla-esr17/configure.in	2013-01-21 13:13:51.961357241 -0500
+@@ -5194,12 +5194,40 @@ MOZ_ARG_DISABLE_BOOL(ogg,
+     MOZ_OGG=,
+     MOZ_OGG=1)
+ 
++dnl system ogg Support
++dnl ========================================================
++MOZ_ARG_WITH_BOOL(system-ogg,
++[  --with-system-ogg    Use system ogg, vorbis, theora, and opus libraries (located with pkgconfig)],
++    MOZ_NATIVE_OGG=1)
++
++MOZ_OGG_CFLAGS=
++MOZ_OGG_LIBS=
++MOZ_VORBIS_CFLAGS=
++MOZ_VORBIS_LIBS=
++MOZ_THEORA_CFLAGS=
++MOZ_THEORA_LIBS=
++MOZ_OPUS_CFLAGS=
++MOZ_OPUS_LIBS=
++
+ if test -n "$MOZ_OGG"; then
+     AC_DEFINE(MOZ_OGG)
+     MOZ_SYDNEYAUDIO=1
+     MOZ_CUBEB=1
+     MOZ_MEDIA=1
+ 
++    if test -n "$MOZ_NATIVE_OGG"; then
++        dnl ============================
++        dnl === ogg (version) check ===
++        dnl ============================
++        dnl Check to see if we have system ogg and theora packages.
++        PKG_CHECK_MODULES(OGG, ogg)
++        PKG_CHECK_MODULES(THEORA, theoradec)
++        MOZ_OGG_CFLAGS="$OGG_CFLAGS"
++        MOZ_OGG_LIBS="$OGG_LIBS"
++        MOZ_THEORA_CFLAGS="$THEORA_CFLAGS"
++        MOZ_THEORA_LIBS="$THEORA_LIBS"
++    fi
++
+     dnl Checks for __attribute__(aligned()) directive
+     AC_CACHE_CHECK([__attribute__ ((aligned ())) support],
+         [ac_cv_c_attribute_aligned],
+@@ -5500,6 +5528,16 @@ fi
+ 
+ if test -n "$MOZ_VORBIS"; then
+     AC_DEFINE(MOZ_VORBIS)
++
++    if test -n "$MOZ_NATIVE_OGG"; then
++        dnl ============================
++        dnl === vorbis (version) check ===
++        dnl ============================
++        dnl Check to see if we have a system vorbis package.
++        PKG_CHECK_MODULES(VORBIS, vorbis)
++        MOZ_VORBIS_CFLAGS="$VORBIS_CFLAGS"
++        MOZ_VORBIS_LIBS="$VORBIS_LIBS"
++    fi
+ fi
+ 
+ if test -n "$MOZ_TREMOR"; then
+@@ -5508,8 +5546,28 @@ fi
+ 
+ if test -n "$MOZ_OPUS"; then
+     AC_DEFINE(MOZ_OPUS)
++
++    if test -n "$MOZ_NATIVE_OGG"; then
++        dnl ============================
++        dnl === opus (version) check ===
++        dnl ============================
++        dnl Check to see if we have a system opus package.
++        PKG_CHECK_MODULES(OPUS, opus)
++        MOZ_OPUS_CFLAGS="$OPUS_CFLAGS"
++        MOZ_OPUS_LIBS="$OPUS_LIBS"
++    fi
+ fi
+ 
++AC_SUBST(MOZ_NATIVE_OGG)
++AC_SUBST(MOZ_OGG_CFLAGS)
++AC_SUBST(MOZ_OGG_LIBS)
++AC_SUBST(MOZ_VORBIS_CFLAGS)
++AC_SUBST(MOZ_VORBIS_LIBS)
++AC_SUBST(MOZ_THEORA_CFLAGS)
++AC_SUBST(MOZ_THEORA_LIBS)
++AC_SUBST(MOZ_OPUS_CFLAGS)
++AC_SUBST(MOZ_OPUS_LIBS)
++
+ dnl ========================================================
+ dnl = Check alsa availability on Linux if using sydneyaudio
+ dnl ========================================================
+diff -uNrp mozilla-esr17.system-ogg/content/media/ogg/Makefile.in mozilla-esr17/content/media/ogg/Makefile.in
+--- mozilla-esr17.system-ogg/content/media/ogg/Makefile.in	2013-01-07 15:52:17.000000000 -0500
++++ mozilla-esr17/content/media/ogg/Makefile.in	2013-01-21 13:13:51.975366022 -0500
+@@ -14,6 +14,12 @@ MODULE		= content
+ LIBRARY_NAME	= gkconogg_s
+ LIBXUL_LIBRARY 	= 1
+ 
++INCLUDES	+= \
++		$(MOZ_OGG_CFLAGS) \
++		$(MOZ_VORBIS_CFLAGS) \
++		$(MOZ_THEORA_CFLAGS) \
++		$(MOZ_OPUS_CFLAGS) \
++		$(NULL)
+ 
+ EXPORTS		+= \
+ 		nsOggDecoder.h \
+diff -uNrp mozilla-esr17.system-ogg/layout/media/Makefile.in mozilla-esr17/layout/media/Makefile.in
+--- mozilla-esr17.system-ogg/layout/media/Makefile.in	2013-01-07 15:52:33.000000000 -0500
++++ mozilla-esr17/layout/media/Makefile.in	2013-01-21 13:13:52.004384209 -0500
+@@ -36,11 +36,13 @@ SHARED_LIBRARY_LIBS += $(MOZ_GRAPHITE_LI
+ endif
+ 
+ ifdef MOZ_VORBIS
++ifndef MOZ_NATIVE_OGG
+ SHARED_LIBRARY_LIBS 	+= \
+ 	$(DEPTH)/media/libvorbis/lib/$(LIB_PREFIX)vorbis.$(LIB_SUFFIX) \
+ 	$(DEPTH)/media/libogg/src/$(LIB_PREFIX)ogg.$(LIB_SUFFIX) \
+ 	$(NULL)
+ endif
++endif
+ 
+ ifdef MOZ_TREMOR
+ SHARED_LIBRARY_LIBS	+= \
+@@ -50,16 +52,20 @@ SHARED_LIBRARY_LIBS	+= \
+ endif
+ 
+ ifdef MOZ_OGG
++ifndef MOZ_NATIVE_OGG
+ SHARED_LIBRARY_LIBS 	+= \
+ 	$(DEPTH)/media/libtheora/lib/$(LIB_PREFIX)theora.$(LIB_SUFFIX) \
+ 	$(NULL)
+ endif
++endif
+ 
+ ifdef MOZ_OPUS
++ifndef MOZ_NATIVE_OGG
+ SHARED_LIBRARY_LIBS += \
+   $(DEPTH)/media/libopus/$(LIB_PREFIX)opus.$(LIB_SUFFIX) \
+   $(NULL)
+ endif
++endif
+ 
+ ifdef MOZ_WEBM
+ SHARED_LIBRARY_LIBS 	+= \
+diff -uNrp mozilla-esr17.system-ogg/layout/media/symbols.def.in mozilla-esr17/layout/media/symbols.def.in
+--- mozilla-esr17.system-ogg/layout/media/symbols.def.in	2013-01-07 15:52:33.000000000 -0500
++++ mozilla-esr17/layout/media/symbols.def.in	2013-01-21 13:13:52.014390479 -0500
+@@ -36,6 +36,7 @@ vpx_codec_vp8_dx
+ #endif
+ #endif
+ #ifdef MOZ_VORBIS
++#ifndef MOZ_NATIVE_OGG
+ ogg_page_bos
+ ogg_page_granulepos
+ ogg_page_serialno
+@@ -67,6 +68,7 @@ vorbis_synthesis_pcmout
+ vorbis_synthesis_read
+ vorbis_synthesis_restart
+ #endif
++#endif
+ #ifdef MOZ_SYDNEYAUDIO
+ sa_stream_create_pcm
+ sa_stream_destroy
+@@ -112,6 +114,7 @@ cubeb_stream_init
+ cubeb_stream_start
+ cubeb_stream_stop
+ #endif
++#ifndef MOZ_NATIVE_OGG
+ #ifdef MOZ_OGG
+ th_comment_clear
+ th_comment_init
+@@ -142,6 +145,7 @@ opus_multistream_decode
+ opus_packet_get_nb_frames
+ opus_packet_get_samples_per_frame
+ #endif
++#endif
+ ShInitialize
+ ShFinalize
+ ShGetObjectCode
+diff -uNrp mozilla-esr17.system-ogg/toolkit/library/Makefile.in mozilla-esr17/toolkit/library/Makefile.in
+--- mozilla-esr17.system-ogg/toolkit/library/Makefile.in	2013-01-07 15:52:51.000000000 -0500
++++ mozilla-esr17/toolkit/library/Makefile.in	2013-01-21 13:13:52.040406784 -0500
+@@ -365,6 +365,10 @@ ifdef MOZ_NATIVE_LIBVPX
+ EXTRA_DSO_LDOPTS += $(MOZ_LIBVPX_LIBS)
+ endif
+ 
++ifdef MOZ_NATIVE_OGG
++EXTRA_DSO_LDOPTS += $(MOZ_OGG_LIBS) $(MOZ_VORBIS_LIBS) $(MOZ_THEORA_LIBS) $(MOZ_OPUS_LIBS)
++endif
++
+ ifndef MOZ_TREE_PIXMAN
+ EXTRA_DSO_LDOPTS += $(MOZ_PIXMAN_LIBS)
+ endif
+diff -uNrp mozilla-esr17.system-ogg/toolkit/toolkit-makefiles.sh mozilla-esr17/toolkit/toolkit-makefiles.sh
+--- mozilla-esr17.system-ogg/toolkit/toolkit-makefiles.sh	2013-01-07 15:52:52.000000000 -0500
++++ mozilla-esr17/toolkit/toolkit-makefiles.sh	2013-01-21 13:13:52.052414309 -0500
+@@ -1606,12 +1606,14 @@ if [ "$MOZ_MEDIA" ]; then
+ fi
+ 
+ if [ "$MOZ_VORBIS" ]; then
+-  add_makefiles "
+-    media/libvorbis/Makefile
+-    media/libvorbis/lib/Makefile
+-    media/libvorbis/include/Makefile
+-    media/libvorbis/include/vorbis/Makefile
+-  "
++  if [ ! "$MOZ_NATIVE_OGG" ]; then
++    add_makefiles "
++      media/libvorbis/Makefile
++      media/libvorbis/lib/Makefile
++      media/libvorbis/include/Makefile
++      media/libvorbis/include/vorbis/Makefile
++    "
++  fi
+ fi
+ 
+ if [ "$MOZ_TREMOR" ]; then
+@@ -1623,23 +1625,29 @@ if [ "$MOZ_TREMOR" ]; then
+ fi
+ 
+ if [ "$MOZ_OPUS" ]; then
+- add_makefiles "
+-   media/libopus/Makefile
+- "
++  if [ ! "$MOZ_NATIVE_OGG" ]; then
++    add_makefiles "
++      media/libopus/Makefile
++    "
++  fi
+ fi
+ 
+ if [ "$MOZ_OGG" ]; then
+   add_makefiles "
+     content/media/ogg/Makefile
+-    media/libogg/Makefile
+-    media/libogg/src/Makefile
+-    media/libogg/include/Makefile
+-    media/libogg/include/ogg/Makefile
+-    media/libtheora/Makefile
+-    media/libtheora/lib/Makefile
+-    media/libtheora/include/Makefile
+-    media/libtheora/include/theora/Makefile
+   "
++  if [ ! "$MOZ_NATIVE_OGG" ]; then
++    add_makefiles "
++      media/libogg/Makefile
++      media/libogg/src/Makefile
++      media/libogg/include/Makefile
++      media/libogg/include/ogg/Makefile
++      media/libtheora/Makefile
++      media/libtheora/lib/Makefile
++      media/libtheora/include/Makefile
++      media/libtheora/include/theora/Makefile
++    "
++  fi
+ fi
+ 
+ if [ "$MOZ_RAW" ]; then
+diff -uNrp mozilla-esr17.system-ogg/toolkit/toolkit-tiers.mk mozilla-esr17/toolkit/toolkit-tiers.mk
+--- mozilla-esr17.system-ogg/toolkit/toolkit-tiers.mk	2013-01-07 15:52:52.000000000 -0500
++++ mozilla-esr17/toolkit/toolkit-tiers.mk	2013-01-21 13:13:52.072426851 -0500
+@@ -85,10 +85,12 @@ tier_platform_dirs += js/jsd
+ endif
+ 
+ ifdef MOZ_VORBIS
++ifndef MOZ_NATIVE_OGG
+ tier_platform_dirs += \
+ 		media/libvorbis \
+ 		$(NULL)
+ endif
++endif
+ 
+ ifdef MOZ_TREMOR
+ tier_platform_dirs += \
+@@ -97,10 +99,12 @@ tier_platform_dirs += \
+ endif
+ 
+ ifdef MOZ_OPUS
++ifndef MOZ_NATIVE_OGG
+ tier_platform_dirs += \
+   media/libopus \
+   $(NULL)
+ endif
++endif
+ 
+ ifdef MOZ_WEBM
+ tier_platform_dirs += media/libnestegg
+@@ -113,11 +117,13 @@ endif
+ endif
+ 
+ ifdef MOZ_OGG
++ifndef MOZ_NATIVE_OGG
+ tier_platform_dirs += \
+ 		media/libogg \
+ 		media/libtheora \
+ 		$(NULL)
+ endif
++endif
+ 
+ ifdef MOZ_SYDNEYAUDIO
+ tier_platform_dirs += \
+diff -uNrp mozilla-esr17.system-ogg/config/system-headers mozilla-esr17/config/system-headers
+--- mozilla-esr17.system-ogg/js/src/config/system-headers	2013-01-07 15:52:15.000000000 -0500
++++ mozilla-esr17/js/src/config/system-headers	2013-01-21 13:13:51.945347209 -0500
+@@ -1061,6 +1061,16 @@ ogg/os_types.h
+ nestegg/nestegg.h
+ cubeb/cubeb.h
+ #endif
++#if MOZ_NATIVE_OGG==1
++vorbis/codec.h
++theora/theoradec.h
++ogg/ogg.h
++ogg/os_types.h
++opus/opus_defines.h
++opus/opus.h
++opus/opus_multistream.h
++opus/opus_types.h
++#endif
+ gst/gst.h
+ gst/app/gstappsink.h
+ gst/app/gstappsrc.h

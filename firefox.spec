@@ -35,7 +35,7 @@ Summary:	Next generation web browser
 Name:		firefox
 Version:	%{major}
 Epoch:		%{ff_epoch}
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -73,6 +73,11 @@ Patch15:	firefox-18.0-fix-debuginfo.patch
 Patch34:	xulrunner_nojit.patch
 # (cjw) use system virtualenv
 Patch36:	firefox-17.0-virtualenv.patch
+# (tpg) from Mageia use system-wide ogg
+Patch37:	firefox-17.0-system-ogg.patch
+# (tpg) from Mageia use mozilla ogg player instead of gstreamer
+Patch38:	firefox-17.0-moz-ogg.patch
+
 BuildRequires:	gtk+2-devel
 BuildRequires:	unzip
 BuildRequires:	zip
@@ -117,6 +122,9 @@ BuildRequires:	libiw-devel
 BuildRequires:	python-virtualenv
 BuildRequires:	gstreamer1.0-devel
 BuildRequires:	libgstreamer1.0-plugins-base-devel
+BuildRequires:	pkgconfig(ogg)
+BuildRequires:	pkgconfig(vorbis)
+BuildRequires:	pkgconfig(theoradec)
 BuildRequires:	pkgconfig(opus)
 
 %if 0%{?prel}
@@ -190,6 +198,8 @@ Files and macros mainly for building Firefox extensions.
 %endif
 %endif
 %patch36 -p1 -b .system-virtualenv
+%patch37 -p1
+%patch38 -p1
 
 pushd js/src
 autoconf-2.13
@@ -226,6 +236,8 @@ ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-libvpx
+ac_add_options --with-system-ogg
+ac_add_options --disable-webrtc
 ac_add_options --enable-system-pixman
 ac_add_options --enable-system-hunspell
 ac_add_options --enable-webm
@@ -251,15 +263,15 @@ ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --enable-gstreamer
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
-ac_add_options --disable-methodjit 
-ac_add_options --disable-tracejit 
+ac_add_options --disable-methodjit
+ac_add_options --disable-tracejit
 %endif
-ac_add_options --enable-system-ffi 
+ac_add_options --enable-system-ffi
 %endif
 %ifnarch %arm %mips
-ac_add_options --with-valgrind 
-ac_add_options --with-java-include-path=%{java_home}/include 
-ac_add_options --with-java-bin-path=%{java_home}/bin 
+ac_add_options --with-valgrind
+ac_add_options --with-java-include-path=%{java_home}/include
+ac_add_options --with-java-bin-path=%{java_home}/bin
 ac_add_options --enable-opus
 %endif
 
@@ -271,8 +283,6 @@ export LDFLAGS="%ldflags"
 make -f client.mk build
 
 %install
-rm -rf %{buildroot}
-
 make -C %{_builddir}/obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
 # Copy files to buildroot
