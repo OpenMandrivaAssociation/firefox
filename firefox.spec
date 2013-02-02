@@ -87,7 +87,7 @@ BuildRequires:	jpeg-devel
 BuildRequires:	libpng-devel >= 2:1.4
 BuildRequires:	zlib-devel
 BuildRequires:	glib2-devel
-BuildRequires:	libIDL2-devel
+BuildRequires:	pkgconfig(libIDL-2.0)
 BuildRequires:	makedepend
 BuildRequires:	nss-devel >= 2:3.12.10
 BuildRequires:	nss-static-devel
