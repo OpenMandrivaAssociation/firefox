@@ -85,7 +85,7 @@ BuildRequires:	zip
 BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	jpeg-devel
-BuildRequires:	pkgconfig(libpng) >= 2:1.4
+BuildRequires:	libpng-devel >= 2:1.4
 BuildRequires:	zlib-devel
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(libIDL-2.0)
