@@ -74,7 +74,7 @@ Patch34:	xulrunner_nojit.patch
 # (cjw) use system virtualenv
 Patch36:	firefox-17.0-virtualenv.patch
 # (tpg) from Mageia use system-wide ogg
-Patch37:	firefox-17.0-system-ogg.patch
+Patch37:	firefox-18.0.1-system-ogg.patch
 # (tpg) from Mageia use mozilla ogg player instead of gstreamer
 Patch38:	firefox-17.0-moz-ogg.patch
 
