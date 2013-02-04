@@ -78,6 +78,7 @@ Patch37:	firefox-17.0-system-ogg.patch
 # (tpg) from Mageia use mozilla ogg player instead of gstreamer
 Patch38:	firefox-17.0-moz-ogg.patch
 
+BuildConflicts:	libreoffice-core
 BuildRequires:	gtk+2-devel
 BuildRequires:	unzip
 BuildRequires:	zip
