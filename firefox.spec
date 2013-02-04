@@ -79,22 +79,22 @@ Patch37:	firefox-17.0-system-ogg.patch
 Patch38:	firefox-17.0-moz-ogg.patch
 
 BuildConflicts:	libreoffice-core
-BuildRequires:	gtk+2-devel
+BuildRequires:	pkgconfig(gtk+-2.0)
 BuildRequires:	unzip
 BuildRequires:	zip
-BuildRequires:	libxinerama-devel
-BuildRequires:	libxscrnsaver-devel
+BuildRequires:	pkgconfig(xinerama)
+BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	jpeg-devel
-BuildRequires:	libpng-devel >= 2:1.4
+BuildRequires:	pkgconfig(libpng) >= 2:1.4
 BuildRequires:	zlib-devel
-BuildRequires:	glib2-devel
+BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(libIDL-2.0)
 BuildRequires:	makedepend
 BuildRequires:	nss-devel >= 2:3.12.10
 BuildRequires:	nss-static-devel
 BuildRequires:	nspr-devel >= 2:4.8.9
-BuildRequires:	startup-notification-devel
-BuildRequires:	dbus-glib-devel
+BuildRequires:	pkgconfig(libstartup-notification-1.0)
+BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	python
 BuildRequires:	pkgconfig(sqlite3) >= 3.7.7.1
 %ifnarch %arm %mips
@@ -103,21 +103,21 @@ BuildRequires:	java-rpmbuild
 BuildRequires:	yasm >= 1.0.1
 %endif
 %ifarch %arm
-BuildRequires:	libffi-devel
+BuildRequires:	pkgconfig(libffi)
 %endif
 BuildRequires:	rootcerts >= 1:20110830.00
-BuildRequires:	libxt-devel
-BuildRequires:	hunspell-devel
+BuildRequires:	pkgconfig(xt)
+BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	doxygen
 # BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	wget
-BuildRequires:	libnotify-devel
-BuildRequires:	libevent-devel
-BuildRequires:	cairo-devel >= 1.10
+BuildRequires:	pkgconfig(libnotify)
+BuildRequires:	pkgconfig(libevent)
+BuildRequires:	pkgconfig(cairo) >= 1.10
 BuildRequires:	pkgconfig(gl)
-BuildRequires:	libvpx-devel
+BuildRequires:	pkgconfig(vpx)
 BuildRequires:	autoconf2.1
 BuildRequires:	libiw-devel
 BuildRequires:	python-virtualenv
@@ -265,6 +265,8 @@ ac_add_options --with-distribution-id=org.rosa
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --enable-gstreamer
+ac_add_options --enable-media-plugins
+ac_add_options --enable-dash
 %if %mdvver >= 201300
 ac_add_options --enable-pulseaudio
 %endif
