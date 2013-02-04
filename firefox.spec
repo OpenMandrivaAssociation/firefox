@@ -121,6 +121,7 @@ BuildRequires:	pkgconfig(vpx)
 BuildRequires:	autoconf2.1
 BuildRequires:	libiw-devel
 BuildRequires:	python-virtualenv
+BuildRequires:	python-distribute
 BuildRequires:	gstreamer1.0-devel
 BuildRequires:	libgstreamer1.0-plugins-base-devel
 BuildRequires:	pkgconfig(ogg)
