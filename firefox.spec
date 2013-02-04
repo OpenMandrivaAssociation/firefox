@@ -127,6 +127,9 @@ BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(vorbis)
 BuildRequires:	pkgconfig(theoradec)
 BuildRequires:	pkgconfig(opus)
+%if %mdvver >= 201300
+BuildRequires:	pkgconfig(libpulse)
+%endif
 
 %if 0%{?prel}
 Provides:	%{name} = %{epoch}:%{realver}-0.%{prel}
@@ -262,6 +265,9 @@ ac_add_options --with-distribution-id=org.rosa
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --enable-gstreamer
+%if %mdvver >= 201300
+ac_add_options --enable-pulseaudio
+%endif
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
 ac_add_options --disable-methodjit
