@@ -425,6 +425,7 @@ fi
 #% ghost %{mozillalibdir}/defaults/profile/bookmarks.html
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
+%dir %{_libdir}/mozilla/extensions
 %dir %{_libdir}/mozilla/extensions/%{firefox_appid}
 %dir %{_datadir}/mozilla/extensions/%{firefox_appid}
 
