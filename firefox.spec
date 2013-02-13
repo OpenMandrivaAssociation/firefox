@@ -128,7 +128,7 @@ BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(vorbis)
 BuildRequires:	pkgconfig(theoradec)
 BuildRequires:	pkgconfig(opus)
-BuildRequires:	pkgconfig(bzip2)
+BuildRequires:	bzip2-devel
 %if %mdvver >= 201300
 BuildRequires:	pkgconfig(libpulse)
 %endif
