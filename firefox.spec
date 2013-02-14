@@ -122,7 +122,7 @@ BuildRequires:	autoconf2.1
 BuildRequires:	libiw-devel
 BuildRequires:	python-virtualenv
 BuildRequires:	python-distribute
-#BuildRequires:	pkgconfig(gstreamer-plugins-base-0.10)
+BuildRequires:	pkgconfig(gstreamer-plugins-base-0.10)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(vorbis)
