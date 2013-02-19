@@ -203,7 +203,7 @@ Files and macros mainly for building Firefox extensions.
 %patch34 -p1
 %endif
 %endif
-%patch36 -p1 -b .system-virtualenv
+#patch36 -p1 -b .system-virtualenv
 %patch37 -p1
 %patch38 -p1
 
