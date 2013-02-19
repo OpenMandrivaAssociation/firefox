@@ -195,8 +195,8 @@ Files and macros mainly for building Firefox extensions.
 
 ## KDE INTEGRATION
 # Disable kde integration , need refactoring
-%patch11 -p1 -b .kdepatch
-%patch12 -p1 -b .kdemoz
+#patch11 -p1 -b .kdepatch
+#patch12 -p1 -b .kdemoz
 
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
