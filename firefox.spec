@@ -7,7 +7,7 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
-%define major 19.0
+%define major 19.0.2
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}
