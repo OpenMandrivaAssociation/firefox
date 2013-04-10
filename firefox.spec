@@ -7,7 +7,7 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
-%define major 19.0.2
+%define major 20.0
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}
@@ -78,7 +78,7 @@ Patch37:	firefox-18.0.1-system-ogg.patch
 # (tpg) from Mageia use mozilla ogg player instead of gstreamer
 Patch38:	firefox-17.0-moz-ogg.patch
 
-BuildConflicts:	libreoffice-core
+#BuildConflicts:	libreoffice-core
 BuildRequires:	pkgconfig(gtk+-2.0)
 BuildRequires:	unzip
 BuildRequires:	zip
@@ -191,7 +191,7 @@ Files and macros mainly for building Firefox extensions.
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
 %patch14 -p1
-%patch15 -p2
+%patch15 -p1
 
 ## KDE INTEGRATION
 # Disable kde integration , need refactoring

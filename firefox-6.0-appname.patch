@@ -1,11 +1,7 @@
-From: Wolfgang Rosenauer <wr@rosenauer.org>
-Subject: Hardcode app starter for default check
-
-diff --git a/browser/components/shell/src/nsGNOMEShellService.cpp b/browser/components/shell/src/nsGNOMEShellService.cpp
---- a/browser/components/shell/src/nsGNOMEShellService.cpp
-+++ b/browser/components/shell/src/nsGNOMEShellService.cpp
-@@ -144,7 +144,11 @@
-   rv = appPath->AppendNative(NS_LITERAL_CSTRING(MOZ_APP_NAME));
+--- mozilla-release/browser/components/shell/src/nsGNOMEShellService.cpp.appname	2013-04-10 18:21:58.743798117 +0200
++++ mozilla-release/browser/components/shell/src/nsGNOMEShellService.cpp	2013-04-10 18:23:18.455801580 +0200
+@@ -113,7 +113,11 @@ nsGNOMEShellService::Init()
+                    getter_AddRefs(appPath));
    NS_ENSURE_SUCCESS(rv, rv);
  
 -  return appPath->GetNativePath(mAppPath);

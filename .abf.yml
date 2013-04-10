@@ -1,3 +1,4 @@
----
 sources:
   firefox-19.0.2.source.tar.bz2: d108d356225379a86d69a4906c706289135f6342
+  firefox-20.0.source.tar.bz2: 6d776c29da0be0d2a50abeb504d63b06b7861218
+  firefox-searchengines-bing.xml: ccdb7c0cc2d288714f70f8a92f0adfc2766f2b36
