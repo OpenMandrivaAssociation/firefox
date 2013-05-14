@@ -69,7 +69,6 @@ Patch11:	firefox-18.0-kde.patch
 Patch12:	mozilla-18.0-kde.patch
 Patch13:	firefox-13-fix-nspr-include.patch
 Patch14:        firefox-18.0-fix-cairo-build.patch
-Patch15:	firefox-18.0-fix-debuginfo.patch
 Patch34:	xulrunner_nojit.patch
 # (cjw) use system virtualenv
 Patch36:	firefox-17.0-virtualenv.patch
@@ -191,7 +190,6 @@ Files and macros mainly for building Firefox extensions.
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
 %patch14 -p1
-%patch15 -p1
 
 ## KDE INTEGRATION
 # Disable kde integration , need refactoring
