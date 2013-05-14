@@ -7,7 +7,7 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
-%define major 20.0.1
+%define major 21.0
 %define ff_epoch 0
 # (tpg) set version HERE !!!
 %define realver %{major}
@@ -85,7 +85,7 @@ BuildRequires:	zip
 BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	jpeg-devel
-BuildRequires:	pkgconfig(libpng) >= 2:1.4
+BuildRequires:	pkgconfig(libpng) >= 1.4
 BuildRequires:	zlib-devel
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(libIDL-2.0)
