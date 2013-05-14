@@ -183,7 +183,7 @@ Files and macros mainly for building Firefox extensions.
 %patch1 -p1 -b .lang
 %patch2 -p1 -b .vendor
 #patch3 -p1 -b .systemproxy
-%patch4 -p1 -b .nsspatch
+#%patch4 -p1 -b .nsspatch
 %patch5 -p1 -b .appname
 # It was disabled because firefox3 hangs when using soundwrapper
 #patch7 -p1
