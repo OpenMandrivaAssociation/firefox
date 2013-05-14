@@ -316,6 +316,7 @@ install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/defaults/preferences/kde.
 install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/applications/%{name}.desktop
 
 # (tpg) icons
+%{__mkdir_p} %{buildroot}/%{mozillalibdir}/icons
 %{__cp} %{buildroot}%{mozillalibdir}/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
 for i in 16 22 24 32 48 256; do
 # (cg) Not all icon sizes are installed with make install, so just redo it here.
