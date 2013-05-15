@@ -317,17 +317,17 @@ install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/applications/%{name}.desktop
 
 # (tpg) icons
 %{__mkdir_p} %{buildroot}/%{mozillalibdir}/icons
-%{__cp} %{buildroot}%{mozillalibdir}/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
+%{__cp} %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
 for i in 16 22 24 32 48 256; do
 # (cg) Not all icon sizes are installed with make install, so just redo it here.
-%{__install} -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/chrome/icons/default/default$i.png
+%{__install} -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
 %{__mkdir_p} %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
 ln -sf %{mozillalibdir}/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
 done
 %{__mkdir_p} %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
-ln -sf %{mozillalibdir}/chrome/icons/default/default48.png %{buildroot}%{_liconsdir}/%{name}.png
-ln -sf %{mozillalibdir}/chrome/icons/default/default32.png %{buildroot}%{_iconsdir}/%{name}.png
-ln -sf %{mozillalibdir}/chrome/icons/default/default16.png %{buildroot}%{_miconsdir}/%{name}.png
+ln -sf %{mozillalibdir}/browser/chrome/icons/default/default48.png %{buildroot}%{_liconsdir}/%{name}.png
+ln -sf %{mozillalibdir}/browser/chrome/icons/default/default32.png %{buildroot}%{_iconsdir}/%{name}.png
+ln -sf %{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}%{_miconsdir}/%{name}.png
 
 # exclusions
 rm -f %{buildroot}%{mozillalibdir}/README.txt
@@ -374,17 +374,17 @@ ln -s %{_datadir}/dict/mozilla/ %{buildroot}%{mozillalibdir}/dictionaries
 touch %{buildroot}%{mozillalibdir}/defaults/profile/bookmarks.html
 
 # search engines
-rm -f %{buildroot}%{mozillalibdir}/searchplugins/*
-cp -f %{SOURCE5} %{buildroot}%{mozillalibdir}/searchplugins/jamendo.xml
-cp -f %{SOURCE6} %{buildroot}%{mozillalibdir}/searchplugins/exalead.xml
-cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/searchplugins/askcom.xml
-cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/searchplugins/yandex.xml
-cp -f %{SOURCE11} %{buildroot}%{mozillalibdir}/searchplugins/google.xml
-cp -f %{SOURCE12} %{buildroot}%{mozillalibdir}/searchplugins/bing.xml
+rm -f %{buildroot}%{mozillalibdir}/browser/searchplugins/*
+cp -f %{SOURCE5} %{buildroot}%{mozillalibdir}/browser/searchplugins/jamendo.xml
+cp -f %{SOURCE6} %{buildroot}%{mozillalibdir}/browser/searchplugins/exalead.xml
+cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/browser/searchplugins/askcom.xml
+cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/browser/searchplugins/yandex.xml
+cp -f %{SOURCE11} %{buildroot}%{mozillalibdir}/browser/searchplugins/google.xml
+cp -f %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/searchplugins/bing.xml
 
 # Correct distro values on search engines
-sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/searchplugins/askcom.xml
-sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/searchplugins/exalead.xml
+sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/browser/searchplugins/askcom.xml
+sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/browser/searchplugins/exalead.xml
 
 mkdir -p %{buildroot}%{_sys_macros_dir}
 cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
