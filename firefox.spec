@@ -35,7 +35,7 @@ Summary:	Next generation web browser
 Name:		firefox
 Version:	%{major}
 Epoch:		%{ff_epoch}
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
