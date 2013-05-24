@@ -35,7 +35,7 @@ Summary:	Next generation web browser
 Name:		firefox
 Version:	%{major}
 Epoch:		%{ff_epoch}
-Release:	3
+Release:	4
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -269,6 +269,7 @@ ac_add_options --enable-media-plugins
 ac_add_options --enable-dash
 %if %mdvver >= 201300
 ac_add_options --enable-pulseaudio
+ac_add_options --enable-profile-guided-optimization
 %endif
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
