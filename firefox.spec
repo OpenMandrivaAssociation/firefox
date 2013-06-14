@@ -70,6 +70,8 @@ Patch36:	firefox-17.0-virtualenv.patch
 Patch37:	firefox-18.0.1-system-ogg.patch
 # (tpg) from Mageia use mozilla ogg player instead of gstreamer
 Patch38:	firefox-17.0-moz-ogg.patch
+#fedya
+Patch39:	this_realloc-mozilla21.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -186,6 +188,7 @@ Files and macros mainly for building Firefox extensions.
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
 %patch34 -p1
+%patch39 -p1
 %endif
 %endif
 #patch36 -p1 -b .system-virtualenv

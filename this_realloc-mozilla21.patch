@@ -1,0 +1,13 @@
+diff --git a/js/src/ion/shared/IonAssemblerBufferWithConstantPools.h b/js/src/ion/shared/IonAssemblerBufferWithConstantPools.h
+index cf54696..d04622a 100644
+--- a/js/src/ion/shared/IonAssemblerBufferWithConstantPools.h
++++ b/js/src/ion/shared/IonAssemblerBufferWithConstantPools.h
+@@ -675,7 +675,7 @@ struct AssemblerBufferWithConstantPool : public AssemblerBuffer<SliceSize, Inst>
+         JS_ASSERT(perforatedNode != NULL);
+         if (numDumps >= (1<<logBasePoolInfo) && (numDumps & (numDumps-1)) == 0) {
+             // need to resize.
+-            poolInfo = static_cast<PoolInfo*>(realloc_(poolInfo, sizeof(PoolInfo) * numDumps,
++            poolInfo = static_cast<PoolInfo*>(this->realloc_(poolInfo, sizeof(PoolInfo) * numDumps,
+                                                        sizeof(PoolInfo) * numDumps * 2));
+             if (poolInfo == NULL) {
+                 this->fail_oom();
