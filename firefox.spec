@@ -99,7 +99,7 @@ BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
 BuildRequires:	pkgconfig(libnotify)
-BuildRequires:	pkgconfig(libpng15) >= 1.4
+BuildRequires:	pkgconfig(libpng) >= 1.4
 BuildRequires:	pkgconfig(libproxy-1.0)
 %if %mdvver >= 201300
 BuildRequires:	pkgconfig(libpulse)
