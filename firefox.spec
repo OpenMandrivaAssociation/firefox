@@ -7,14 +7,8 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
-%define major 22.0
-%define ff_epoch 0
-# (tpg) set version HERE !!!
-%define realver %{major}
 %define firefox_appid \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
-
-# (tpg) MOZILLA_FIVE_HOME
-%define mozillalibdir %{_libdir}/%{name}-%{major}
+%define mozillalibdir %{_libdir}/%{name}-%{version}
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner2.0.
@@ -33,16 +27,16 @@
 
 Summary:	Next generation web browser
 Name:		firefox
-Version:	%{major}
-Epoch:		%{ff_epoch}
+Epoch:		0
+Version:	22.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}%prel.source.tar.bz2
+Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.bz2
 %else
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{realver}/source/%{name}-%{realver}.source.tar.bz2
+Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.bz2
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -76,80 +70,75 @@ Patch36:	firefox-17.0-virtualenv.patch
 Patch37:	firefox-18.0.1-system-ogg.patch
 # (tpg) from Mageia use mozilla ogg player instead of gstreamer
 Patch38:	firefox-17.0-moz-ogg.patch
+#fedya
+Patch39:	this_realloc-mozilla21.patch
 
 #BuildConflicts:	libreoffice-core
-BuildRequires:	pkgconfig(gtk+-2.0)
+BuildRequires:	doxygen
+BuildRequires:	makedepend
+BuildRequires:	python
+BuildRequires:	python-virtualenv
+BuildRequires:	python-distribute
+BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
+BuildRequires:	wget
 BuildRequires:	zip
+BuildRequires:	bzip2-devel
+BuildRequires:	jpeg-devel
+BuildRequires:	libiw-devel
+BuildRequires:	pkgconfig(alsa)
+BuildRequires:	pkgconfig(cairo) >= 1.10
+BuildRequires:	pkgconfig(dbus-glib-1)
+BuildRequires:	pkgconfig(glib-2.0)
+BuildRequires:	pkgconfig(gl)
+BuildRequires:	pkgconfig(gstreamer-plugins-base-0.10)
+BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
+BuildRequires:	pkgconfig(gtk+-2.0)
+BuildRequires:	pkgconfig(hunspell)
+BuildRequires:	pkgconfig(libevent)
+BuildRequires:	pkgconfig(libffi)
+BuildRequires:	pkgconfig(libIDL-2.0)
+BuildRequires:	pkgconfig(libnotify)
+BuildRequires:	pkgconfig(libpng) >= 1.4
+BuildRequires:	pkgconfig(libproxy-1.0)
+%if %mdvver >= 201300
+BuildRequires:	pkgconfig(libpulse)
+%endif
+BuildRequires:	pkgconfig(libstartup-notification-1.0)
+BuildRequires:	pkgconfig(nspr)
+BuildRequires:	pkgconfig(nss)
+BuildRequires:	pkgconfig(ogg)
+BuildRequires:	pkgconfig(opus)
+BuildRequires:	pkgconfig(sqlite3) >= 3.7.7.1
+BuildRequires:	pkgconfig(theoradec)
+BuildRequires:	pkgconfig(vorbis)
+BuildRequires:	pkgconfig(vpx)
 BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
-BuildRequires:	jpeg-devel
-BuildRequires:	pkgconfig(libpng) >= 1.4
-BuildRequires:	zlib-devel
-BuildRequires:	pkgconfig(glib-2.0)
-BuildRequires:	pkgconfig(libIDL-2.0)
-BuildRequires:	makedepend
-BuildRequires:	nss-devel >= 2:3.12.10
+BuildRequires:	pkgconfig(xt)
+BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
-BuildRequires:	nspr-devel >= 2:4.8.9
-BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(dbus-glib-1)
-BuildRequires:	python
-BuildRequires:	pkgconfig(sqlite3) >= 3.7.7.1
 %ifnarch %arm %mips
 BuildRequires:	valgrind
 BuildRequires:	java-rpmbuild
 BuildRequires:	yasm >= 1.0.1
 %endif
-%ifarch %arm
-BuildRequires:	pkgconfig(libffi)
-%endif
-BuildRequires:	rootcerts >= 1:20110830.00
-BuildRequires:	pkgconfig(xt)
-BuildRequires:	pkgconfig(hunspell)
-BuildRequires:	doxygen
-# BuildRequires:  xulrunner-devel >= %xulrunner_version%{?prel:-0.%prel}
-BuildRequires:	pkgconfig(libproxy-1.0)
-BuildRequires:	pkgconfig(alsa)
-BuildRequires:	wget
-BuildRequires:	pkgconfig(libnotify)
-BuildRequires:	pkgconfig(libevent)
-BuildRequires:	pkgconfig(cairo) >= 1.10
-BuildRequires:	pkgconfig(gl)
-BuildRequires:	pkgconfig(vpx)
-BuildRequires:	autoconf2.1
-BuildRequires:	libiw-devel
-BuildRequires:	python-virtualenv
-BuildRequires:	python-distribute
-BuildRequires:	pkgconfig(gstreamer-plugins-base-0.10)
-BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-BuildRequires:	pkgconfig(ogg)
-BuildRequires:	pkgconfig(vorbis)
-BuildRequires:	pkgconfig(theoradec)
-BuildRequires:	pkgconfig(opus)
-BuildRequires:	bzip2-devel
-%if %mdvver >= 201300
-BuildRequires:	pkgconfig(libpulse)
-%endif
+Requires:	indexhtml
+# fixes bug #42096
+Requires:	mailcap
+Requires:	xdg-utils
+Suggests:	hunspell-en
+Suggests:	%{_lib}canberra0
+Suggests:	%{_lib}cups2
 
 %if 0%{?prel}
-Provides:	%{name} = %{epoch}:%{realver}-0.%{prel}
+Provides:	%{name} = %{epoch}:%{version}-0.%{prel}
 %else
-Provides:	%{name} = %{epoch}:%{realver}
+Provides:	%{name} = %{epoch}:%{version}
 %endif
 Provides:	mozilla-firefox = %{epoch}:%{version}-%{release}
 Provides:	webclient
 
-Requires:	%{mklibname sqlite3_ 0} >= %{sqlite3_version}
-Requires:	%{mklibname nss 3} >= 2:%{nss_version}
-Requires:	%{mklibname nspr 4} >= 2:%{nspr_version}
-Requires:	indexhtml
-Requires:	xdg-utils
-# fixes bug #42096
-Requires:	mailcap
-Suggests:	hunspell-en
-Suggests:	%{_lib}canberra0
-Suggests:	%{_lib}cups2
 Obsoletes:	firefox-ext-weave-sync
 Obsoletes:	firefox-beta < 11
 
@@ -199,16 +188,17 @@ Files and macros mainly for building Firefox extensions.
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
 %patch34 -p1
+%patch39 -p1
 %endif
 %endif
 #patch36 -p1 -b .system-virtualenv
 #patch37 -p1
 #patch38 -p1
 
-pushd js/src
-autoconf-2.13
-popd
-autoconf-2.13
+#pushd js/src
+#autoconf-2.13
+#popd
+#autoconf-2.13
 
 # needed to regenerate certdata.c
 pushd security/nss/lib/ckfw/builtins
@@ -269,6 +259,7 @@ ac_add_options --enable-media-plugins
 ac_add_options --enable-dash
 %if %mdvver >= 201300
 ac_add_options --enable-pulseaudio
+ac_add_options --enable-profile-guided-optimization
 %endif
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
@@ -286,7 +277,7 @@ ac_add_options --enable-opus
 
 EOF
 
-%__perl -p -i -e 's|\-0|\-9|g' config/make-jars.pl
+perl -pi -e 's|\-0|\-9|g' config/make-jars.pl
 
 export LDFLAGS="%ldflags"
 make -f client.mk build
@@ -295,10 +286,10 @@ make -f client.mk build
 make -C %{_builddir}/obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
 # Copy files to buildroot
-%{__mkdir_p} %{buildroot}%{mozillalibdir}
+mkdir -p %{buildroot}%{mozillalibdir}
 cp -rf %{_builddir}/obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 
-%{__mkdir_p}  %{buildroot}%{_bindir}
+mkdir -p  %{buildroot}%{_bindir}
 ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
 pushd %{buildroot}%{_bindir}
 	ln -sf firefox mozilla-firefox
@@ -307,24 +298,24 @@ mkdir -p %{buildroot}%{mozillalibdir}/defaults/preferences/
 install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/defaults/preferences/kde.js
 
 # Create and own %_libdir/mozilla/plugins & firefox extensions directories
-%{__mkdir_p} %{buildroot}%{pluginsdir}
-%{__mkdir_p} %{buildroot}%{_libdir}/mozilla/extensions/%{firefox_appid}
-%{__mkdir_p} %{buildroot}%{_datadir}/mozilla/extensions/%{firefox_appid}
+mkdir -p %{buildroot}%{pluginsdir}
+mkdir -p %{buildroot}%{_libdir}/mozilla/extensions/%{firefox_appid}
+mkdir -p %{buildroot}%{_datadir}/mozilla/extensions/%{firefox_appid}
 
 # (tpg) desktop entry
-%{__mkdir_p} %{buildroot}%{_datadir}/applications
+mkdir -p %{buildroot}%{_datadir}/applications
 install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/applications/%{name}.desktop
 
 # (tpg) icons
-%{__mkdir_p} %{buildroot}/%{mozillalibdir}/icons
-%{__cp} %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
+mkdir -p %{buildroot}/%{mozillalibdir}/icons
+cp %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
 for i in 16 22 24 32 48 256; do
 # (cg) Not all icon sizes are installed with make install, so just redo it here.
-%{__install} -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
-%{__mkdir_p} %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
+install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
+mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
 ln -sf %{mozillalibdir}/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
 done
-%{__mkdir_p} %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
+mkdir -p %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default48.png %{buildroot}%{_liconsdir}/%{name}.png
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default32.png %{buildroot}%{_iconsdir}/%{name}.png
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}%{_miconsdir}/%{name}.png
@@ -358,7 +349,7 @@ user_pref("browser.shell.checkDefaultBrowser", false);
 EOF
 
 # display icon for Firefox button
-%{__mkdir_p} %{buildroot}%{mozillalibdir}/defaults/profile/chrome
+mkdir -p %{buildroot}%{mozillalibdir}/defaults/profile/chrome
 cat << EOF > %{buildroot}%{mozillalibdir}/defaults/profile/chrome/userChrome.css
 #appmenu-toolbar-button {
   list-style-image: url("chrome://branding/content/icon16.png");
@@ -389,9 +380,9 @@ sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/browser/searchplugins/e
 mkdir -p %{buildroot}%{_sys_macros_dir}
 cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 # Macros from %{name} package
-%%firefox_major              %{major}
-%%firefox_epoch              %{ff_epoch}
-%%firefox_version            %{major}%{?prel:-0.%prel}
+%%firefox_major              %{version}
+%%firefox_epoch              %{epoch}
+%%firefox_version            %{version}%{?prel:-0.%{prel}}
 %%firefox_mozillapath        %{mozillalibdir}
 %%firefox_pluginsdir         %{pluginsdir}
 %%firefox_appid              \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
@@ -421,7 +412,7 @@ fi
 %{_iconsdir}/%{name}.png
 %{_liconsdir}/%{name}.png
 %{_datadir}/applications/*.desktop
-%{_libdir}/%{name}-%{major}*
+%{_libdir}/%{name}-%{version}*
 #% ghost %{mozillalibdir}/defaults/profile/bookmarks.html
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
