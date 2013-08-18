@@ -130,7 +130,6 @@ Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
 Requires:	xdg-utils
-Suggests:	hunspell-en
 Suggests:	%{_lib}canberra0
 Suggests:	%{_lib}cups2
 
