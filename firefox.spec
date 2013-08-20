@@ -31,7 +31,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	23.0
+Version:	23.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
