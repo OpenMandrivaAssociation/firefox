@@ -31,7 +31,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	23.0.1
+Version:	24.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -177,7 +177,7 @@ Files and macros mainly for building Firefox extensions.
 %patch8 -p0 -b .tirpc
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
-%patch14 -p1
+#patch14 -p1
 
 ## KDE INTEGRATION
 # Disable kde integration , need refactoring

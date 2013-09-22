@@ -1,0 +1,2 @@
+# This way it really works better
+addFilter("E: use-of-RPM_SOURCE_DIR")
