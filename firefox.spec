@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	24.0
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -79,6 +79,7 @@ BuildRequires:	makedepend
 BuildRequires:	python
 BuildRequires:	python-virtualenv
 BuildRequires:	python-distribute
+BuildRequires:	python-ply
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
@@ -211,20 +212,19 @@ mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
 ac_add_options --host=%{_host}
 ac_add_options --target=%{_target_platform}
-ac_add_options --enable-optimize="%{optflags}"
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 ac_add_options --sysconfdir="%{_sysconfdir}"
 ac_add_options --mandir="%{_mandir}"
 ac_add_options --includedir="%{_includedir}"
 ac_add_options --datadir="%{_datadir}"
+ac_add_options --enable-optimize
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-libvpx
 ac_add_options --with-system-ogg
-ac_add_options --disable-webrtc
 ac_add_options --enable-system-pixman
 ac_add_options --enable-system-hunspell
 ac_add_options --enable-webm
@@ -244,7 +244,8 @@ ac_add_options --enable-system-cairo
 ac_add_options --enable-system-sqlite
 ac_add_options --enable-startup-notification
 ac_add_options --enable-xinerama
-ac_add_options --with-distribution-id=org.rosa
+ac_add_options --with-system-ply
+ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --enable-gstreamer
@@ -253,13 +254,15 @@ ac_add_options --enable-dash
 %if %mdvver >= 201300
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-profile-guided-optimization
+ac_add_options --enable-webrtc
+ac_add_options --enable-system-ffi
 %endif
 %ifarch %arm
 %if "%{_target_cpu}" != "armv7l"
 ac_add_options --disable-methodjit
 ac_add_options --disable-tracejit
 %endif
-ac_add_options --enable-system-ffi
+ac_add_options --disable-webrtc
 %endif
 %ifnarch %arm %mips
 ac_add_options --with-valgrind
@@ -339,6 +342,8 @@ user_pref("extensions.autoDisableScopes", 0);
 user_pref("extensions.shownSelectionUI", true);
 user_pref("network.manage-offline-status", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("media.gstreamer.enabled", true);
+user_pref("media.webaudio.enabled", true);
 EOF
 
 # display icon for Firefox button
