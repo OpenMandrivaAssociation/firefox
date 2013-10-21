@@ -79,7 +79,8 @@ BuildRequires:	makedepend
 BuildRequires:	python
 BuildRequires:	python-virtualenv
 BuildRequires:	python-distribute
-BuildRequires:	python-ply
+#(tpg) this is in contrib
+#BuildRequires:	python-ply
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
@@ -244,7 +245,7 @@ ac_add_options --enable-system-cairo
 ac_add_options --enable-system-sqlite
 ac_add_options --enable-startup-notification
 ac_add_options --enable-xinerama
-ac_add_options --with-system-ply
+#ac_add_options --with-system-ply
 ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
