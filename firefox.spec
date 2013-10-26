@@ -377,7 +377,7 @@ rm -fr %{buildroot}%{mozillalibdir}/dictionaries
 ln -s %{_datadir}/dict/mozilla/ %{buildroot}%{mozillalibdir}/dictionaries
 
 # (lm) touch and %ghost bookmarks.html to a proper uninstall
-touch %{buildroot}%{mozillalibdir}/defaults/profile/bookmarks.html
+touch %{buildroot}%{mozillalibdir}/browser/defaults/profile/bookmarks.html
 
 # search engines
 rm -f %{buildroot}%{mozillalibdir}/browser/searchplugins/*
@@ -428,7 +428,7 @@ fi
 %{_liconsdir}/%{name}.png
 %{_datadir}/applications/*.desktop
 %{_libdir}/%{name}-%{version}*
-#% ghost %{mozillalibdir}/defaults/profile/bookmarks.html
+#% ghost %{mozillalibdir}/browser/defaults/profile/bookmarks.html
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
 %dir %{_libdir}/mozilla/extensions
