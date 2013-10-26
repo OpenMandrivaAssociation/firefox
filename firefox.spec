@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	24.0
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -291,8 +291,8 @@ ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
 pushd %{buildroot}%{_bindir}
 	ln -sf firefox mozilla-firefox
 popd
-mkdir -p %{buildroot}%{mozillalibdir}/defaults/preferences/
-install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/defaults/preferences/kde.js
+mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/preferences/
+install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/kde.js
 
 # Create and own %_libdir/mozilla/plugins & firefox extensions directories
 mkdir -p %{buildroot}%{pluginsdir}
@@ -322,8 +322,8 @@ rm -f %{buildroot}%{mozillalibdir}/README.txt
 rm -f %{buildroot}%{mozillalibdir}/removed-files
 rm -f %{buildroot}%{mozillalibdir}/precomplete
 
-install -D -m644 browser/app/profile/prefs.js %{buildroot}%{mozillalibdir}/defaults/profile/prefs.js
-cat << EOF >> %{buildroot}%{mozillalibdir}/defaults/profile/prefs.js
+install -D -m644 browser/app/profile/prefs.js %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
+cat << EOF >> %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
 user_pref("browser.EULA.override", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.ctrlTab.previews", true);
@@ -348,11 +348,27 @@ user_pref("media.webaudio.enabled", true);
 EOF
 
 # display icon for Firefox button
-mkdir -p %{buildroot}%{mozillalibdir}/defaults/profile/chrome
-cat << EOF > %{buildroot}%{mozillalibdir}/defaults/profile/chrome/userChrome.css
+mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome
+cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome/userChrome.css
 #appmenu-toolbar-button {
   list-style-image: url("chrome://branding/content/icon16.png");
 }
+EOF
+
+# files in this directory are read on every startup, and can change/add
+# preferences for existing profiles
+# extensions.autoDisableScopes is a new preference added in firefox 8
+# it defines "scopes" where newly installed addons are disabled by default
+# this is an additive bit field, and the value defaults to 15 (1+2+4+8)
+# we need to remove system scope (8) from it so language packs and other addons
+# which are installed systemwide won't get marked as 3rd party and disabled
+# documentation: http://kb.mozillazine.org/About:config_entries#Extensions.
+# or in toolkit/mozapps/extensions/AddonManager.jsm
+# we also need to disable the "disable addon selection dialog"
+cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/preferences/mga.js
+pref("general.useragent.locale", "chrome://global/locale/intl.properties");
+pref("extensions.autoDisableScopes", 0);
+pref("extensions.shownSelectionUI", true);
 EOF
 
 # use the system myspell dictionaries
@@ -400,7 +416,7 @@ if [ ! -r /etc/sysconfig/oem ]; then
     *desktop) bookmark="mozilla-one.html";;
     *) bookmark="mozilla-download.html";;
   esac
-  ln -s -f ../../../../share/mdk/bookmarks/mozilla/$bookmark  %{mozillalibdir}/defaults/profile/bookmarks.html
+  ln -s -f ../../../../share/mdk/bookmarks/mozilla/$bookmark  %{mozillalibdir}/browser/defaults/profile/bookmarks.html
 fi
 
 %files
