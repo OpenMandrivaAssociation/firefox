@@ -72,6 +72,8 @@ Patch36:	firefox-17.0-virtualenv.patch
 Patch37:	firefox-18.0.1-system-ogg.patch
 # (tpg) from Mageia use mozilla ogg player instead of gstreamer
 Patch38:	firefox-17.0-moz-ogg.patch
+# (crisb) fix for 64-bit failure
+Patch39:	firefox-25.0-x86_64.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -189,6 +191,7 @@ Files and macros mainly for building Firefox extensions.
 #patch36 -p1 -b .system-virtualenv
 #patch37 -p1
 #patch38 -p1
+%patch39 -p0
 
 #pushd js/src
 #autoconf-2.13
