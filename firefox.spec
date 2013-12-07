@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	25.0.1
-Release:	3
+Release:	4
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
