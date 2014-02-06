@@ -277,8 +277,6 @@ ac_add_options --enable-opus
 
 EOF
 
-perl -pi -e 's|\-0|\-9|g' config/make-jars.pl
-
 export LDFLAGS="%ldflags"
 make -f client.mk build
 
