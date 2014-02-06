@@ -31,7 +31,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	26.0
+Version:	27.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
