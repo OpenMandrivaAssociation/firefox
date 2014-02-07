@@ -225,11 +225,7 @@ ac_add_options --includedir="%{_includedir}"
 ac_add_options --datadir="%{_datadir}"
 ac_add_options --enable-optimize
 ac_add_options --with-system-nspr
-%if %mdvver >= 201400
 ac_add_options --with-system-nss
-%else
-ac_add_options --without-system-nss
-%endif
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-libvpx
