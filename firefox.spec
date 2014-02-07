@@ -125,6 +125,7 @@ BuildRequires:	nss-static-devel
 %ifnarch %arm %mips
 BuildRequires:	valgrind
 BuildRequires:	java-rpmbuild
+BuildRequires:	java-devel
 BuildRequires:	yasm >= 1.0.1
 %endif
 Requires:	indexhtml
