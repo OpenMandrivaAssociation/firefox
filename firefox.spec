@@ -242,10 +242,12 @@ ac_add_options --disable-debug
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
-ac_add_options --with-system-png
 ac_add_options --with-system-jpeg
-ac_add_options --enable-system-cairo
+%if %mdvver > 201300
+ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
+%endif
+ac_add_options --enable-system-cairo
 ac_add_options --enable-startup-notification
 ac_add_options --enable-xinerama
 #ac_add_options --with-system-ply
@@ -276,6 +278,10 @@ ac_add_options --enable-opus
 %endif
 
 EOF
+
+# Show the config just for debugging
+cat $MOZCONFIG
+
 
 export LDFLAGS="%ldflags"
 make -f client.mk build
