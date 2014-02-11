@@ -51,13 +51,9 @@ Source11:	firefox-searchengines-google.xml
 Source12:	firefox-searchengines-bing.xml
 Patch1:		firefox-6.0-lang.patch
 Patch2:		firefox-vendor.patch
-Patch3:		mozilla-firefox-1.5.0.6-systemproxy.patch
-Patch4:		firefox-17.0-nss-binary.patch
 # (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
 # the default web browser" is used fix mdv bug#58784
 Patch5:		firefox-6.0-appname.patch
-Patch6:		firefox-7.0-fix-str-fmt.patch
-Patch7:		mozilla-firefox-run-mozilla.patch
 Patch8:		firefox-18.0-tirpc.patch
 Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
@@ -166,11 +162,7 @@ Files and macros mainly for building Firefox extensions.
 %setup -qn mozilla-%update_channel
 %patch1 -p1 -b .lang
 %patch2 -p1 -b .vendor
-#patch3 -p1 -b .systemproxy
-#%patch4 -p1 -b .nsspatch
 %patch5 -p1 -b .appname
-# It was disabled because firefox3 hangs when using soundwrapper
-#patch7 -p1
 %patch8 -p0 -b .tirpc
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
