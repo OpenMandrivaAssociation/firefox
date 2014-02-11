@@ -64,14 +64,6 @@ Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
 Patch11:	firefox-18.0-kde.patch
 Patch12:	mozilla-18.0-kde.patch
-Patch13:	firefox-13-fix-nspr-include.patch
-Patch14:        firefox-18.0-fix-cairo-build.patch
-# (cjw) use system virtualenv
-Patch36:	firefox-17.0-virtualenv.patch
-# (tpg) from Mageia use system-wide ogg
-Patch37:	firefox-18.0.1-system-ogg.patch
-# (tpg) from Mageia use mozilla ogg player instead of gstreamer
-Patch38:	firefox-17.0-moz-ogg.patch
 # (crisb) fix for 64-bit failure
 Patch39:	firefox-25.0-x86_64.patch
 
@@ -182,16 +174,12 @@ Files and macros mainly for building Firefox extensions.
 %patch8 -p0 -b .tirpc
 %patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
-#patch14 -p1
 
 ## KDE INTEGRATION
 # Disable kde integration , need refactoring
 #patch11 -p1 -b .kdepatch
 #patch12 -p1 -b .kdemoz
 
-#patch36 -p1 -b .system-virtualenv
-#patch37 -p1
-#patch38 -p1
 %patch39 -p0
 
 #pushd js/src
