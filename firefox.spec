@@ -232,7 +232,7 @@ ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
 ac_add_options --with-system-jpeg
-%if %mdvver > 201400
+%if %mdvver >= 201400
 ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
