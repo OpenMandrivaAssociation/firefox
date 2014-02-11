@@ -62,8 +62,8 @@ Patch8:		firefox-18.0-tirpc.patch
 Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-18.0-kde.patch
-Patch12:	mozilla-18.0-kde.patch
+Patch11:	firefox-27.0-kde.patch
+Patch12:	mozilla-27.0-kde.patch
 # (crisb) fix for 64-bit failure
 Patch39:	firefox-25.0-x86_64.patch
 
@@ -176,9 +176,8 @@ Files and macros mainly for building Firefox extensions.
 %patch10 -p1 -b .default-mail-handler
 
 ## KDE INTEGRATION
-# Disable kde integration , need refactoring
-#patch11 -p1 -b .kdepatch
-#patch12 -p1 -b .kdemoz
+%patch11 -p1 -b .kdepatch
+%patch12 -p1 -b .kdemoz
 
 %patch39 -p0
 
