@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	27.0.1
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -227,7 +227,7 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
-ac_add_options --enable-system-cairo
+ac_add_options --disable-system-cairo
 ac_add_options --enable-startup-notification
 ac_add_options --enable-xinerama
 #ac_add_options --with-system-ply
@@ -239,7 +239,6 @@ ac_add_options --enable-media-plugins
 ac_add_options --enable-dash
 %if %mdvver >= 201300
 ac_add_options --enable-pulseaudio
-ac_add_options --enable-profile-guided-optimization
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
 %endif
