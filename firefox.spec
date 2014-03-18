@@ -31,8 +31,8 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	27.0.1
-Release:	2
+Version:	28.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -58,8 +58,6 @@ Patch4:		firefox-17.0-nss-binary.patch
 Patch5:		firefox-6.0-appname.patch
 Patch6:		firefox-7.0-fix-str-fmt.patch
 Patch7:		mozilla-firefox-run-mozilla.patch
-Patch8:		firefox-18.0-tirpc.patch
-Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
 Patch11:	firefox-18.0-kde.patch
@@ -177,10 +175,6 @@ Files and macros mainly for building Firefox extensions.
 #patch3 -p1 -b .systemproxy
 #%patch4 -p1 -b .nsspatch
 %patch5 -p1 -b .appname
-# It was disabled because firefox3 hangs when using soundwrapper
-#patch7 -p1
-%patch8 -p0 -b .tirpc
-%patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
 #patch14 -p1
 
