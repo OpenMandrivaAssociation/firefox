@@ -54,7 +54,6 @@ Patch2:		firefox-vendor.patch
 # (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
 # the default web browser" is used fix mdv bug#58784
 Patch5:		firefox-6.0-appname.patch
-Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
 Patch11:	firefox-28.0-kde.patch
