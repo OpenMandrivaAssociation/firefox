@@ -31,8 +31,8 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	27.0.1
-Release:	3
+Version:	28.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -54,12 +54,11 @@ Patch2:		firefox-vendor.patch
 # (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
 # the default web browser" is used fix mdv bug#58784
 Patch5:		firefox-6.0-appname.patch
-Patch8:		firefox-18.0-tirpc.patch
 Patch9:		firefox-5.0-asciidel.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-27.0-kde.patch
-Patch12:	mozilla-27.0-kde.patch
+Patch11:	firefox-28.0-kde.patch
+Patch12:	mozilla-28.0-kde.patch
 # (crisb) fix for 64-bit failure
 Patch39:	firefox-25.0-x86_64.patch
 
@@ -163,8 +162,6 @@ Files and macros mainly for building Firefox extensions.
 %patch1 -p1 -b .lang
 %patch2 -p1 -b .vendor
 %patch5 -p1 -b .appname
-%patch8 -p0 -b .tirpc
-%patch9 -p1 -b .ascii
 %patch10 -p1 -b .default-mail-handler
 
 ## KDE INTEGRATION
