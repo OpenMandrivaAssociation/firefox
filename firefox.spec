@@ -60,6 +60,8 @@ Patch11:	firefox-28.0-kde.patch
 Patch12:	mozilla-28.0-kde.patch
 # (crisb) fix for 64-bit failure
 Patch39:	firefox-25.0-x86_64.patch
+# (crisb) fix for two component (3.16) NSS version
+Patch40:	firefox-28.0-nss_detect.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -168,6 +170,8 @@ Files and macros mainly for building Firefox extensions.
 %patch12 -p1 -b .kdemoz
 
 %patch39 -p0
+
+%patch40 -p1 
 
 #pushd js/src
 #autoconf-2.13
