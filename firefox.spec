@@ -222,7 +222,7 @@ ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
-ac_add_options --with-system-libvpx
+#ac_add_options --with-system-libvpx
 ac_add_options --with-system-ogg
 ac_add_options --enable-system-pixman
 ac_add_options --enable-system-hunspell
