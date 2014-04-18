@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	28.0
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -313,7 +313,7 @@ cat << EOF >> %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
 user_pref("browser.EULA.override", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.ctrlTab.previews", true);
-user_pref("browser.tabs.insertRelatedAfterCurrent", false);
+user_pref("browser.tabs.insertRelatedAfterCurrent", true);
 user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
 #user_pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("browser.backspace_action", 2);
