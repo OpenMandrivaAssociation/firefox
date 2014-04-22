@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	28.0
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -296,7 +296,7 @@ for i in 16 22 24 32 48 256; do
 # (cg) Not all icon sizes are installed with make install, so just redo it here.
 install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
 mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
-ln -sf %{mozillalibdir}/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
+ln -sf %{mozillalibdir}/browser/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
 done
 mkdir -p %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default48.png %{buildroot}%{_liconsdir}/%{name}.png
