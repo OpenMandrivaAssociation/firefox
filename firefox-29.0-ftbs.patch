@@ -1,0 +1,23 @@
+--- mozilla-release/content/media/plugins/MediaPluginHost.cpp.orig	2014-04-28 15:53:15.157225181 +0100
++++ mozilla-release/content/media/plugins/MediaPluginHost.cpp	2014-04-28 15:53:19.955225375 +0100
+@@ -20,9 +20,7 @@
+ 
+ #include "MPAPI.h"
+ 
+-#if defined(ANDROID) && !defined(MOZ_WIDGET_GONK)
+ #include "nsIPropertyBag2.h"
+-#endif
+ 
+ #if defined(ANDROID) || defined(MOZ_WIDGET_GONK)
+ #include "android/log.h"
+--- mozilla-release/content/media/plugins/MPAPI.h.orig	2014-04-28 16:28:25.326165911 +0100
++++ mozilla-release/content/media/plugins/MPAPI.h	2014-04-28 16:29:58.185169668 +0100
+@@ -135,7 +135,7 @@
+   void (*SetMetaDataReadMode)(Decoder *aDecoder);
+   void (*SetPlaybackReadMode)(Decoder *aDecoder);
+   bool (*GetIntPref)(const char *aPref, int32_t *aResult);
+-  bool (*GetSystemInfoString)(const char *aKey, char *aResult, uint32_t aResultLen);
++  bool (*GetSystemInfoString)(const char *aKey, char *aResult, size_t aResultLen);
+ };
+ 
+ struct Decoder {
