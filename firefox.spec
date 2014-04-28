@@ -62,6 +62,7 @@ Patch12:	mozilla-29.0-kde.patch
 Patch39:	firefox-25.0-x86_64.patch
 # (crisb) fix for two component (3.16) NSS version
 Patch40:	firefox-28.0-nss_detect.patch
+Patch41:	firefox-29.0-ftbs.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -172,6 +173,7 @@ Files and macros mainly for building Firefox extensions.
 %patch39 -p0
 
 %patch40 -p1 
+%patch41 -p1
 
 #pushd js/src
 #autoconf-2.13
