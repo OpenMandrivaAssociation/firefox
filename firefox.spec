@@ -56,7 +56,7 @@ Patch2:		firefox-vendor.patch
 Patch5:		firefox-6.0-appname.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-29.0-kde.patch
+Patch11:	firefox-30.0-kde.patch
 Patch12:	mozilla-30.0-kde.patch
 # (crisb) fix for 64-bit failure
 Patch39:	firefox-25.0-x86_64.patch
