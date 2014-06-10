@@ -31,7 +31,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	29.0.1
+Version:	30.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -57,12 +57,11 @@ Patch5:		firefox-6.0-appname.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
 Patch11:	firefox-29.0-kde.patch
-Patch12:	mozilla-29.0-kde.patch
+Patch12:	mozilla-30.0-kde.patch
 # (crisb) fix for 64-bit failure
 Patch39:	firefox-25.0-x86_64.patch
 # (crisb) fix for two component (3.16) NSS version
 Patch40:	firefox-28.0-nss_detect.patch
-Patch41:	firefox-29.0-ftbs.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -84,7 +83,6 @@ BuildRequires:	pkgconfig(cairo) >= 1.10
 BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
-BuildRequires:	pkgconfig(gstreamer-plugins-base-0.10)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 BuildRequires:	pkgconfig(gtk+-2.0)
 BuildRequires:	pkgconfig(hunspell)
@@ -173,7 +171,6 @@ Files and macros mainly for building Firefox extensions.
 %patch39 -p0
 
 %patch40 -p1 
-%patch41 -p1
 
 #pushd js/src
 #autoconf-2.13
@@ -225,7 +222,7 @@ ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
 ac_add_options --with-system-jpeg
-%if %mdvver >= 201400
+%if %mdvver >= 201500
 ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
@@ -236,7 +233,7 @@ ac_add_options --enable-xinerama
 ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
-ac_add_options --enable-gstreamer
+ac_add_options --enable-gstreamer=1.0
 ac_add_options --enable-media-plugins
 ac_add_options --enable-dash
 %if %mdvver >= 201300
