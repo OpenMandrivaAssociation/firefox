@@ -184,6 +184,10 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
+# (crisb) use gcc for now
+export CXX=g++
+export CC=gcc
+
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
 %setup_compile_flags
