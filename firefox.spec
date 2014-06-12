@@ -62,6 +62,8 @@ Patch12:	mozilla-30.0-kde.patch
 Patch39:	firefox-25.0-x86_64.patch
 # (crisb) fix for two component (3.16) NSS version
 Patch40:	firefox-28.0-nss_detect.patch
+# (crisb) java does not actually seem to be required except for android builds
+Patch41:	firefox-30.0-no_java.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -111,8 +113,6 @@ BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
 %ifnarch %arm %mips
 BuildRequires:	valgrind
-BuildRequires:	java-rpmbuild
-BuildRequires:	java-devel
 BuildRequires:	yasm >= 1.0.1
 %endif
 Requires:	indexhtml
@@ -171,6 +171,7 @@ Files and macros mainly for building Firefox extensions.
 %patch39 -p0
 
 %patch40 -p1 
+%patch41 -p0
 
 #pushd js/src
 #autoconf-2.13
@@ -250,8 +251,6 @@ ac_add_options --disable-webrtc
 %endif
 %ifnarch %arm %mips
 ac_add_options --with-valgrind
-ac_add_options --with-java-include-path=%{java_home}/include
-ac_add_options --with-java-bin-path=%{java_home}/bin
 ac_add_options --enable-opus
 %endif
 
