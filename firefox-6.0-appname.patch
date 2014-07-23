@@ -12,4 +12,4 @@
 +  return NS_OK;
  }
  
- NS_IMPL_ISUPPORTS1(nsGNOMEShellService, nsIShellService)
+ NS_IMPL_ISUPPORTS(nsGNOMEShellService, nsIShellService)
