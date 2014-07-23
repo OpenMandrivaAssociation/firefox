@@ -80,6 +80,8 @@ BuildRequires:	zip
 BuildRequires:	bzip2-devel
 BuildRequires:	jpeg-devel
 BuildRequires:	libiw-devel
+BuildRequires:	icu-devel
+BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(cairo) >= 1.10
 BuildRequires:	pkgconfig(dbus-glib-1)
@@ -211,8 +213,10 @@ ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
+ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
 ac_add_options --with-system-ogg
+ac_add_options --with-system-harfbuzz
 ac_add_options --enable-system-pixman
 ac_add_options --enable-system-hunspell
 ac_add_options --enable-webm
