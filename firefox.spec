@@ -158,7 +158,8 @@ Obsoletes:	firefox-beta-devel < 11
 Files and macros mainly for building Firefox extensions.
 
 %prep
-%setup -qn mozilla-%update_channel
+%setup -qc %{name}-%{version} 
+pushd mozilla-%update_channel
 %patch1 -p1 -b .lang
 %patch2 -p1 -b .vendor
 %patch5 -p1 -b .appname
@@ -184,6 +185,9 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
+
+pushd mozilla-%update_channel
+
 # (crisb) use gcc for now
 export CXX=g++
 export CC=gcc
@@ -268,11 +272,14 @@ export LDFLAGS="%ldflags"
 make -f client.mk build
 
 %install
-make -C %{_builddir}/obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
+
+pushd mozilla-%update_channel
+
+make -C %{_builddir}/%{name}-%{version}/obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
 # Copy files to buildroot
 mkdir -p %{buildroot}%{mozillalibdir}
-cp -rf %{_builddir}/obj/dist/firefox/* %{buildroot}%{mozillalibdir}
+cp -rf %{_builddir}/%{name}-%{version}/obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 
 mkdir -p  %{buildroot}%{_bindir}
 ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
