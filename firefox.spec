@@ -177,7 +177,7 @@ pushd mozilla-%update_channel
 
 %patch40 -p1 
 %patch41 -p0
-%patch42 -p1
+%patch42 -p0
 
 #pushd js/src
 #autoconf-2.13
