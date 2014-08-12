@@ -64,6 +64,8 @@ Patch39:	firefox-25.0-x86_64.patch
 Patch40:	firefox-28.0-nss_detect.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
+# (crisb) python 3 support
+Patch42:	firefox-31.0-python3.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -175,6 +177,7 @@ pushd mozilla-%update_channel
 
 %patch40 -p1 
 %patch41 -p0
+%patch42 -p1
 
 #pushd js/src
 #autoconf-2.13
