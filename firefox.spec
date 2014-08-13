@@ -64,15 +64,17 @@ Patch39:	firefox-25.0-x86_64.patch
 Patch40:	firefox-28.0-nss_detect.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
-# (crisb) python 3 support
-Patch42:	firefox-31.0-python3.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
-BuildRequires:	python
-BuildRequires:	python-virtualenv
-BuildRequires:	python-distribute
+%if %mdvver >= 201500
+BuildRequires:	python2
+BuildRequires:	python2-distribute
+%else
+BuildRequires:  python
+BuildRequires:  python-distribute
+%endif
 #(tpg) this is in contrib
 #BuildRequires:	python-ply
 BuildRequires:	rootcerts >= 1:20110830.00
@@ -177,7 +179,6 @@ pushd mozilla-%update_channel
 
 %patch40 -p1 
 %patch41 -p0
-%patch42 -p0
 
 #pushd js/src
 #autoconf-2.13
@@ -276,6 +277,7 @@ cat $MOZCONFIG
 
 
 export LDFLAGS="%ldflags"
+export PYTHON=python3
 make -f client.mk build
 
 %install
