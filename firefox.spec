@@ -277,6 +277,7 @@ cat $MOZCONFIG
 
 
 export LDFLAGS="%ldflags"
+export PYTHON=python2
 make -f client.mk build
 
 %install
