@@ -272,6 +272,11 @@ ac_add_options --enable-opus
 
 EOF
 
+# Temporary workaround - installation crash (from fedora)
+%ifarch %{ix86}
+echo "ac_add_options --disable-ion" >> $MOZCONFIG
+%endif
+
 # Show the config just for debugging
 cat $MOZCONFIG
 
