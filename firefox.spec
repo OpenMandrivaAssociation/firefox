@@ -31,7 +31,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	32.0.3
+Version:	33.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -56,10 +56,8 @@ Patch2:		firefox-vendor.patch
 Patch5:		firefox-6.0-appname.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-32.0-kde.patch
-Patch12:	mozilla-32.0-kde.patch
-# (crisb) fix for 64-bit failure
-Patch39:	firefox-25.0-x86_64.patch
+Patch11:	firefox-33.0-kde.patch
+Patch12:	mozilla-33.0-kde.patch
 # (crisb) fix for two component (3.16) NSS version
 Patch40:	firefox-28.0-nss_detect.patch
 # (crisb) java does not actually seem to be required except for android builds
