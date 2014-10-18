@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	33.0
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -172,8 +172,6 @@ pushd mozilla-%update_channel
 ## KDE INTEGRATION
 %patch11 -p1 -b .kdepatch
 %patch12 -p1 -b .kdemoz
-
-%patch39 -p0
 
 %patch40 -p1 
 %patch41 -p0
