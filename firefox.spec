@@ -32,7 +32,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	33.0
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -267,11 +267,6 @@ ac_add_options --enable-opus
 %endif
 
 EOF
-
-# Temporary workaround - installation crash (from fedora)
-%ifarch %{ix86}
-echo "ac_add_options --disable-ion" >> $MOZCONFIG
-%endif
 
 # Show the config just for debugging
 cat $MOZCONFIG
