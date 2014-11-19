@@ -35,7 +35,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	33.1.1
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -216,7 +216,11 @@ ac_add_options --sysconfdir="%{_sysconfdir}"
 ac_add_options --mandir="%{_mandir}"
 ac_add_options --includedir="%{_includedir}"
 ac_add_options --datadir="%{_datadir}"
+%ifarch %{ix86}
+ac_add_options --disable-optimize
+%else
 ac_add_options --enable-optimize
+%endif
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
@@ -271,11 +275,6 @@ ac_add_options --enable-opus
 %endif
 
 EOF
-
-# Temporary workaround - installation crash (from fedora)
-%ifarch %{ix86}
-echo "ac_add_options --disable-ion" >> $MOZCONFIG
-%endif
 
 # Show the config just for debugging
 cat $MOZCONFIG
