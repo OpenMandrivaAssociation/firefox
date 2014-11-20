@@ -25,14 +25,17 @@
 
 %define update_channel  release
 
+%define _enable_debug_packages %{nil}
+%define debug_package %{nil}
+
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	33.0
-Release:	2
+Version:	33.1.1
+Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -187,6 +190,7 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
+%global optflags %{optflags} -g0
 
 pushd mozilla-%update_channel
 
@@ -212,7 +216,11 @@ ac_add_options --sysconfdir="%{_sysconfdir}"
 ac_add_options --mandir="%{_mandir}"
 ac_add_options --includedir="%{_includedir}"
 ac_add_options --datadir="%{_datadir}"
+%ifarch %{ix86}
+ac_add_options --disable-optimize
+%else
 ac_add_options --enable-optimize
+%endif
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
@@ -267,11 +275,6 @@ ac_add_options --enable-opus
 %endif
 
 EOF
-
-# Temporary workaround - installation crash (from fedora)
-%ifarch %{ix86}
-echo "ac_add_options --disable-ion" >> $MOZCONFIG
-%endif
 
 # Show the config just for debugging
 cat $MOZCONFIG
