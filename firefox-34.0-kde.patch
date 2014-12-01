@@ -2,7 +2,7 @@ diff --git a/browser/base/content/browser-kde.xul b/browser/base/content/browser
 new file mode 100644
 --- /dev/null
 +++ b/browser/base/content/browser-kde.xul
-@@ -0,0 +1,1238 @@
+@@ -0,0 +1,1224 @@
 +#filter substitution
 +<?xml version="1.0"?>
 +# -*- Mode: HTML -*-
@@ -674,7 +674,7 @@ new file mode 100644
 +             aria-label="&navbarCmd.label;"
 +             fullscreentoolbar="true" mode="icons" customizable="true"
 +             iconsize="small"
-+             defaultset="urlbar-container,search-container,bookmarks-menu-button,downloads-button,home-button,loop-call-button,social-share-button,social-toolbar-item"
++             defaultset="urlbar-container,search-container,bookmarks-menu-button,downloads-button,home-button,social-share-button,social-toolbar-item"
 +             customizationtarget="nav-bar-customization-target"
 +             overflowable="true"
 +             overflowbutton="nav-bar-overflow-button"
@@ -717,7 +717,7 @@ new file mode 100644
 +                     ontextreverted="return this.handleRevert();"
 +                     pageproxystate="invalid"
 +                     onfocus="document.getElementById('identity-box').style.MozUserFocus= 'normal'"
-+                     onblur="setTimeout(function() document.getElementById('identity-box').style.MozUserFocus = '', 0);">
++                     onblur="setTimeout(() => { document.getElementById('identity-box').style.MozUserFocus = ''; }, 0);">
 +              <box id="notification-popup-box" hidden="true" align="center">
 +                <image id="default-notification-icon" class="notification-anchor-icon" role="button"/>
 +                <image id="identity-notification-icon" class="notification-anchor-icon" role="button"/>
@@ -729,7 +729,8 @@ new file mode 100644
 +                <image id="plugins-notification-icon" class="notification-anchor-icon" role="button"/>
 +                <image id="web-notifications-notification-icon" class="notification-anchor-icon" role="button"/>
 +                <image id="plugin-install-notification-icon" class="notification-anchor-icon" role="button"/>
-+                <image id="mixed-content-blocked-notification-icon" class="notification-anchor-icon" role="button"/>
++                <image id="bad-content-blocked-notification-icon" class="notification-anchor-icon" role="button"/>
++                <image id="bad-content-unblocked-notification-icon" class="notification-anchor-icon" role="button"/>
 +                <image id="webRTC-shareDevices-notification-icon" class="notification-anchor-icon" role="button"/>
 +                <image id="webRTC-sharingDevices-notification-icon" class="notification-anchor-icon" role="button"/>
 +                <image id="webRTC-shareMicrophone-notification-icon" class="notification-anchor-icon" role="button"/>
@@ -922,22 +923,6 @@ new file mode 100644
 +                       cui-areatype="toolbar"
 +                       aboutHomeOverrideTooltip="&abouthome.pageTitle;"/>
 +
-+        <!-- XXX Bug 1013989 will provide a label for the button -->
-+        <!-- This uses badged to be compatible with the social api code it shares.
-+             We may also want it to be badged in the future, for notification
-+             purposes. -->
-+        <toolbarbutton id="loop-call-button"
-+                       class="toolbarbutton-1 chromeclass-toolbar-additional"
-+                       persist="class"
-+                       type="badged"
-+                       removable="true"
-+                       tooltiptext="&loopCallButton.tooltip;"
-+                       oncommand="LoopUI.openCallPanel(event);"
-+                       cui-areatype="toolbar"
-+                       >
-+        </toolbarbutton>
-+
-+
 +        <toolbarbutton id="social-share-button"
 +                       class="toolbarbutton-1 chromeclass-toolbar-additional"
 +                       label="&sharePageCmd.label;"
@@ -1107,6 +1092,7 @@ new file mode 100644
 +
 +      <splitter id="sidebar-splitter" class="chromeclass-extrachrome sidebar-splitter" hidden="true"/>
 +      <vbox id="appcontent" flex="1">
++        <notificationbox id="high-priority-global-notificationbox"/>
 +        <tabbrowser id="content"
 +                    flex="1" contenttooltip="aHTMLTooltip"
 +                    tabcontainer="tabbrowser-tabs"
@@ -1263,7 +1249,7 @@ diff --git a/browser/base/content/browser.xul b/browser/base/content/browser.xul
          <button id="editBookmarkPanelDeleteButton"
                  class="editBookmarkPanelBottomButton"
                  label="&editBookmark.cancel.label;"
-@@ -1164,17 +1164,17 @@
+@@ -1150,17 +1150,17 @@
  
    <hbox id="full-screen-warning-container" hidden="true" fadeout="true">
      <hbox style="width: 100%;" pack="center"> <!-- Inner hbox needed due to bug 579776. -->
@@ -1299,11 +1285,11 @@ diff --git a/browser/base/jar.mn b/browser/base/jar.mn
  *       content/browser/browser-tabPreviews.xml       (content/browser-tabPreviews.xml)
  *       content/browser/chatWindow.xul                (content/chatWindow.xul)
          content/browser/content.js                    (content/content.js)
-         content/browser/newtab/newTab.xul             (content/newtab/newTab.xul)
- *       content/browser/newtab/newTab.js              (content/newtab/newTab.js)
-         content/browser/newtab/newTab.css             (content/newtab/newTab.css)
- *       content/browser/pageinfo/pageInfo.xul         (content/pageinfo/pageInfo.xul)
-         content/browser/pageinfo/pageInfo.js          (content/pageinfo/pageInfo.js)
+         content/browser/defaultthemes/1.footer.jpg    (content/defaultthemes/1.footer.jpg)
+         content/browser/defaultthemes/1.header.jpg    (content/defaultthemes/1.header.jpg)
+         content/browser/defaultthemes/1.icon.jpg      (content/defaultthemes/1.icon.jpg)
+         content/browser/defaultthemes/1.preview.jpg   (content/defaultthemes/1.preview.jpg)
+         content/browser/defaultthemes/2.footer.jpg    (content/defaultthemes/2.footer.jpg)
 diff --git a/browser/components/build/nsModule.cpp b/browser/components/build/nsModule.cpp
 --- a/browser/components/build/nsModule.cpp
 +++ b/browser/components/build/nsModule.cpp
@@ -1364,17 +1350,17 @@ diff --git a/browser/components/build/nsModule.cpp b/browser/components/build/ns
  #elif defined(XP_MACOSX)
      { &kNS_SHELLSERVICE_CID, false, nullptr, nsMacShellServiceConstructor },
  #endif
-diff --git a/browser/components/preferences/advanced.js b/browser/components/preferences/advanced.js
---- a/browser/components/preferences/advanced.js
-+++ b/browser/components/preferences/advanced.js
-@@ -25,16 +25,22 @@ var gAdvancedPane = {
-     if (extraArgs && extraArgs["advancedTab"]){
-       advancedPrefs.selectedTab = document.getElementById(extraArgs["advancedTab"]);
-     } else {
-       var preference = document.getElementById("browser.preferences.advanced.selectedTabIndex");
-       if (preference.value !== null)
-         advancedPrefs.selectedIndex = preference.value;
-     }
+diff --git a/browser/components/preferences/main.js b/browser/components/preferences/main.js
+--- a/browser/components/preferences/main.js
++++ b/browser/components/preferences/main.js
+@@ -12,16 +12,22 @@ var gMainPane = {
+ 
+   /**
+    * Initialization of this.
+    */
+   init: function ()
+   {
+     this._pane = document.getElementById("paneMain");
  
 +    var env = Components.classes["@mozilla.org/process/environment;1"]
 +                        .getService(Components.interfaces.nsIEnvironment);
@@ -1390,52 +1376,38 @@ diff --git a/browser/components/preferences/advanced.js b/browser/components/pre
      // when the user will select the default.  We refresh here periodically
      // in case the default changes.  On other Windows OS's defaults can also
      // be set while the prefs are open.
-@@ -889,14 +895,25 @@ var gAdvancedPane = {
-    * Set browser as the operating system default browser.
+@@ -497,16 +503,27 @@ var gMainPane = {
     */
    setDefaultBrowser: function()
    {
      let shellSvc = getShellService();
      if (!shellSvc)
        return;
-     shellSvc.setDefaultBrowser(true, false);
-+    if (kde_session == 1) {
-+      var shellObj = Components.classes["@mozilla.org/file/local;1"]
-+                               .createInstance(Components.interfaces.nsILocalFile);
-+      shellObj.initWithPath("/usr/bin/kwriteconfig");
-+      var process = Components.classes["@mozilla.org/process/util;1"]
-+                              .createInstance(Components.interfaces.nsIProcess);
-+      process.init(shellObj);
-+      var args = ["--file", "kdeglobals", "--group", "General", "--key",
-+          "BrowserApplication", "MozillaFirefox"];
-+      process.run(false, args, args.length);
-+    }
+     try {
+       shellSvc.setDefaultBrowser(true, false);
++      if (kde_session == 1) {
++        var shellObj = Components.classes["@mozilla.org/file/local;1"]
++                                 .createInstance(Components.interfaces.nsILocalFile);
++        shellObj.initWithPath("/usr/bin/kwriteconfig");
++        var process = Components.classes["@mozilla.org/process/util;1"]
++                                .createInstance(Components.interfaces.nsIProcess);
++        process.init(shellObj);
++        var args = ["--file", "kdeglobals", "--group", "General", "--key",
++            "BrowserApplication", "MozillaFirefox"];
++        process.run(false, args, args.length);
++      }
+     } catch (ex) {
+       Components.utils.reportError(ex);
+       return;
+     }
      let selectedIndex =
        shellSvc.isDefaultBrowser(false, true) ? 1 : 0;
      document.getElementById("setDefaultPane").selectedIndex = selectedIndex;
    }
- #endif
- };
-diff --git a/browser/components/shell/src/Makefile.in b/browser/components/shell/src/Makefile.in
---- a/browser/components/shell/src/Makefile.in
-+++ b/browser/components/shell/src/Makefile.in
-@@ -2,10 +2,12 @@
- # This Source Code Form is subject to the terms of the Mozilla Public
- # License, v. 2.0. If a copy of the MPL was not distributed with this
- # file, You can obtain one at http://mozilla.org/MPL/2.0/.
- 
- include $(topsrcdir)/config/rules.mk
- 
- CXXFLAGS += $(TK_CFLAGS)
- 
-+LOCAL_INCLUDES += -I$(topsrcdir)/toolkit/xre
-+
- clobber::
- 	rm -f $(DIST)/lib/$(LIBRARY_NAME).lib
-diff --git a/browser/components/shell/src/moz.build b/browser/components/shell/src/moz.build
---- a/browser/components/shell/src/moz.build
-+++ b/browser/components/shell/src/moz.build
-@@ -10,16 +10,18 @@ if CONFIG['OS_ARCH'] == 'WINNT':
+diff --git a/browser/components/shell/moz.build b/browser/components/shell/moz.build
+--- a/browser/components/shell/moz.build
++++ b/browser/components/shell/moz.build
+@@ -30,16 +30,18 @@ if CONFIG['OS_ARCH'] == 'WINNT':
      ]
  elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'cocoa':
      SOURCES += [
@@ -1454,10 +1426,10 @@ diff --git a/browser/components/shell/src/moz.build b/browser/components/shell/s
  EXTRA_COMPONENTS += [
      'nsSetDefaultBrowser.js',
      'nsSetDefaultBrowser.manifest',
-diff --git a/browser/components/shell/src/nsKDEShellService.cpp b/browser/components/shell/src/nsKDEShellService.cpp
+diff --git a/browser/components/shell/nsKDEShellService.cpp b/browser/components/shell/nsKDEShellService.cpp
 new file mode 100644
 --- /dev/null
-+++ b/browser/components/shell/src/nsKDEShellService.cpp
++++ b/browser/components/shell/nsKDEShellService.cpp
 @@ -0,0 +1,238 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1697,10 +1669,10 @@ new file mode 100644
 +    NS_ADDREF(*_retval = defaultReader);
 +    return NS_OK;
 +}
-diff --git a/browser/components/shell/src/nsKDEShellService.h b/browser/components/shell/src/nsKDEShellService.h
+diff --git a/browser/components/shell/nsKDEShellService.h b/browser/components/shell/nsKDEShellService.h
 new file mode 100644
 --- /dev/null
-+++ b/browser/components/shell/src/nsKDEShellService.h
++++ b/browser/components/shell/nsKDEShellService.h
 @@ -0,0 +1,60 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* ***** BEGIN LICENSE BLOCK *****
@@ -1762,10 +1734,10 @@ new file mode 100644
 +};
 +
 +#endif // nskdeshellservice_h____
-diff --git a/browser/components/shell/src/nsUnixShellService.cpp b/browser/components/shell/src/nsUnixShellService.cpp
+diff --git a/browser/components/shell/nsUnixShellService.cpp b/browser/components/shell/nsUnixShellService.cpp
 new file mode 100644
 --- /dev/null
-+++ b/browser/components/shell/src/nsUnixShellService.cpp
++++ b/browser/components/shell/nsUnixShellService.cpp
 @@ -0,0 +1,52 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* ***** BEGIN LICENSE BLOCK *****
@@ -1819,10 +1791,10 @@ new file mode 100644
 +        return nsKDEShellServiceConstructor( aOuter, aIID, aResult );
 +    return nsGNOMEShellServiceConstructor( aOuter, aIID, aResult );
 +}
-diff --git a/browser/components/shell/src/nsUnixShellService.h b/browser/components/shell/src/nsUnixShellService.h
+diff --git a/browser/components/shell/nsUnixShellService.h b/browser/components/shell/nsUnixShellService.h
 new file mode 100644
 --- /dev/null
-+++ b/browser/components/shell/src/nsUnixShellService.h
++++ b/browser/components/shell/nsUnixShellService.h
 @@ -0,0 +1,45 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* ***** BEGIN LICENSE BLOCK *****
@@ -1872,7 +1844,7 @@ new file mode 100644
 diff --git a/browser/installer/package-manifest.in b/browser/installer/package-manifest.in
 --- a/browser/installer/package-manifest.in
 +++ b/browser/installer/package-manifest.in
-@@ -658,19 +658,21 @@
+@@ -685,19 +685,21 @@
  @BINPATH@/defaults/autoconfig/prefcalls.js
  @BINPATH@/browser/defaults/profile/prefs.js
  
