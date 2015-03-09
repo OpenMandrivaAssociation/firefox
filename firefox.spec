@@ -274,6 +274,7 @@ Patch41:	firefox-30.0-no_java.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
+BuildRequires:	pkgconfig(python2)
 %if %mdvver >= 201500
 BuildRequires:	python2
 BuildRequires:	python2-distribute
@@ -480,6 +481,7 @@ ac_add_options --enable-system-ffi
 ac_add_options --disable-methodjit
 ac_add_options --disable-tracejit
 %endif
+ac_add_options --enable-skia
 ac_add_options --disable-webrtc
 %endif
 %ifnarch %arm %mips
