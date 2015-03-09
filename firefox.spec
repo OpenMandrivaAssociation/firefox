@@ -373,7 +373,7 @@ Files and macros mainly for building Firefox extensions.
 # Expand all languages packages.
 %{expand:%(\
         for lang in %langlist; do\
-                echo "%%{expand:%%(sed "s!__LANG__!$lang!g" %{_sourcedir}/%{name}-template.in 2> /dev/null)}";\
+                echo "%%{expand:%%(sed "s!__LANG__!$lang!g" %{SOURCE13} 2> /dev/null)}";\
         done\
         )
 }
