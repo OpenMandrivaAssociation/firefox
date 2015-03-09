@@ -1,46 +1,47 @@
-%package -n %{oname}-__LANG__
+%package -n %{name}-__LANG__
 Summary:	%{langname___LANG__} interface for Firefox
+BuildArch:	noarch
 License:	GPL
 Group:		Networking/WWW
 Url:		http://www.mozilla.org/products/firefox/
 Obsoletes:	mozilla-firefox-__LANG__ < 3.0
 Obsoletes:	firefox-beta-__LANG__ < 18
-Requires:	%{oname} = 0:%{version}
+Requires:	%{name} = 0:%{version}
 Requires:	locales-%{locale___LANG__}
 %if %{with_dict___LANG__}
-%if __LANG__ == de
+%if "__LANG__" == "de"
 Requires: myspell-de_DE
 %else # DE
-%if __LANG__ == fr
+%if "__LANG__" == "fr"
 Requires: myspell-fr_FR
 %else # FR
 Requires: myspell-__LANG__
 %endif # FR
 %endif # DE
 %endif # LANG
-%if __LANG__ == fi
+%if "__LANG__" == "fi"
 %endif
-%if __LANG__ == br_FR
-Obsoletes: %{oname}-br <= 2.0.0.4
+%if "__LANG__" == "br_FR"
+Obsoletes: %{name}-br <= 2.0.0.4
 %endif
-%if __LANG__ == et
-Obsoletes: %{oname}-et_EE <= 3.0.1-6
+%if "__LANG__" == "et"
+Obsoletes: %{name}-et_EE <= 3.0.1-6
 %endif
-%if __LANG__ == es_ES
-Obsoletes: %{oname}-es <= 2.0.0.4
+%if "__LANG__" == "es_ES"
+Obsoletes: %{name}-es <= 2.0.0.4
 %endif
-%if __LANG__ == pt_PT
-Obsoletes: %{oname}-pt <= 2.0.0.4
+%if "__LANG__" == "pt_PT"
+Obsoletes: %{name}-pt <= 2.0.0.4
 %endif
-%if __LANG__ == nb_NO
-Obsoletes: %{oname}-nb <= 2.0.0.4
+%if "__LANG__" == "nb_NO"
+Obsoletes: %{name}-nb <= 2.0.0.4
 %endif
-%if __LANG__ == uk
-Obsoletes: %{oname}-uk_UA
+%if "__LANG__" == "uk"
+Obsoletes: %{name}-uk_UA
 %endif
 
-%description -n %{oname}-__LANG__
+%description -n %{name}-__LANG__
 %{langname___LANG__} localization for the Firefox web browser.
 
-%files -n %{oname}-__LANG__
-%{firefox_extdir}/langpack-%{language___LANG__}@firefox.mozilla.org.xpi
+%files -n %{name}-__LANG__
+%{firefox_langdir}/langpack-%{language___LANG__}@firefox.mozilla.org.xpi
