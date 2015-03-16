@@ -409,8 +409,8 @@ popd
 pushd mozilla-%update_channel
 
 # (crisb) use gcc for now
-export CXX=g++
-export CC=gcc
+export CXX=clang++
+export CC=clang
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
