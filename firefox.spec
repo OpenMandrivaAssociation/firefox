@@ -228,7 +228,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	36.0.1
+Version:	36.0.3
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -408,9 +408,11 @@ popd
 
 pushd mozilla-%update_channel
 
-# (crisb) use gcc for now
-export CXX=g++
-export CC=gcc
+%if %mdvver >= 201500
+# export clang just be safe it is used
+export CXX=clang++
+export CC=clang
+%endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
