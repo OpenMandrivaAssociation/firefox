@@ -409,9 +409,15 @@ popd
 pushd mozilla-%update_channel
 
 %if %mdvver >= 201500
+%ifarch %arm
+# arm still requires gcc
+export CXX=g++
+export CC=gcc
+%else
 # export clang just be safe it is used
 export CXX=clang++
 export CC=clang
+%endif
 %endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
