@@ -303,6 +303,7 @@ BuildRequires:	qt5-devel
 BuildRequires:	cmake(Qt5Gui)
 BuildRequires:	cmake(Qt5Network)
 BuildRequires:	cmake(Qt5Core)
+BuildRequires:	cmake(QtSensors)
 BuildRequires:	cmake(Qt5Quick)
 BuildRequires:	qmake5
 BuildRequires:	pkgconfig(pango)
