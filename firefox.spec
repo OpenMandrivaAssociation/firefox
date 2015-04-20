@@ -428,8 +428,8 @@ export CXX=g++
 export CC=gcc
 %else
 # export clang just be safe it is used
-export CXX=clang++
-export CC=clang
+export CXX=g++
+export CC=gcc
 %endif
 %endif
 
@@ -458,7 +458,7 @@ ac_add_options --disable-optimize
 %else
 ac_add_options --enable-optimize
 %endif
-ac_add_options --enable-llvm-hacks
+#ac_add_options --enable-llvm-hacks
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
