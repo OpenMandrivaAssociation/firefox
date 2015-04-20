@@ -311,6 +311,8 @@ BuildRequires:	cmake(Qt5Widgets)
 BuildRequires:	cmake(Qt5Quick)
 BuildRequires:	qmake5
 BuildRequires:	pkgconfig(pango)
+BuildRequires:	pkgconfig(pangoft2)
+BuildRequires:	pkgconfig(pangocairo)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
