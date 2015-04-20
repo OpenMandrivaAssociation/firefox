@@ -300,6 +300,11 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 BuildRequires:	qt5-devel
+BuildRequires:	cmake(Qt5Gui)
+BuildRequires:	cmake(Qt5Network)
+BuildRequires:	cmake(Qt5Core)
+BuildRequires:	cmake(Qt5Quick)
+BuildRequires:	qmake5
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
@@ -439,6 +444,7 @@ ac_add_options --mandir="%{_mandir}"
 ac_add_options --includedir="%{_includedir}"
 ac_add_options --datadir="%{_datadir}"
 ac_add_options --enable-default-toolkit=cairo-qt
+ac_add_options --with-qtdir=%{_libdir}/qt5
 %ifarch %{ix86}
 ac_add_options --disable-optimize
 %else
