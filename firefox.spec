@@ -432,8 +432,8 @@ export CC=gcc
 # export clang just be safe it is used
 export CXX=g++
 export CC=gcc
-export CFLAGS="$CFLAGS -I /usr/include/qt5/QtGui"
-export CPPFLAGS="$CPPFLAGS -I /usr/include/qt5/QtGui"
+export CFLAGS="$CFLAGS -I /usr/include/qt5/QtGui -I /usr/include/qt5/QtGui/5.5.0/QtGui/qpa"
+export CPPFLAGS="$CPPFLAGS -I /usr/include/qt5/QtGui -I /usr/include/qt5/QtGui/5.5.0/QtGui/qpa"
 %endif
 %endif
 
@@ -511,7 +511,7 @@ ac_add_options --enable-system-ffi
 ac_add_options --disable-methodjit
 ac_add_options --disable-tracejit
 %endif
-ac_add_options --enable-skia
+ac_add_options --disable-skia
 ac_add_options --disable-webrtc
 %endif
 %ifnarch %arm %mips
