@@ -305,6 +305,7 @@ BuildRequires:	cmake(Qt5Network)
 BuildRequires:	cmake(Qt5Core)
 BuildRequires:	cmake(Qt5Quick)
 BuildRequires:	qmake5
+BuildRequires:	pkgconfig(pango)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
