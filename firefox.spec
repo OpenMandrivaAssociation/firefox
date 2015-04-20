@@ -417,7 +417,7 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
-sed -i -e "s/#include <QWindow>/#include <QMainWindow>/g" mozilla-release/widget/nsShmImage.cpp
+sed -i -e "s/#include <QWindow>/#include <QtGui/QWindow>/g" mozilla-release/widget/nsShmImage.cpp
 
 %global optflags %{optflags} -g0
 
