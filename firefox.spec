@@ -299,7 +299,7 @@ BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-BuildRequires:	pkgconfig(gtk+-2.0)
+BuildRequires:	qt5-devel
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
@@ -438,11 +438,13 @@ ac_add_options --sysconfdir="%{_sysconfdir}"
 ac_add_options --mandir="%{_mandir}"
 ac_add_options --includedir="%{_includedir}"
 ac_add_options --datadir="%{_datadir}"
+ac_add_options --enable-default-toolkit=cairo-qt
 %ifarch %{ix86}
 ac_add_options --disable-optimize
 %else
 ac_add_options --enable-optimize
 %endif
+ac_add_options --enable-llvm-hacks
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
@@ -451,11 +453,13 @@ ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
 ac_add_options --with-system-ogg
 ac_add_options --with-system-harfbuzz
+ac_add_options --with-system-libvpx
 ac_add_options --enable-system-pixman
 ac_add_options --enable-system-hunspell
 ac_add_options --enable-webm
 ac_add_options --enable-gio
 ac_add_options --disable-gnomevfs
+ac_add_options --disable-gnomeui
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
@@ -469,7 +473,7 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
-ac_add_options --disable-system-cairo
+ac_add_options --enable-system-cairo
 ac_add_options --enable-startup-notification
 ac_add_options --enable-xinerama
 #ac_add_options --with-system-ply
