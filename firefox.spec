@@ -228,7 +228,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	37.0.1
+Version:	37.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
