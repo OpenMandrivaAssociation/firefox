@@ -1,3 +1,11 @@
+
+# HG changeset patch
+# User Mike Hommey <mh@glandium.org>
+# Date 1425858139 -32400
+# Node ID 48e130d698364f246d9ab870044617fbf9e21f20
+# Parent  08d7c1951e618f91863d34bddfdffe880bf78bf6
+Bug 1136958 - Reintroduce pixman code path removed in bug 1097776 for --disable-skia builds. r=jmuizelaar, a=sledru
+
 diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompositor.cpp
 --- a/gfx/layers/basic/BasicCompositor.cpp
 +++ b/gfx/layers/basic/BasicCompositor.cpp
@@ -10,7 +18,7 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
  #include <algorithm>
  #include "ImageContainer.h"
  #include "gfxPrefs.h"
-+#if MOZ_ENABLE_SKIA
++#ifdef MOZ_ENABLE_SKIA
  #include "skia/SkCanvas.h"              // for SkCanvas
  #include "skia/SkBitmapDevice.h"        // for SkBitmapDevice
 +#else
@@ -25,7 +33,7 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
  
  class DataTextureSourceBasic : public DataTextureSource
                               , public TextureSourceBasic
-@@ -163,16 +168,17 @@ DrawSurfaceWithTextureCoords(DrawTarget 
+@@ -172,16 +177,17 @@ DrawSurfaceWithTextureCoords(DrawTarget 
    // Only use REPEAT if aTextureCoords is outside (0, 0, 1, 1).
    gfx::Rect unitRect(0, 0, 1, 1);
    ExtendMode mode = unitRect.Contains(aTextureCoords) ? ExtendMode::CLAMP : ExtendMode::REPEAT;
@@ -34,7 +42,7 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
                     mode, aMask, aMaskTransform, &matrix);
  }
  
-+#if MOZ_ENABLE_SKIA
++#ifdef MOZ_ENABLE_SKIA
  static SkMatrix
  Matrix3DToSkia(const gfx3DMatrix& aMatrix)
  {
@@ -43,7 +51,7 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
                     aMatrix._21,
                     aMatrix._41,
                     aMatrix._12,
-@@ -181,17 +187,17 @@ Matrix3DToSkia(const gfx3DMatrix& aMatri
+@@ -190,20 +196,20 @@ Matrix3DToSkia(const gfx3DMatrix& aMatri
                     aMatrix._14,
                     aMatrix._24,
                     aMatrix._44);
@@ -53,16 +61,22 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
  
  static void
 -SkiaTransform(DataSourceSurface* aDest,
-+DrawTransform(DataSourceSurface* aDest,
-               DataSourceSurface* aSource,
-               const gfx3DMatrix& aTransform,
-               const Point& aDestOffset)
+-              DataSourceSurface* aSource,
+-              const gfx3DMatrix& aTransform,
+-              const Point& aDestOffset)
++Transform(DataSourceSurface* aDest,
++          DataSourceSurface* aSource,
++          const gfx3DMatrix& aTransform,
++          const Point& aDestOffset)
  {
    if (aTransform.IsSingular()) {
      return;
    }
  
-@@ -220,16 +226,90 @@ SkiaTransform(DataSourceSurface* aDest,
+   IntSize destSize = aDest->GetSize();
+   SkImageInfo destInfo = SkImageInfo::Make(destSize.width,
+                                            destSize.height,
+@@ -229,16 +235,88 @@ SkiaTransform(DataSourceSurface* aDest,
  
    SkPaint paint;
    paint.setXfermodeMode(SkXfermode::kSrc_Mode);
@@ -72,8 +86,6 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
    destCanvas.drawBitmapRectToRect(src, nullptr, destRect, &paint);
  }
 +#else
-+// Cairo must rely on a less precise method if Skia is not available.
-+// See bugs 1105087 and 1097776.
 +static pixman_transform
 +Matrix3DToPixman(const gfx3DMatrix& aMatrix)
 +{
@@ -96,10 +108,10 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
 +}
 +
 +static void
-+DrawTransform(DataSourceSurface* aDest,
-+              DataSourceSurface* aSource,
-+              const gfx3DMatrix& aTransform,
-+              const Point& aDestOffset)
++Transform(DataSourceSurface* aDest,
++          DataSourceSurface* aSource,
++          const gfx3DMatrix& aTransform,
++          const Point& aDestOffset)
 +{
 +  IntSize destSize = aDest->GetSize();
 +  pixman_image_t* dest = pixman_image_create_bits(PIXMAN_a8r8g8b8,
@@ -153,17 +165,27 @@ diff --git a/gfx/layers/basic/BasicCompositor.cpp b/gfx/layers/basic/BasicCompos
    return IntRect(r.x, r.y, r.width, r.height);
  }
  
-@@ -364,17 +444,17 @@ BasicCompositor::DrawQuad(const gfx::Rec
+@@ -368,22 +446,26 @@ BasicCompositor::DrawQuad(const gfx::Rec
+   }
+ 
+   if (!aTransform.Is2D()) {
+     dest->Flush();
+ 
      RefPtr<SourceSurface> snapshot = dest->Snapshot();
      RefPtr<DataSourceSurface> source = snapshot->GetDataSurface();
      RefPtr<DataSourceSurface> temp =
-       Factory::CreateDataSourceSurface(RoundOut(transformBounds).Size(), SurfaceFormat::B8G8R8A8, true);
+-      Factory::CreateDataSourceSurface(RoundOut(transformBounds).Size(), SurfaceFormat::B8G8R8A8, true);
++      Factory::CreateDataSourceSurface(RoundOut(transformBounds).Size(), SurfaceFormat::B8G8R8A8
++#ifdef MOZ_ENABLE_SKIA
++        , true
++#endif
++        );
      if (NS_WARN_IF(!temp)) {
        return;
      }
  
 -    SkiaTransform(temp, source, new3DTransform, transformBounds.TopLeft());
-+    DrawTransform(temp, source, new3DTransform, transformBounds.TopLeft());
++    Transform(temp, source, new3DTransform, transformBounds.TopLeft());
  
      transformBounds.MoveTo(0, 0);
      buffer->DrawSurface(temp, transformBounds, transformBounds);
@@ -184,7 +206,7 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
  #include "nsRect.h"                     // for nsIntRect
  #include "nsRegion.h"                   // for nsIntRegion, etc
  #include "nsTArray.h"                   // for nsAutoTArray
-+#if MOZ_ENABLE_SKIA
++#ifdef MOZ_ENABLE_SKIA
  #include "skia/SkCanvas.h"              // for SkCanvas
  #include "skia/SkBitmapDevice.h"        // for SkBitmapDevice
 +#else
@@ -199,7 +221,7 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
  using namespace mozilla::gfx;
  
  /**
-@@ -596,16 +601,17 @@ void
+@@ -601,16 +606,17 @@ void
  BasicLayerManager::SetRoot(Layer* aLayer)
  {
    NS_ASSERTION(aLayer, "Root can't be null");
@@ -208,7 +230,7 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
    mRoot = aLayer;
  }
  
-+#if MOZ_ENABLE_SKIA
++#ifdef MOZ_ENABLE_SKIA
  static SkMatrix
  BasicLayerManager_Matrix3DToSkia(const gfx3DMatrix& aMatrix)
  {
@@ -217,7 +239,7 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
                     aMatrix._21,
                     aMatrix._41,
                     aMatrix._12,
-@@ -614,17 +620,17 @@ BasicLayerManager_Matrix3DToSkia(const g
+@@ -619,20 +625,20 @@ BasicLayerManager_Matrix3DToSkia(const g
                     aMatrix._14,
                     aMatrix._24,
                     aMatrix._44);
@@ -227,16 +249,22 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
  
  static void
 -SkiaTransform(const gfxImageSurface* aDest,
-+DrawTransform(const gfxImageSurface* aDest,
-               RefPtr<DataSourceSurface> aSrc,
-               const gfx3DMatrix& aTransform,
-               gfxPoint aDestOffset)
+-              RefPtr<DataSourceSurface> aSrc,
+-              const gfx3DMatrix& aTransform,
+-              gfxPoint aDestOffset)
++Transform(const gfxImageSurface* aDest,
++          RefPtr<DataSourceSurface> aSrc,
++          const gfx3DMatrix& aTransform,
++          gfxPoint aDestOffset)
  {
    if (aTransform.IsSingular()) {
      return;
    }
  
-@@ -653,16 +659,89 @@ SkiaTransform(const gfxImageSurface* aDe
+   IntSize destSize = ToIntSize(aDest->GetSize());
+   SkImageInfo destInfo = SkImageInfo::Make(destSize.width,
+                                            destSize.height,
+@@ -658,16 +664,88 @@ SkiaTransform(const gfxImageSurface* aDe
  
    SkPaint paint;
    paint.setXfermodeMode(SkXfermode::kSrc_Mode);
@@ -246,7 +274,6 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
    destCanvas.drawBitmapRectToRect(src, nullptr, destRect, &paint);
  }
 +#else
-+// See bugs 1097776 and 1105087.
 +static pixman_transform
 +BasicLayerManager_Matrix3DToPixman(const gfx3DMatrix& aMatrix)
 +{
@@ -269,10 +296,10 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
 +}
 +
 +static void
-+PixmanTransform(const gfxImageSurface* aDest,
-+                RefPtr<DataSourceSurface> aSrc,
-+                const gfx3DMatrix& aTransform,
-+                gfxPoint aDestOffset)
++Transform(const gfxImageSurface* aDest,
++          RefPtr<DataSourceSurface> aSrc,
++          const gfx3DMatrix& aTransform,
++          gfxPoint aDestOffset)
 +{
 +  IntSize destSize = ToIntSize(aDest->GetSize());
 +  pixman_image_t* dest = pixman_image_create_bits(aDest->Format() == gfxImageFormat::ARGB32 ? PIXMAN_a8r8g8b8 : PIXMAN_x8r8g8b8,
@@ -326,7 +353,7 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
   * @param aSource       Source surface.
   * @param aDest         Desintation context.
   * @param aBounds       Area represented by aSource.
-@@ -694,17 +773,17 @@ Transform3D(RefPtr<SourceSurface> aSourc
+@@ -699,17 +777,17 @@ Transform3D(RefPtr<SourceSurface> aSourc
                                                                         aDestRect.height),
                                                              gfxImageFormat::ARGB32);
    gfxPoint offset = aDestRect.TopLeft();
@@ -336,7 +363,7 @@ diff --git a/gfx/layers/basic/BasicLayerManager.cpp b/gfx/layers/basic/BasicLaye
  
    // Transform the content and offset it such that the content begins at the origin.
 -  SkiaTransform(destImage, aSource->GetDataSurface(), translation * aTransform, offset);
-+  DrawTransform(destImage, aSource->GetDataSurface(), translation * aTransform, offset);
++  Transform(destImage, aSource->GetDataSurface(), translation * aTransform, offset);
  
    // If we haven't actually drawn to aDest then return our temporary image so
    // that the caller can do this.
