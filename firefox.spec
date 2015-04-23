@@ -435,8 +435,8 @@ export CC=gcc
 # export clang just be safe it is used
 export CXX=g++
 export CC=gcc
-export CFLAGS="$CFLAGS -I /usr/include/qt5/QtGui -I /usr/include/qt5/QtGui/5.5.0/QtGui/qpa"
-export CPPFLAGS="$CPPFLAGS -I /usr/include/qt5/QtGui -I /usr/include/qt5/QtGui/5.5.0/QtGui/qpa"
+export CFLAGS="$CFLAGS -I/usr/include/qt5/QtGui -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa"
+export CPPFLAGS="$CPPFLAGS -I/usr/include/qt5/QtGui -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa"
 %endif
 %endif
 
