@@ -441,8 +441,8 @@ export CC=gcc
 # export clang just be safe it is used
 export CXX=g++
 export CC=gcc
-export CFLAGS="$CFLAGS -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 Qt5Gui Qt5PrintSupport) "
-export CPPFLAGS="$CPPFLAGS  -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 Qt5Gui Qt5PrintSupport)"
+export CFLAGS="$CFLAGS -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 gio-2.0 gio-unix-2.0 Qt5Gui Qt5PrintSupport) "
+export CPPFLAGS="$CPPFLAGS  -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 gio-2.0 gio-unix-2.0 Qt5Gui Qt5PrintSupport)"
 %endif
 %endif
 
