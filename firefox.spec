@@ -425,6 +425,7 @@ sed -i -e "s,#include <qpa/qplatformnativeinterface.h>,#include <QtGui/5.5.0/QtG
 sed -i -e "s,#include <QPrinterInfo>,#include <QtPrintSupport/QPrinterInfo>,g" mozilla-release/widget/qt/nsDeviceContextSpecQt.cpp
 sed -i -e "s,#include <QPrinterInfo>,#include <QtPrintSupport/QPrinterInfo>,g" mozilla-release/widget/qt/nsPrintSettingsQt.cpp
 sed -i -e "s,#include <QPrinter>,#include <QtPrintSupport/QPrinter>,g" mozilla-release/widget/qt/nsPrintSettingsQt.cpp
+sed -i -e "s,#include <gio/gio.h>,#include <glib-2.0/gio/gio.h>,g" mozilla-release/extensions/gio/nsGIOProtocolHandler.cpp
 
 %global optflags %{optflags} -g0
 
