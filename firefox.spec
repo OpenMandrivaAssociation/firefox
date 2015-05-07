@@ -422,6 +422,7 @@ popd
 %build
 sed -i -e "s,#include <QWindow>,#include <QtGui/QWindow>,g" mozilla-release/widget/nsShmImage.cpp
 sed -i -e "s,#include <qpa/qplatformnativeinterface.h>,#include <QtGui/5.5.0/QtGui/qpa/qplatformnativeinterface.h>,g" mozilla-release/gfx/thebes/gfxQtPlatform.cpp 
+sed -i -e "s,#include <QPrinterInfo>,#include <QtPrintSupport/QPrinterInfo>,g" mozilla-release/widget/qt/nsDeviceContextSpecQt.cpp
 
 %global optflags %{optflags} -g0
 
