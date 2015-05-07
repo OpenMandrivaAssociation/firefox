@@ -420,6 +420,7 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
+%define _disable_ld_no_undefined 1
 sed -i -e "s,#include <QWindow>,#include <QtGui/QWindow>,g" mozilla-release/widget/nsShmImage.cpp
 sed -i -e "s,#include <qpa/qplatformnativeinterface.h>,#include <QtGui/5.5.0/QtGui/qpa/qplatformnativeinterface.h>,g" mozilla-release/gfx/thebes/gfxQtPlatform.cpp 
 sed -i -e "s,#include <QPrinterInfo>,#include <QtPrintSupport/QPrinterInfo>,g" mozilla-release/widget/qt/nsDeviceContextSpecQt.cpp
@@ -440,8 +441,8 @@ export CC=gcc
 # export clang just be safe it is used
 export CXX=g++
 export CC=gcc
-export CFLAGS="$CFLAGS  -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 Qt5Gui Qt5PrintSupport) "
-export CPPFLAGS="$CPPFLAGS  -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 Qt5Gui Qt5PrintSupport)"
+export CFLAGS="$CFLAGS -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 Qt5Gui Qt5PrintSupport) "
+export CPPFLAGS="$CPPFLAGS  -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 Qt5Gui Qt5PrintSupport)"
 %endif
 %endif
 
