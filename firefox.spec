@@ -270,8 +270,6 @@ Patch12:	mozilla-37.0-kde.patch
 Patch40:	firefox-28.0-nss_detect.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
-# (tpg) https://bugzilla.mozilla.org/show_bug.cgi?id=1105087
-Patch42:	firefox-fix-build-with-disable-skia.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -407,7 +405,6 @@ pushd mozilla-%update_channel
 
 #patch40 -p1
 %patch41 -p0
-%patch42 -p1
 
 #pushd js/src
 #autoconf-2.13
