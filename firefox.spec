@@ -402,7 +402,7 @@ pushd mozilla-%update_channel
 %patch10 -p1 -b .default-mail-handler
 
 ## KDE INTEGRATION
-%patch11 -p1 -b .kdepatch
+#patch11 -p1 -b .kdepatch
 %patch12 -p1 -b .kdemoz
 
 %patch40 -p1
