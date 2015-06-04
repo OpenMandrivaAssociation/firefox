@@ -388,7 +388,6 @@ pushd mozilla-%update_channel
 %patch11 -p1 -b .kdepatch
 %patch12 -p1 -b .kdemoz
 
-%patch40 -p1 
 %patch41 -p0
 
 #pushd js/src
