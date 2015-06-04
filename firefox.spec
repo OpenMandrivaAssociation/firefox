@@ -228,7 +228,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	38.0.1
+Version:	38.0.5
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -388,7 +388,6 @@ pushd mozilla-%update_channel
 %patch11 -p1 -b .kdepatch
 %patch12 -p1 -b .kdemoz
 
-%patch40 -p1 
 %patch41 -p0
 
 #pushd js/src
