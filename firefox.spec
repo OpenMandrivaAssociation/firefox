@@ -229,7 +229,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	38.0.5
-Release:	0.1
+Release:	0.2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
