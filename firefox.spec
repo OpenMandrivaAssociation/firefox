@@ -406,7 +406,7 @@ popd
 pushd mozilla-%update_channel
 
 %if %mdvver >= 201500
-%ifarch %arm
+%ifarch %arm %ix86
 # arm still requires gcc
 export CXX=g++
 export CC=gcc
