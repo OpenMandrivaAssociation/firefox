@@ -29,7 +29,7 @@
 %define _enable_debug_packages %{nil}
 %define debug_package %{nil}
 
-%define xpidir ftp://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-i686/xpi/
+%define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-i686/xpi/
 
 # Supported l10n language lists
 %define langlist af ar as ast be bg bn_IN bn_BD br bs ca cs cy da de el en_GB en_ZA eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mai mk ml mr nb_NO nl nn_NO or pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
@@ -228,15 +228,15 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	39.0
-Release:	2
+Version:	39.0.3
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.bz2
+Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.bz2
 %else
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.bz2
+Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.bz2
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
