@@ -610,7 +610,7 @@ mkdir -p %{buildroot}%{mozillalibdir}/distribution/searchplugins/common
 cp -f %{SOURCE5} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/jamendo.xml
 cp -f %{SOURCE6} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/exalead.xml
 cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
-cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/distribution/searchplugins/cmmonyandex.xml
+cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/yandex.xml
 
 # Correct distro values on search engines
 sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
