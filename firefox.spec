@@ -228,7 +228,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	40.0
+Version:	40.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -404,7 +404,7 @@ popd
 pushd mozilla-%update_channel
 
 %if %mdvver >= 201500
-%ifarch %arm %ix86
+%ifarch %arm %ix86 x86_64
 # arm still requires gcc
 export CXX=g++
 export CC=gcc
