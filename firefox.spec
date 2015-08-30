@@ -244,8 +244,6 @@ Source6:	firefox-searchengines-exalead.xml
 Source8:	firefox-searchengines-askcom.xml
 Source9:	kde.js
 Source10:	firefox-searchengines-yandex.xml
-Source11:	firefox-searchengines-google.xml
-Source12:	firefox-searchengines-bing.xml
 Source13:	firefox-l10n-template.in
 Source100:      firefox.rpmlintrc
 # l10n sources
@@ -644,8 +642,6 @@ cp -f %{SOURCE5} %{buildroot}%{mozillalibdir}/browser/searchplugins/jamendo.xml
 cp -f %{SOURCE6} %{buildroot}%{mozillalibdir}/browser/searchplugins/exalead.xml
 cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/browser/searchplugins/askcom.xml
 cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/browser/searchplugins/yandex.xml
-cp -f %{SOURCE11} %{buildroot}%{mozillalibdir}/browser/searchplugins/google.xml
-cp -f %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/searchplugins/bing.xml
 
 # Correct distro values on search engines
 sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/browser/searchplugins/askcom.xml
