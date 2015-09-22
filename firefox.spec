@@ -451,6 +451,7 @@ ac_add_options --enable-system-hunspell
 ac_add_options --enable-webm
 ac_add_options --enable-gio
 ac_add_options --disable-gnomevfs
+ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
