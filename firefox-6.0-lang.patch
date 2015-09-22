@@ -9,6 +9,6 @@ index 02aa908..e6ff139 100644
 +// Use system environment variable to choose locale
 +pref("intl.locale.matchOS", true);
 +
- // This is the pref to control the location bar, change this to true to 
+ // This is the pref to control the location bar, change this to true to
  // force this - this makes the origin of popup windows more obvious to avoid
  // spoofing. We would rather not do it by default because it affects UE for web

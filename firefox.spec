@@ -228,15 +228,15 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	40.0.3
+Version:	41.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
-Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.bz2
+Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
 %else
-Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.bz2
+Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -262,8 +262,8 @@ Patch2:		firefox-vendor.patch
 Patch5:		firefox-6.0-appname.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-40.0-kde.patch
-Patch12:	mozilla-40.0-kde.patch
+Patch11:	firefox-41.0-kde.patch
+Patch12:	mozilla-41.0-kde.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
 
