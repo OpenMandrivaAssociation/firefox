@@ -7,6 +7,13 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
+# Set up Google API keys, see http://www.chromium.org/developers/how-tos/api-keys
+# OpenMandriva key, id and secret
+# For your own builds, please get your own set of keys.
+%define    google_api_key AIzaSyAraWnKIFrlXznuwvd3gI-gqTozL-H-8MU
+%define    google_default_client_id 1089316189405-m0ropn3qa4p1phesfvi2urs7qps1d79o.apps.googleusercontent.com
+%define    google_default_client_secret RDdr-pHq2gStY4uw0m-zxXeo
+
 %define firefox_appid \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 %define firefox_langdir %{_datadir}/mozilla/extensions/%{firefox_appid}
 %define mozillalibdir %{_libdir}/%{name}-%{version}
@@ -228,7 +235,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	41.0
+Version:	41.0.1
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -419,6 +426,9 @@ export CC=clang
 # because compile will fail of missing -fPIC  :)
 %setup_compile_flags
 
+echo -n "%google_api_key" > google-api-key
+echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
+
 export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
 mk_add_options MOZILLA_OFFICIAL=1
@@ -492,6 +502,8 @@ ac_add_options --disable-webrtc
 ac_add_options --with-valgrind
 ac_add_options --enable-opus
 %endif
+ac_add_options --with-google-oauth-api-keyfile=$PWD/google-oauth-api-key
+ac_add_options --with-google-api-keyfile=$PWD/google-api-key
 
 EOF
 
