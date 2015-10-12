@@ -236,7 +236,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	41.0.1
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -568,7 +568,7 @@ user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.ctrlTab.previews", true);
 user_pref("browser.tabs.insertRelatedAfterCurrent", true);
 user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
-#user_pref("browser.startup.homepage_override.mstone", "ignore");
+pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("browser.backspace_action", 2);
 user_pref("browser.display.use_system_colors", true);
 user_pref("browser.download.folderList", 1);
