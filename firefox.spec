@@ -235,7 +235,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	41.0.1
+Version:	41.0.2
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -568,7 +568,7 @@ user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.ctrlTab.previews", true);
 user_pref("browser.tabs.insertRelatedAfterCurrent", true);
 user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
-#user_pref("browser.startup.homepage_override.mstone", "ignore");
+pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("browser.backspace_action", 2);
 user_pref("browser.display.use_system_colors", true);
 user_pref("browser.download.folderList", 1);
