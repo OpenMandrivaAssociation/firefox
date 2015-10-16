@@ -3,7 +3,7 @@ langlist="af ar as ast be bg bn-IN bn-BD br bs ca cs cy da de el en-GB en-ZA eo 
 fversion=`grep ^Version: firefox.spec  | awk '{print $2}'`
 
 echo "Fetching $fversion files"
-for i in $langlist;do wget http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/$fversion/linux-i686/xpi/$i.xpi;done
+for i in $langlist;do wget https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/$fversion/linux-i686/xpi/$i.xpi;done
 
 if [ -x /usr/bin/abf ]; then
     echo "Uploading to www.abf.io"
