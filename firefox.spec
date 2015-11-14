@@ -235,7 +235,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	41.0.2
+Version:	42.0
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -269,10 +269,11 @@ Patch2:		firefox-vendor.patch
 Patch5:		firefox-6.0-appname.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-41.0-kde.patch
-Patch12:	mozilla-41.0-kde.patch
+Patch11:	firefox-42.0-kde.patch
+Patch12:	mozilla-42.0-kde.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
+Patch42:	mozilla-42.0-libproxy.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -383,7 +384,7 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %setup -qc %{name}-%{version} 
-pushd mozilla-%update_channel
+pushd %{name}-%{version}
 %patch1 -p1 -b .lang
 #patch2 -p1 -b .vendor
 %patch5 -p1 -b .appname
@@ -394,6 +395,7 @@ pushd mozilla-%update_channel
 %patch12 -p1 -b .kdemoz
 
 %patch41 -p0
+%patch42 -p1
 
 #pushd js/src
 #autoconf-2.13
@@ -408,7 +410,7 @@ popd
 %build
 %global optflags %{optflags} -g0
 
-pushd mozilla-%update_channel
+pushd %{name}-%{version}
 
 %if %mdvver >= 201500
 %ifarch %arm %ix86 x86_64
@@ -517,7 +519,7 @@ make -f client.mk build
 
 %install
 
-pushd mozilla-%update_channel
+pushd %{name}-%{version}
 
 make -C %{_builddir}/%{name}-%{version}/obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
