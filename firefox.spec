@@ -397,7 +397,7 @@ pushd %{name}-%{version}
 
 %patch41 -p0
 %patch42 -p1
-%ifmddver >= 201500
+%if %mddver >= 201500
 %patch43 -p1
 %endif
 
