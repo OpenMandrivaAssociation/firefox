@@ -274,6 +274,7 @@ Patch12:	mozilla-42.0-kde.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
 Patch42:	mozilla-42.0-libproxy.patch
+Patch43:	freetype261.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -396,6 +397,9 @@ pushd %{name}-%{version}
 
 %patch41 -p0
 %patch42 -p1
+%ifmddver >= 201500
+%patch43 -p1
+%endif
 
 #pushd js/src
 #autoconf-2.13
