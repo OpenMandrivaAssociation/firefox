@@ -235,7 +235,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	43.0
+Version:	43.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -438,6 +438,7 @@ mk_add_options BUILD_OFFICIAL=1
 mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
 ac_add_options --host=%{_host}
+ac_add_options --enable-default-toolkit=cairo-gtk3
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
