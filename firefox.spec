@@ -235,7 +235,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	43.0
+Version:	43.0.2
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -274,7 +274,6 @@ Patch12:	mozilla-43.0-kde.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
 Patch42:	mozilla-42.0-libproxy.patch
-Patch43:	freetype261.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -397,9 +396,6 @@ pushd %{name}-%{version}
 
 %patch41 -p0
 %patch42 -p1
-%if %mdvver >= 201500
-%patch43 -p1
-%endif
 
 #pushd js/src
 #autoconf-2.13
@@ -442,6 +438,7 @@ mk_add_options BUILD_OFFICIAL=1
 mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
 ac_add_options --host=%{_host}
+ac_add_options --enable-default-toolkit=cairo-gtk3
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
