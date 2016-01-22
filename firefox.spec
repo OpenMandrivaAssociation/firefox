@@ -438,9 +438,14 @@ export CC=clang
 %endif
 %endif
 
+
+
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
 %setup_compile_flags
+
+export CFLAGS="$CFLAGS -fPIC -I/usr/include/qt5/QtGui/5.5.1/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 gio-2.0 gio-unix-2.0 Qt5Gui Qt5PrintSupport) "
+export CPPFLAGS="$CPPFLAGS  -fPIC -I/usr/include/qt5/QtGui/5.5.1/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 gio-2.0 gio-unix-2.0 Qt5Gui Qt5PrintSupport)"
 
 echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
