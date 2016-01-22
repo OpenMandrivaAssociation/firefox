@@ -7,6 +7,13 @@
 # This also means only STABLE upstream releases, NO betas.
 # This is a discussed topic. Please, do not flame it again.
 
+# Set up Google API keys, see http://www.chromium.org/developers/how-tos/api-keys
+# OpenMandriva key, id and secret
+# For your own builds, please get your own set of keys.
+%define    google_api_key AIzaSyAraWnKIFrlXznuwvd3gI-gqTozL-H-8MU
+%define    google_default_client_id 1089316189405-m0ropn3qa4p1phesfvi2urs7qps1d79o.apps.googleusercontent.com
+%define    google_default_client_secret RDdr-pHq2gStY4uw0m-zxXeo
+
 %define firefox_appid \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 %define firefox_langdir %{_datadir}/mozilla/extensions/%{firefox_appid}
 %define mozillalibdir %{_libdir}/%{name}-%{version}
@@ -29,7 +36,7 @@
 %define _enable_debug_packages %{nil}
 %define debug_package %{nil}
 
-%define xpidir ftp://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-i686/xpi/
+%define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-i686/xpi/
 
 # Supported l10n language lists
 %define langlist af ar as ast be bg bn_IN bn_BD br bs ca cs cy da de el en_GB en_ZA eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mai mk ml mr nb_NO nl nn_NO or pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
@@ -228,15 +235,15 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	40.0.3
+Version:	43.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.bz2
+Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
 %else
-Source0:	ftp://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.bz2
+Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -262,12 +269,11 @@ Patch2:		firefox-vendor.patch
 Patch5:		firefox-6.0-appname.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-37.0-kde.patch
-Patch12:	mozilla-37.0-kde.patch
-# (crisb) fix for two component (3.16) NSS version
-Patch40:	firefox-28.0-nss_detect.patch
+Patch11:	firefox-43.0-kde.patch
+Patch12:	mozilla-43.0-kde.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
+Patch42:	mozilla-42.0-libproxy.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -297,20 +303,21 @@ BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-BuildRequires:	qt5-devel
-BuildRequires:	cmake(Qt5Gui)
-BuildRequires:	cmake(Qt5Network)
-BuildRequires:	cmake(Qt5Core)
-BuildRequires:	cmake(Qt5Positioning)
-BuildRequires:	cmake(Qt5PrintSupport)
-BuildRequires:	cmake(Qt5Sensors)
-BuildRequires:	cmake(Qt5Xml)
-BuildRequires:	cmake(Qt5Widgets)
-BuildRequires:	cmake(Qt5Quick)
-BuildRequires:	qmake5
-BuildRequires:	pkgconfig(pango)
-BuildRequires:	pkgconfig(pangoft2)
-BuildRequires:	pkgconfig(pangocairo)
+BuildRequires: qt5-devel
+BuildRequires: cmake(Qt5Gui)
+BuildRequires: cmake(Qt5Network)
+BuildRequires: cmake(Qt5Core)
+BuildRequires: cmake(Qt5Positioning)
+BuildRequires: cmake(Qt5PrintSupport)
+BuildRequires: cmake(Qt5Sensors)
+BuildRequires: cmake(Qt5Xml)
+BuildRequires: cmake(Qt5Widgets)
+BuildRequires: cmake(Qt5Quick)
+BuildRequires: qmake5
+BuildRequires: pkgconfig(pango)
+BuildRequires: pkgconfig(pangoft2)
+BuildRequires: pkgconfig(pangocairo)
+BuildRequires:	pkgconfig(gtk+-2.0)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
@@ -391,18 +398,18 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %setup -qc %{name}-%{version} 
-pushd mozilla-%update_channel
+pushd %{name}-%{version}
 %patch1 -p1 -b .lang
 #patch2 -p1 -b .vendor
 %patch5 -p1 -b .appname
 %patch10 -p1 -b .default-mail-handler
 
 ## KDE INTEGRATION
-#patch11 -p1 -b .kdepatch
-#patch12 -p1 -b .kdemoz
+%patch11 -p1 -b .kdepatch
+%patch12 -p1 -b .kdemoz
 
-#patch40 -p1
 %patch41 -p0
+%patch42 -p1
 
 #pushd js/src
 #autoconf-2.13
@@ -415,35 +422,28 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
-%define _disable_ld_no_undefined 1
-sed -i -e "s,#include <QWindow>,#include <QtGui/QWindow>,g" mozilla-release/widget/nsShmImage.cpp
-sed -i -e "s,#include <qpa/qplatformnativeinterface.h>,#include <QtGui/5.5.0/QtGui/qpa/qplatformnativeinterface.h>,g" mozilla-release/gfx/thebes/gfxQtPlatform.cpp 
-sed -i -e "s,#include <QPrinterInfo>,#include <QtPrintSupport/QPrinterInfo>,g" mozilla-release/widget/qt/nsDeviceContextSpecQt.cpp
-sed -i -e "s,#include <QPrinterInfo>,#include <QtPrintSupport/QPrinterInfo>,g" mozilla-release/widget/qt/nsPrintSettingsQt.cpp
-sed -i -e "s,#include <QPrinter>,#include <QtPrintSupport/QPrinter>,g" mozilla-release/widget/qt/nsPrintSettingsQt.cpp
-sed -i -e "s,#include <gio/gio.h>,#include <glib-2.0/gio/gio.h>,g" mozilla-release/extensions/gio/nsGIOProtocolHandler.cpp
-
 %global optflags %{optflags} -g0
 
-pushd mozilla-%update_channel
+pushd %{name}-%{version}
 
 %if %mdvver >= 201500
-%ifarch %arm
+%ifarch %arm %ix86 x86_64
 # arm still requires gcc
 export CXX=g++
 export CC=gcc
 %else
 # export clang just be safe it is used
-export CXX=g++
-export CC=gcc
-export CFLAGS="$CFLAGS -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 gio-2.0 gio-unix-2.0 Qt5Gui Qt5PrintSupport) "
-export CPPFLAGS="$CPPFLAGS  -fPIC -I/usr/include/qt5/QtGui/5.5.0/QtGui/qpa $(pkg-config --libs --cflags glib-2.0 gio-2.0 gio-unix-2.0 Qt5Gui Qt5PrintSupport)"
+export CXX=clang++
+export CC=clang
 %endif
 %endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
 %setup_compile_flags
+
+echo -n "%google_api_key" > google-api-key
+echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
 
 export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
@@ -466,7 +466,6 @@ ac_add_options --disable-optimize
 %else
 ac_add_options --enable-optimize
 %endif
-#ac_add_options --enable-llvm-hacks
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
@@ -475,13 +474,12 @@ ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
 ac_add_options --with-system-ogg
 ac_add_options --with-system-harfbuzz
-ac_add_options --with-system-libvpx
 ac_add_options --enable-system-pixman
 ac_add_options --enable-system-hunspell
 ac_add_options --enable-webm
 ac_add_options --enable-gio
 ac_add_options --disable-gnomevfs
-ac_add_options --disable-gnomeui
+ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
@@ -515,13 +513,15 @@ ac_add_options --enable-system-ffi
 ac_add_options --disable-methodjit
 ac_add_options --disable-tracejit
 %endif
-ac_add_options --disable-skia
+ac_add_options --enable-skia
 ac_add_options --disable-webrtc
 %endif
 %ifnarch %arm %mips
 ac_add_options --with-valgrind
 ac_add_options --enable-opus
 %endif
+ac_add_options --with-google-oauth-api-keyfile=$PWD/google-oauth-api-key
+ac_add_options --with-google-api-keyfile=$PWD/google-api-key
 
 EOF
 
@@ -535,7 +535,7 @@ make -f client.mk build
 
 %install
 
-pushd mozilla-%update_channel
+pushd %{name}-%{version}
 
 make -C %{_builddir}/%{name}-%{version}/obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
@@ -586,7 +586,7 @@ user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.ctrlTab.previews", true);
 user_pref("browser.tabs.insertRelatedAfterCurrent", true);
 user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
-#user_pref("browser.startup.homepage_override.mstone", "ignore");
+pref("browser.startup.homepage_override.mstone", "ignore");
 user_pref("browser.backspace_action", 2);
 user_pref("browser.display.use_system_colors", true);
 user_pref("browser.download.folderList", 1);
@@ -637,15 +637,15 @@ ln -s %{_datadir}/dict/mozilla/ %{buildroot}%{mozillalibdir}/dictionaries
 touch %{buildroot}%{mozillalibdir}/browser/defaults/profile/bookmarks.html
 
 # search engines
-rm -f %{buildroot}%{mozillalibdir}/browser/searchplugins/*
-cp -f %{SOURCE5} %{buildroot}%{mozillalibdir}/browser/searchplugins/jamendo.xml
-cp -f %{SOURCE6} %{buildroot}%{mozillalibdir}/browser/searchplugins/exalead.xml
-cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/browser/searchplugins/askcom.xml
-cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/browser/searchplugins/yandex.xml
+mkdir -p %{buildroot}%{mozillalibdir}/distribution/searchplugins/common
+cp -f %{SOURCE5} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/jamendo.xml
+cp -f %{SOURCE6} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/exalead.xml
+cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
+cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/yandex.xml
 
 # Correct distro values on search engines
-sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/browser/searchplugins/askcom.xml
-sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/browser/searchplugins/exalead.xml
+sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
+sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/exalead.xml
 
 mkdir -p %{buildroot}%{_sys_macros_dir}
 cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
