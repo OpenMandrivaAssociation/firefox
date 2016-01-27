@@ -26,10 +26,6 @@ sources:
   eu.xpi: 6c32fc16dc5fc6de1388705cf92f50f255ab8ec9
   fa.xpi: 94a254856a6d1c09d24858cce534ff701714f49a
   fi.xpi: e1c9618800c49c9ad95eb47b284d1e79be8365c1
-  firefox-41.0.2.source.tar.xz: 5e8243cbbd3ea306bd1e5f1b16079bdcc9af95a4
-  firefox-42.0.source.tar.xz: c207a73fbfde2683aca36417331441d007ceb765
-  firefox-43.0.2.source.tar.xz: 1ba1da32a1472a88f644bdb1373c40a97e721170
-  firefox-43.0.source.tar.xz: 65913f9dd61b49b341a66a514c9cac23b602c7c8
   firefox-44.0.source.tar.xz: 47189b0a15087dd8f27999f5d920ad204fde8dca
   fr.xpi: ed1723c0d7bfc99b10344bb6b5b7e026a5b69944
   fy-NL.xpi: 1494107d7ccaef170a3f56b060175ce6ddbc7535
