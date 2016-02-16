@@ -416,6 +416,14 @@ popd
 
 pushd %{name}-%{version}
 
+%if %mdvver >= 201500
+%ifarch %ix86
+# still requires gcc
+export CXX=g++
+export CC=gcc
+%endif
+
+
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
 %setup_compile_flags
