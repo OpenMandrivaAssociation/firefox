@@ -425,7 +425,7 @@ pushd %{name}-%{version}
 export CXX=g++
 export CC=gcc
 %endif
-
+%endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
