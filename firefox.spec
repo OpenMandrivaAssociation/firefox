@@ -308,6 +308,9 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 BuildRequires:	pkgconfig(gtk+-2.0)
+%if %mdvver >= 201500
+BuildRequires:	pkgconfig(gtk+-3.0)
+%endif
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
@@ -416,6 +419,14 @@ popd
 
 pushd %{name}-%{version}
 
+%if %mdvver >= 201500
+%ifarch %ix86
+# still requires gcc
+export CXX=g++
+export CC=gcc
+%endif
+
+
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
 %setup_compile_flags
@@ -430,7 +441,9 @@ mk_add_options BUILD_OFFICIAL=1
 mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
 ac_add_options --host=%{_host}
+%if %mdvver >= 201500
 ac_add_options --enable-default-toolkit=cairo-gtk3
+%endif
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
