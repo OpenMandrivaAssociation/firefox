@@ -1,3 +1,7 @@
+# Problem with clang+LTO as of 3.8.0-0.260001.1:
+# Compile failure with
+# Assertion `!N->isTemporary() && "Expected all forward declarations to be resolved"' failed.
+%define _disable_lto 1
 #
 # WARNING, READ FIRST:
 #
@@ -235,7 +239,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	44.0
+Version:	44.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -411,18 +415,6 @@ popd
 %global optflags %{optflags} -g0
 
 pushd %{name}-%{version}
-
-%if %mdvver >= 201500
-%ifarch %arm %ix86 x86_64
-# arm still requires gcc
-export CXX=g++
-export CC=gcc
-%else
-# export clang just be safe it is used
-export CXX=clang++
-export CC=clang
-%endif
-%endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
