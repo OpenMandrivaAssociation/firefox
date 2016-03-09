@@ -239,7 +239,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	44.0.2
+Version:	45.0
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -273,8 +273,8 @@ Patch2:		firefox-vendor.patch
 Patch5:		firefox-6.0-appname.patch
 Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-44.0-kde.patch
-Patch12:	mozilla-44.0-kde.patch
+Patch11:	firefox-45.0-kde.patch
+Patch12:	mozilla-45.0-kde.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
 Patch42:	mozilla-42.0-libproxy.patch
@@ -460,8 +460,10 @@ ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
+%if %mdvver >= 201500
 ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
+%endif
 ac_add_options --with-system-ogg
 ac_add_options --with-system-harfbuzz
 ac_add_options --enable-system-pixman
