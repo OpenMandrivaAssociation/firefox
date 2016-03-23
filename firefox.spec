@@ -30,6 +30,10 @@
 %define _requires_exceptions libxul.so
 %endif
 
+# Use Qt instead of GTK -- long term goal, but as of 45.0.1,
+# doesn't even compile yet
+%bcond_with qt
+
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
@@ -307,9 +311,15 @@ BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
+%if %{with qt}
+BuildRequires:	pkgconfig(QtCore5)
+BuildRequires:	pkgconfig(QtGui5)
+BuildRequires:	pkgconfig(QtWidgets5)
+%else
 BuildRequires:	pkgconfig(gtk+-2.0)
 %if %mdvver >= 201500
 BuildRequires:	pkgconfig(gtk+-3.0)
+%endif
 %endif
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
@@ -425,6 +435,13 @@ pushd %{name}-%{version}
 export CXX=g++
 export CC=gcc
 %endif
+%if %{with qt}
+# Headers in FF-Qt are weird and change visibility
+# of symbols at random. clang errors out on that, so
+# force gcc for now
+export CXX=g++
+export CC=gcc
+%endif
 %endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
@@ -434,15 +451,25 @@ export CC=gcc
 echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
 
+sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
 export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
+%if %{with qt}
+export CFLAGS="`pkg-config --cflags glib-2.0`"
+export CXXFLAGS="`pkg-config --cflags glib-2.0`"
+%endif
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
 ac_add_options --host=%{_host}
 %if %mdvver >= 201500
+%if %{with qt}
+ac_add_options --enable-default-toolkit=cairo-qt
+ac_add_options --with-qtdir=%{_libdir}/qt5
+%else
 ac_add_options --enable-default-toolkit=cairo-gtk3
+%endif
 %endif
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
@@ -520,6 +547,12 @@ EOF
 # Show the config just for debugging
 cat $MOZCONFIG
 
+%if %{with qt}
+# FIXME workaround for a bug in the Qt frontend makefiles - they look for
+# source files in the object directory, so let's just put them there for now.
+mkdir -p ../obj/ipc/chromium
+cp ipc/chromium/src/base/message_pump_qt.* ../obj/ipc/chromium/
+%endif
 
 export LDFLAGS="%ldflags"
 export PYTHON=python2
