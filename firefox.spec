@@ -311,7 +311,9 @@ BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-%if %{with qt}
+# no idea why if {with qt}
+# causes parseExpressionFailure
+%if 0
 BuildRequires:	pkgconfig(QtCore5)
 BuildRequires:	pkgconfig(QtGui5)
 BuildRequires:	pkgconfig(QtWidgets5)
