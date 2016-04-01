@@ -695,12 +695,11 @@ mkdir -p %{buildroot}%{firefox_langdir}/
 
 # Install all languages
 for lang in %{langlist}; do
-        language="language_$lang"
-        language=${!language}
+    language="language_$lang"
+    language=${!language}
 
-        # l10n
-        cp %{_sourcedir}/${language}.xpi %{buildroot}%{firefox_langdir}/langpack-${language}@firefox.mozilla.org.xpi
-
+# l10n
+    cp %{_sourcedir}/${language}.xpi %{buildroot}%{firefox_langdir}/langpack-${language}@firefox.mozilla.org.xpi
 done
 
 %pre
@@ -723,7 +722,8 @@ fi
 %{_liconsdir}/%{name}.png
 %{_datadir}/applications/*.desktop
 %{_libdir}/%{name}-%{version}*
-%ghost %{mozillalibdir}/browser/defaults/profile/bookmarks.html
+# (tpg) it is already owned
+#%ghost %{mozillalibdir}/browser/defaults/profile/bookmarks.html
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
 %dir %{_libdir}/mozilla/extensions
