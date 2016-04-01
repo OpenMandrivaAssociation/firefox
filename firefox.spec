@@ -244,7 +244,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	45.0.1
-Release:	3
+Release:	4
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -368,6 +368,8 @@ Provides:	webclient
 
 Obsoletes:	firefox-ext-weave-sync
 Obsoletes:	firefox-beta < 11
+# (tpg) needed for bookmarks
+Requires(post):	desktop-common-data
 
 %description
 The award-winning Web browser is now faster, more secure, and fully
@@ -707,13 +709,9 @@ if [ -d %{mozillalibdir}/dictionaries ]; then
 fi
 
 %post
-if [ ! -r /etc/sysconfig/oem ]; then
-  case `grep META_CLASS /etc/sysconfig/system` in
-    *powerpack) bookmark="mozilla-powerpack.html" ;;
-    *desktop) bookmark="mozilla-one.html";;
-    *) bookmark="mozilla-download.html";;
-  esac
-  ln -s -f ../../../../share/mdk/bookmarks/mozilla/$bookmark  %{mozillalibdir}/browser/defaults/profile/bookmarks.html
+if [ "$(readlink %{mozillalibdir}/browser/defaults/profile/bookmarks.html)" != "%{_datadir}/mdk/bookmarks/mozilla/bookmarks.html" ]; then
+    rm -rf %{mozillalibdir}/browser/defaults/profile/bookmarks.html
+    ln -s -f %{_datadir}/mdk/bookmarks/mozilla/bookmarks.html %{mozillalibdir}/browser/defaults/profile/bookmarks.html
 fi
 
 %files
@@ -725,7 +723,7 @@ fi
 %{_liconsdir}/%{name}.png
 %{_datadir}/applications/*.desktop
 %{_libdir}/%{name}-%{version}*
-#% ghost %{mozillalibdir}/browser/defaults/profile/bookmarks.html
+%ghost %{mozillalibdir}/browser/defaults/profile/bookmarks.html
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
 %dir %{_libdir}/mozilla/extensions
