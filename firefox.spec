@@ -244,7 +244,7 @@ Epoch:		0
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
 Version:	45.0.1
-Release:	4
+Release:	5
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -370,6 +370,8 @@ Obsoletes:	firefox-ext-weave-sync
 Obsoletes:	firefox-beta < 11
 # (tpg) needed for bookmarks
 Requires(post):	desktop-common-data
+# (tpg) fix bug https://issues.openmandriva.org/show_bug.cgi?id=1525
+Requires:	gtk3-modules
 
 %description
 The award-winning Web browser is now faster, more secure, and fully
