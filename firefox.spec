@@ -370,8 +370,10 @@ Obsoletes:	firefox-ext-weave-sync
 Obsoletes:	firefox-beta < 11
 # (tpg) needed for bookmarks
 Requires(post):	desktop-common-data
+%if %mdvver >= 201500
 # (tpg) fix bug https://issues.openmandriva.org/show_bug.cgi?id=1525
 Requires:	gtk3-modules
+%endif
 
 %description
 The award-winning Web browser is now faster, more secure, and fully
