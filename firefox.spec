@@ -347,7 +347,7 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
-%ifnarch %arm %mips
+%ifnarch %armx %mips
 BuildRequires:	valgrind
 BuildRequires:	yasm >= 1.0.1
 %endif
