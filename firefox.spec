@@ -243,7 +243,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the firefox-l10n package
 # because its subpackages depend on the exact version of Firefox it was
 # built for.
-Version:	45.0.2
+Version:	46.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -271,14 +271,9 @@ Source100:      firefox.rpmlintrc
         )
 }
 Patch1:		firefox-6.0-lang.patch
-Patch2:		firefox-vendor.patch
-# (OpenSuse) add patch to make firefox always use /usr/bin/firefox when "make firefox
-# the default web browser" is used fix mdv bug#58784
-Patch5:		firefox-6.0-appname.patch
-Patch10:	firefox-3.5.3-default-mail-handler.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-45.0-kde.patch
-Patch12:	mozilla-45.0-kde.patch
+Patch11:	firefox-46.0-kde.patch
+Patch12:	mozilla-46.0-kde.patch
 # (crisb) java does not actually seem to be required except for android builds
 Patch41:	firefox-30.0-no_java.patch
 Patch42:	mozilla-42.0-libproxy.patch
@@ -335,7 +330,7 @@ BuildRequires:	pkgconfig(libpulse)
 %endif
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr)
-BuildRequires:	pkgconfig(nss)
+BuildRequires:	pkgconfig(nss) >= 3.22.3
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(sqlite3) >= 3.7.7.1
@@ -412,8 +407,6 @@ Files and macros mainly for building Firefox extensions.
 pushd %{name}-%{version}
 %patch1 -p1 -b .lang
 #patch2 -p1 -b .vendor
-%patch5 -p1 -b .appname
-%patch10 -p1 -b .default-mail-handler
 
 ## KDE INTEGRATION
 %patch11 -p1 -b .kdepatch
@@ -478,6 +471,8 @@ ac_add_options --with-qtdir=%{_libdir}/qt5
 %else
 ac_add_options --enable-default-toolkit=cairo-gtk3
 %endif
+%else
+ac_add_options --enable-default-toolkit=cairo-gtk2
 %endif
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
