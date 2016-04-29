@@ -236,7 +236,6 @@
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%define locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
 
-
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
