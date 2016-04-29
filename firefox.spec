@@ -236,7 +236,6 @@
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%define locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
 
-
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
@@ -409,8 +408,8 @@ pushd %{name}-%{version}
 #patch2 -p1 -b .vendor
 
 ## KDE INTEGRATION
-%patch11 -p1 -b .kdepatch
-%patch12 -p1 -b .kdemoz
+#patch11 -p1 -b .kdepatch
+#patch12 -p1 -b .kdemoz
 
 %patch41 -p0
 %patch42 -p1
