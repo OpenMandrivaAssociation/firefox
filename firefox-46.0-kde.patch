@@ -1374,7 +1374,7 @@ new file mode 100644
 +    return NS_OK;
 +}
 +
-+NS_IMPL_ISUPPORTS(nsKDEShellService, nsIShellService)
++NS_IMPL_ISUPPORTS(nsKDEShellService, nsIGNOMEShellService, nsIShellService)
 +
 +NS_IMETHODIMP
 +nsKDEShellService::IsDefaultBrowser(bool aStartupCheck,
