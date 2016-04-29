@@ -408,8 +408,8 @@ pushd %{name}-%{version}
 #patch2 -p1 -b .vendor
 
 ## KDE INTEGRATION
-#patch11 -p1 -b .kdepatch
-#patch12 -p1 -b .kdemoz
+%patch11 -p1 -b .kdepatch
+%patch12 -p1 -b .kdemoz
 
 %patch41 -p0
 %patch42 -p1
