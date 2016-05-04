@@ -239,11 +239,10 @@
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
-# IMPORTANT: When updating, you MUST also update the firefox-l10n package
-# because its subpackages depend on the exact version of Firefox it was
-# built for.
-Version:	46.0
-Release:	3
+# IMPORTANT: When updating, you MUST also update the l10n files by running
+# download.sh after editing the version number
+Version:	46.0.1
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
