@@ -331,6 +331,7 @@ BuildRequires:	pkgconfig(nspr)
 BuildRequires:	pkgconfig(nss) >= 3.22.3
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
+BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(sqlite3) >= 3.7.7.1
 BuildRequires:	pkgconfig(theoradec)
 BuildRequires:	pkgconfig(vorbis)
