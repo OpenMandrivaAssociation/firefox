@@ -425,7 +425,7 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
-%global optflags %{optflags} -g0
+%global optflags %{optflags} -g0 -Qunused-arguments
 
 pushd %{name}-%{version}
 
