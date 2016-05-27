@@ -425,16 +425,18 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
-%global optflags %{optflags} -g0 -Qunused-arguments
-
 pushd %{name}-%{version}
-
+%global optflags %{optflags} -g0
 %if %mdvver >= 201500
 %ifarch %ix86
 # still requires gcc
 export CXX=g++
 export CC=gcc
+%else
+%global %optflags %{optflags} -Qunused-arguments
 %endif
+%endif
+
 %if %{with qt}
 # Headers in FF-Qt are weird and change visibility
 # of symbols at random. clang errors out on that, so
