@@ -427,6 +427,7 @@ popd
 %build
 pushd %{name}-%{version}
 %global optflags %{optflags} -g0
+
 %if %mdvver >= 201500
 %ifarch %ix86
 # still requires gcc
@@ -434,7 +435,6 @@ export CXX=g++
 export CC=gcc
 %else
 %global %optflags %{optflags} -Qunused-arguments
-%endif
 %endif
 
 %if %{with qt}
