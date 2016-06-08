@@ -30,7 +30,7 @@
 %define _requires_exceptions libxul.so
 %endif
 
-# Use Qt instead of GTK -- long term goal, but as of 45.0.1,
+# Use Qt instead of GTK -- long term goal, but as of 47.0,
 # doesn't even compile yet
 %bcond_with qt
 
@@ -241,8 +241,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	46.0.1
-Release:	2
+Version:	47.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -258,6 +258,7 @@ Source8:	firefox-searchengines-askcom.xml
 Source9:	kde.js
 Source10:	firefox-searchengines-yandex.xml
 Source13:	firefox-l10n-template.in
+Source20:	http://ftp.gnu.org/gnu/autoconf/autoconf-2.13.tar.gz
 Source100:      firefox.rpmlintrc
 # l10n sources
 %{expand:%(\
@@ -270,10 +271,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF 
-Patch11:	firefox-46.0-kde.patch
+Patch11:	firefox-47.0-kde.patch
 Patch12:	mozilla-46.0-kde.patch
-# (crisb) java does not actually seem to be required except for android builds
-Patch41:	firefox-30.0-no_java.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 #BuildConflicts:	libreoffice-core
@@ -402,17 +401,15 @@ Files and macros mainly for building Firefox extensions.
 }
 
 %prep
-%setup -qc %{name}-%{version} 
-pushd %{name}-%{version}
-%patch1 -p1 -b .lang
-#patch2 -p1 -b .vendor
+%setup -q -a 20
+%apply_patches
 
-## KDE INTEGRATION
-%patch11 -p1 -b .kdepatch
-%patch12 -p1 -b .kdemoz
-
-%patch41 -p0
-%patch42 -p1
+TOP="$(pwd)"
+cd autoconf-2.13
+./configure --prefix=$TOP/ac213bin
+%make
+%make install
+cd ..
 
 #pushd js/src
 #autoconf-2.13
@@ -425,8 +422,8 @@ perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
-pushd %{name}-%{version}
 %global optflags %{optflags} -g0
+export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 
 %if %mdvver >= 201500
 %ifarch %ix86
@@ -463,7 +460,7 @@ export CXXFLAGS="`pkg-config --cflags glib-2.0`"
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
-mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../obj
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --host=%{_host}
 %if %mdvver >= 201500
 %if %{with qt}
@@ -554,8 +551,8 @@ cat $MOZCONFIG
 %if %{with qt}
 # FIXME workaround for a bug in the Qt frontend makefiles - they look for
 # source files in the object directory, so let's just put them there for now.
-mkdir -p ../obj/ipc/chromium
-cp ipc/chromium/src/base/message_pump_qt.* ../obj/ipc/chromium/
+mkdir -p obj/ipc/chromium
+cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 %endif
 
 export LDFLAGS="%ldflags"
@@ -563,14 +560,11 @@ export PYTHON=python2
 make -f client.mk build
 
 %install
-
-pushd %{name}-%{version}
-
-make -C %{_builddir}/%{name}-%{version}/obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
+make -C obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
 # Copy files to buildroot
 mkdir -p %{buildroot}%{mozillalibdir}
-cp -rf %{_builddir}/%{name}-%{version}/obj/dist/firefox/* %{buildroot}%{mozillalibdir}
+cp -rf obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 
 mkdir -p  %{buildroot}%{_bindir}
 ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
