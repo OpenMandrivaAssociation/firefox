@@ -1,6 +1,11 @@
---- firefox-47.0/browser/base/content/browser-kde.xul.kdepatch	2016-06-07 14:40:15.052176116 +0200
-+++ firefox-47.0/browser/base/content/browser-kde.xul	2016-06-07 14:40:15.052176116 +0200
-@@ -0,0 +1,1175 @@
+# HG changeset patch
+# Parent  4311c6bdf61ac317bc60b25cd89ff67662a75049
+
+diff --git a/browser/base/content/browser-kde.xul b/browser/base/content/browser-kde.xul
+new file mode 100644
+--- /dev/null
++++ b/browser/base/content/browser-kde.xul
+@@ -0,0 +1,1160 @@
 +#filter substitution
 +<?xml version="1.0"?>
 +# -*- Mode: HTML -*-
@@ -72,6 +77,8 @@
 +
 +<script type="application/javascript" src="chrome://global/content/contentAreaUtils.js"/>
 +
++<script type="application/javascript" src="chrome://browser/content/downloads/downloads.js"/>
++<script type="application/javascript" src="chrome://browser/content/downloads/indicator.js"/>
 +<script type="application/javascript" src="chrome://browser/content/places/editBookmarkOverlay.js"/>
 +
 +# All sets except for popupsets (commands, keys, stringbundles and broadcasters) *must* go into the
@@ -183,12 +190,6 @@
 +        <vbox>
 +          <label id="editBookmarkPanelTitle"/>
 +          <description id="editBookmarkPanelDescription"/>
-+          <hbox>
-+            <button id="editBookmarkPanelRemoveButton"
-+                    class="editBookmarkPanelHeaderButton"
-+                    oncommand="StarUI.removeBookmarkButtonCommand();"
-+                    accesskey="&editBookmark.removeBookmark.accessKey;"/>
-+          </hbox>
 +        </vbox>
 +      </row>
 +      <vbox id="editBookmarkPanelContent" flex="1" hidden="true"/>
@@ -199,15 +200,15 @@
 +                label="&editBookmark.done.label;"
 +                default="true"
 +                oncommand="StarUI.panel.hidePopup();"/>
-+        <!-- button id="editBookmarkPanelDeleteButton"
++        <button id="editBookmarkPanelRemoveButton"
 +                class="editBookmarkPanelBottomButton"
-+                label="&editBookmark.cancel.label;"
-+                oncommand="StarUI.cancelButtonOnCommand();"/ -->
++                oncommand="StarUI.removeBookmarkButtonCommand();"
++                accesskey="&editBookmark.removeBookmark.accessKey;"/>
 +#else
-+        <button id="editBookmarkPanelDeleteButton"
++        <button id="editBookmarkPanelRemoveButton"
 +                class="editBookmarkPanelBottomButton"
-+                label="&editBookmark.cancel.label;"
-+                oncommand="StarUI.cancelButtonOnCommand();"/>
++                oncommand="StarUI.removeBookmarkButtonCommand();"
++                accesskey="&editBookmark.removeBookmark.accessKey;"/>
 +        <button id="editBookmarkPanelDoneButton"
 +                class="editBookmarkPanelBottomButton"
 +                label="&editBookmark.done.label;"
@@ -466,6 +467,46 @@
 +
 +    <tooltip id="dynamic-shortcut-tooltip"
 +             onpopupshowing="UpdateDynamicShortcutTooltipText(this);"/>
++
++    <menupopup id="SyncedTabsSidebarContext">
++      <menuitem label="&syncedTabs.context.openTab.label;"
++                accesskey="&syncedTabs.context.openTab.accesskey;"
++                id="syncedTabsOpenSelected"/>
++      <menuitem label="&syncedTabs.context.bookmarkSingleTab.label;"
++                accesskey="&syncedTabs.context.bookmarkSingleTab.accesskey;"
++                id="syncedTabsBookmarkSelected"/>
++      <menuseparator/>
++      <menuitem label="&syncSyncNowItem.label;"
++                accesskey="&syncSyncNowItem.accesskey;"
++                id="syncedTabsRefresh"/>
++    </menupopup>
++    <menupopup id="SyncedTabsSidebarTabsFilterContext"
++               class="textbox-contextmenu">
++      <menuitem label="&undoCmd.label;"
++                accesskey="&undoCmd.accesskey;"
++                cmd="cmd_undo"/>
++      <menuseparator/>
++      <menuitem label="&cutCmd.label;"
++                accesskey="&cutCmd.accesskey;"
++                cmd="cmd_cut"/>
++      <menuitem label="&copyCmd.label;"
++                accesskey="&copyCmd.accesskey;"
++                cmd="cmd_copy"/>
++      <menuitem label="&pasteCmd.label;"
++                accesskey="&pasteCmd.accesskey;"
++                cmd="cmd_paste"/>
++      <menuitem label="&deleteCmd.label;"
++                accesskey="&deleteCmd.accesskey;"
++                cmd="cmd_delete"/>
++      <menuseparator/>
++      <menuitem label="&selectAllCmd.label;"
++                accesskey="&selectAllCmd.accesskey;"
++                cmd="cmd_selectAll"/>
++      <menuseparator/>
++      <menuitem label="&syncSyncNowItem.label;"
++                accesskey="&syncSyncNowItem.accesskey;"
++                id="syncedTabsRefreshFilter"/>
++    </menupopup>
 +  </popupset>
 +
 +#ifdef CAN_DRAW_IN_TITLEBAR
@@ -662,10 +703,6 @@
 +              <box id="notification-popup-box" hidden="true" align="center">
 +                <image id="default-notification-icon" class="notification-anchor-icon" role="button"
 +                       aria-label="&urlbar.defaultNotificationAnchor.label;"/>
-+                <!-- NB: the identity-notification-icon is used for persona-based auth and preffed
-+                     off by default. It hasn't been updated for some time and liable to being
-+                     removed.-->
-+                <image id="identity-notification-icon" class="notification-anchor-icon" role="button"/>
 +                <image id="geo-notification-icon" class="notification-anchor-icon" role="button"
 +                       aria-label="&urlbar.geolocationNotificationAnchor.label;"/>
 +                <image id="addons-notification-icon" class="notification-anchor-icon" role="button"
@@ -805,30 +842,6 @@
 +                      label="&showAllBookmarks2.label;"
 +                      command="Browser:ShowAllBookmarks"
 +                      key="manBookmarkKb"/>
-+            <menuseparator/>
-+            <menuitem id="BMB_subscribeToPageMenuitem"
-+#ifndef XP_MACOSX
-+                      class="menuitem-iconic subviewbutton"
-+#else
-+                      class="subviewbutton"
-+#endif
-+                      label="&subscribeToPageMenuitem.label;"
-+                      oncommand="return FeedHandler.subscribeToFeed(null, event);"
-+                      onclick="checkForMiddleClick(this, event);"
-+                      observes="singleFeedMenuitemState"/>
-+            <menu id="BMB_subscribeToPageMenupopup"
-+#ifndef XP_MACOSX
-+                  class="menu-iconic subviewbutton"
-+#else
-+                  class="subviewbutton"
-+#endif
-+                  label="&subscribeToPageMenupopup.label;"
-+                  observes="multipleFeedsMenuState">
-+              <menupopup id="BMB_subscribeToPageSubmenuMenupopup"
-+                         onpopupshowing="return FeedHandler.buildFeedList(event.target);"
-+                         oncommand="return FeedHandler.subscribeToFeed(null, event);"
-+                         onclick="checkForMiddleClick(this, event);"/>
-+            </menu>
 +            <menuseparator/>
 +            <menu id="BMB_bookmarksToolbar"
 +                  class="menu-iconic bookmark-item subviewbutton"
@@ -1128,29 +1141,6 @@
 +
 +  <vbox id="browser-bottombox" layer="true">
 +    <notificationbox id="global-notificationbox" notificationside="bottom"/>
-+    <toolbar id="developer-toolbar"
-+             hidden="true">
-+#ifdef XP_MACOSX
-+          <toolbarbutton id="developer-toolbar-closebutton"
-+                         class="devtools-closebutton"
-+                         oncommand="DeveloperToolbar.hide();"
-+                         tooltiptext="&devToolbarCloseButton.tooltiptext;"/>
-+#endif
-+          <stack class="gclitoolbar-stack-node" flex="1">
-+            <textbox class="gclitoolbar-input-node" rows="1"/>
-+            <hbox class="gclitoolbar-complete-node"/>
-+          </stack>
-+          <toolbarbutton id="developer-toolbar-toolbox-button"
-+                         class="developer-toolbar-button"
-+                         observes="devtoolsMenuBroadcaster_DevToolbox"
-+                         tooltiptext="&devToolbarToolsButton.tooltip;"/>
-+#ifndef XP_MACOSX
-+          <toolbarbutton id="developer-toolbar-closebutton"
-+                         class="devtools-closebutton"
-+                         oncommand="DeveloperToolbar.hide();"
-+                         tooltiptext="&devToolbarCloseButton.tooltiptext;"/>
-+#endif
-+   </toolbar>
 +  </vbox>
 +
 +  <svg:svg height="0">
@@ -1176,9 +1166,15 @@
 +</deck>
 +
 +</window>
---- firefox-47.0/browser/base/jar.mn.kdepatch	2016-05-12 19:13:09.000000000 +0200
-+++ firefox-47.0/browser/base/jar.mn	2016-06-07 14:40:15.052176116 +0200
-@@ -76,6 +76,8 @@ browser.jar:
+diff --git a/browser/base/jar.mn b/browser/base/jar.mn
+--- a/browser/base/jar.mn
++++ b/browser/base/jar.mn
+@@ -71,16 +71,18 @@ browser.jar:
+         content/browser/aboutTabCrashed.css           (content/aboutTabCrashed.css)
+         content/browser/aboutTabCrashed.js            (content/aboutTabCrashed.js)
+         content/browser/aboutTabCrashed.xhtml         (content/aboutTabCrashed.xhtml)
+ *       content/browser/aboutTabGroupsMigration.xhtml (content/aboutTabGroupsMigration.xhtml)
+         content/browser/aboutTabGroupsMigration.js    (content/aboutTabGroupsMigration.js)
  *       content/browser/browser.css                   (content/browser.css)
          content/browser/browser.js                    (content/browser.js)
  *       content/browser/browser.xul                   (content/browser.xul)
@@ -1187,9 +1183,20 @@
          content/browser/browser-addons.js             (content/browser-addons.js)
          content/browser/browser-ctrlTab.js            (content/browser-ctrlTab.js)
          content/browser/browser-customization.js      (content/browser-customization.js)
---- firefox-47.0/browser/components/build/nsModule.cpp.kdepatch	2016-06-01 06:11:38.000000000 +0200
-+++ firefox-47.0/browser/components/build/nsModule.cpp	2016-06-07 14:40:15.052176116 +0200
-@@ -13,7 +13,7 @@
+         content/browser/browser-data-submission-info-bar.js (content/browser-data-submission-info-bar.js)
+         content/browser/browser-devedition.js         (content/browser-devedition.js)
+         content/browser/browser-eme.js                (content/browser-eme.js)
+         content/browser/browser-feeds.js              (content/browser-feeds.js)
+         content/browser/browser-fullScreen.js         (content/browser-fullScreen.js)
+diff --git a/browser/components/build/nsModule.cpp b/browser/components/build/nsModule.cpp
+--- a/browser/components/build/nsModule.cpp
++++ b/browser/components/build/nsModule.cpp
+@@ -8,17 +8,17 @@
+ #include "nsBrowserCompsCID.h"
+ #include "DirectoryProvider.h"
+ 
+ #if defined(XP_WIN)
+ #include "nsWindowsShellService.h"
  #elif defined(XP_MACOSX)
  #include "nsMacShellService.h"
  #elif defined(MOZ_WIDGET_GTK)
@@ -1198,7 +1205,17 @@
  #endif
  
  #if defined(XP_WIN)
-@@ -36,8 +36,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(Directory
+ #include "nsIEHistoryEnumerator.h"
+ #endif
+ 
+ #include "rdf.h"
+ #include "nsFeedSniffer.h"
+@@ -31,18 +31,16 @@ using namespace mozilla::browser;
+ 
+ /////////////////////////////////////////////////////////////////////////////
+ 
+ NS_GENERIC_FACTORY_CONSTRUCTOR(DirectoryProvider)
+ #if defined(XP_WIN)
  NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindowsShellService)
  #elif defined(XP_MACOSX)
  NS_GENERIC_FACTORY_CONSTRUCTOR(nsMacShellService)
@@ -1207,7 +1224,17 @@
  #endif
  
  #if defined(XP_WIN)
-@@ -65,7 +63,7 @@ static const mozilla::Module::CIDEntry k
+ NS_GENERIC_FACTORY_CONSTRUCTOR(nsIEHistoryEnumerator)
+ #endif
+ 
+ NS_GENERIC_FACTORY_CONSTRUCTOR(nsFeedSniffer)
+ 
+@@ -60,17 +58,17 @@ NS_DEFINE_NAMED_CID(NS_WINIEHISTORYENUME
+ NS_DEFINE_NAMED_CID(NS_SHELLSERVICE_CID);
+ #endif
+ 
+ static const mozilla::Module::CIDEntry kBrowserCIDs[] = {
+     { &kNS_BROWSERDIRECTORYPROVIDER_CID, false, nullptr, DirectoryProviderConstructor },
  #if defined(XP_WIN)
      { &kNS_SHELLSERVICE_CID, false, nullptr, nsWindowsShellServiceConstructor },
  #elif defined(MOZ_WIDGET_GTK)
@@ -1216,42 +1243,74 @@
  #endif
      { &kNS_FEEDSNIFFER_CID, false, nullptr, nsFeedSnifferConstructor },
      { &kNS_BROWSER_ABOUT_REDIRECTOR_CID, false, nullptr, AboutRedirector::Create },
---- firefox-47.0/browser/components/preferences/in-content/main.js.kdepatch	2016-06-07 14:40:15.052176116 +0200
-+++ firefox-47.0/browser/components/preferences/in-content/main.js	2016-06-07 14:53:05.891246755 +0200
-@@ -28,6 +28,12 @@ var gMainPane = {
+ #if defined(XP_WIN)
+     { &kNS_WINIEHISTORYENUMERATOR_CID, false, nullptr, nsIEHistoryEnumeratorConstructor },
+ #elif defined(XP_MACOSX)
+     { &kNS_SHELLSERVICE_CID, false, nullptr, nsMacShellServiceConstructor },
+ #endif
+diff --git a/browser/components/preferences/in-content/main.js b/browser/components/preferences/in-content/main.js
+--- a/browser/components/preferences/in-content/main.js
++++ b/browser/components/preferences/in-content/main.js
+@@ -23,16 +23,22 @@ var gMainPane = {
+   init: function ()
+   {
+     function setEventListener(aId, aEventType, aCallback)
+     {
+       document.getElementById(aId)
                .addEventListener(aEventType, aCallback.bind(gMainPane));
      }
  
 +    var env = Components.classes["@mozilla.org/process/environment;1"]
-+		    .getService(Components.interfaces.nsIEnvironment);
++                          .getService(Components.interfaces.nsIEnvironment);
 +    var kde_session = 0;
 +    if (env.get('KDE_FULL_SESSION') == "true")
-+      kde_session = 1;
++        kde_session = 1;
 +
  #ifdef HAVE_SHELL_SERVICE
      this.updateSetDefaultBrowser();
  #ifdef XP_WIN
-@@ -741,6 +747,17 @@ var gMainPane = {
+     // In Windows 8 we launch the control panel since it's the only
+     // way to get all file type association prefs. So we don't know
+     // when the user will select the default.  We refresh here periodically
+     // in case the default changes. On other Windows OS's defaults can also
+     // be set while the prefs are open.
+@@ -736,16 +742,27 @@ var gMainPane = {
+     let alwaysCheckPref = document.getElementById("browser.shell.checkDefaultBrowser");
+     alwaysCheckPref.value = true;
+ 
+     let shellSvc = getShellService();
+     if (!shellSvc)
        return;
      try {
        shellSvc.setDefaultBrowser(true, false);
 +      if (kde_session == 1) {
 +        var shellObj = Components.classes["@mozilla.org/file/local;1"]
-+        	.createInstance(Components.interfaces.nsILocalFile);
-+        shellObj.initWithPath("/usr/bin/kwriteconfig5");
++          .createInstance(Components.interfaces.nsILocalFile);
++        shellObj.initWithPath("/usr/bin/kwriteconfig");
 +        var process = Components.classes["@mozilla.org/process/util;1"]
-+        	.createInstance(Components.interfaces.nsIProcess);
++          .createInstance(Components.interfaces.nsIProcess);
 +        process.init(shellObj);
 +        var args = ["--file", "kdeglobals", "--group", "General", "--key",
-+        	"BrowserApplication", "firefox"];
++            "BrowserApplication", "firefox"];
 +        process.run(false, args, args.length);
 +      }
      } catch (ex) {
        Cu.reportError(ex);
        return;
---- firefox-47.0/browser/components/shell/moz.build.kdepatch	2016-05-12 19:13:10.000000000 +0200
-+++ firefox-47.0/browser/components/shell/moz.build	2016-06-07 14:40:15.053176116 +0200
-@@ -39,6 +39,8 @@ elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'co
+     }
+ 
+     let selectedIndex = shellSvc.isDefaultBrowser(false, true) ? 1 : 0;
+     document.getElementById("setDefaultPane").selectedIndex = selectedIndex;
+   }
+diff --git a/browser/components/shell/moz.build b/browser/components/shell/moz.build
+--- a/browser/components/shell/moz.build
++++ b/browser/components/shell/moz.build
+@@ -34,16 +34,18 @@ if CONFIG['OS_ARCH'] == 'WINNT':
+     ]
+ elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'cocoa':
+     SOURCES += [
+         'nsMacShellService.cpp',
+     ]
  elif CONFIG['MOZ_WIDGET_GTK']:
      SOURCES += [
          'nsGNOMEShellService.cpp',
@@ -1260,8 +1319,15 @@
      ]
  
  if SOURCES:
---- firefox-47.0/browser/components/shell/nsKDEShellService.cpp.kdepatch	2016-06-07 14:40:15.053176116 +0200
-+++ firefox-47.0/browser/components/shell/nsKDEShellService.cpp	2016-06-07 14:40:15.053176116 +0200
+     FINAL_LIBRARY = 'browsercomps'
+ 
+ EXTRA_COMPONENTS += [
+     'nsSetDefaultBrowser.js',
+     'nsSetDefaultBrowser.manifest',
+diff --git a/browser/components/shell/nsKDEShellService.cpp b/browser/components/shell/nsKDEShellService.cpp
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsKDEShellService.cpp
 @@ -0,0 +1,203 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1466,8 +1532,10 @@
 +    NS_ADDREF(*_retval = defaultReader);
 +    return NS_OK;
 +}
---- firefox-47.0/browser/components/shell/nsKDEShellService.h.kdepatch	2016-06-07 14:40:15.053176116 +0200
-+++ firefox-47.0/browser/components/shell/nsKDEShellService.h	2016-06-07 14:40:15.053176116 +0200
+diff --git a/browser/components/shell/nsKDEShellService.h b/browser/components/shell/nsKDEShellService.h
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsKDEShellService.h
 @@ -0,0 +1,30 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1499,8 +1567,10 @@
 +};
 +
 +#endif // nskdeshellservice_h____
---- firefox-47.0/browser/components/shell/nsUnixShellService.cpp.kdepatch	2016-06-07 14:40:15.053176116 +0200
-+++ firefox-47.0/browser/components/shell/nsUnixShellService.cpp	2016-06-07 14:40:15.053176116 +0200
+diff --git a/browser/components/shell/nsUnixShellService.cpp b/browser/components/shell/nsUnixShellService.cpp
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsUnixShellService.cpp
 @@ -0,0 +1,22 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1524,8 +1594,10 @@
 +        return nsKDEShellServiceConstructor( aOuter, aIID, aResult );
 +    return nsGNOMEShellServiceConstructor( aOuter, aIID, aResult );
 +}
---- firefox-47.0/browser/components/shell/nsUnixShellService.h.kdepatch	2016-06-07 14:40:15.053176116 +0200
-+++ firefox-47.0/browser/components/shell/nsUnixShellService.h	2016-06-07 14:40:15.053176116 +0200
+diff --git a/browser/components/shell/nsUnixShellService.h b/browser/components/shell/nsUnixShellService.h
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsUnixShellService.h
 @@ -0,0 +1,15 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1542,9 +1614,15 @@
 +nsUnixShellServiceConstructor(nsISupports *aOuter, REFNSIID aIID, void **aResult);
 +
 +#endif // nsunixshellservice_h____
---- firefox-47.0/browser/installer/package-manifest.in.kdepatch	2016-06-01 06:11:40.000000000 +0200
-+++ firefox-47.0/browser/installer/package-manifest.in	2016-06-07 14:40:15.053176116 +0200
-@@ -702,6 +702,7 @@
+diff --git a/browser/installer/package-manifest.in b/browser/installer/package-manifest.in
+--- a/browser/installer/package-manifest.in
++++ b/browser/installer/package-manifest.in
+@@ -697,16 +697,17 @@
+ @RESPATH@/greprefs.js
+ @RESPATH@/defaults/autoconfig/prefcalls.js
+ @RESPATH@/browser/defaults/permissions
+ 
+ ; Warning: changing the path to channel-prefs.js can cause bugs (Bug 756325)
  ; Technically this is an app pref file, but we are keeping it in the original
  ; gre location for now.
  @RESPATH@/defaults/pref/channel-prefs.js
@@ -1552,3 +1630,8 @@
  
  ; Services (gre) prefs
  #ifdef MOZ_SERVICES_NOTIFICATIONS
+ @RESPATH@/defaults/pref/services-notifications.js
+ #endif
+ @RESPATH@/defaults/pref/services-sync.js
+ 
+ ; [Layout Engine Resources]
