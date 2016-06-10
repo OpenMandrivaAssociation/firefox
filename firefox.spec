@@ -242,7 +242,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	47.0
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -272,7 +272,7 @@ Source100:      firefox.rpmlintrc
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF 
 Patch11:	firefox-47.0-kde.patch
-Patch12:	mozilla-46.0-kde.patch
+Patch12:	mozilla-47.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 #BuildConflicts:	libreoffice-core
