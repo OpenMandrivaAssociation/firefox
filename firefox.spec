@@ -32,7 +32,7 @@
 
 # Use Qt instead of GTK -- long term goal, but as of 47.0,
 # doesn't even compile yet
-%bcond_with qt
+%bcond_without qt
 
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
