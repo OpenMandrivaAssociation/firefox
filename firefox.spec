@@ -242,7 +242,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	47.0
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -274,6 +274,9 @@ Patch1:		firefox-6.0-lang.patch
 Patch11:	firefox-47.0-kde.patch
 Patch12:	mozilla-47.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
+
+# from fedora - fix for app chooser
+Patch43:	rhbz-1291190-appchooser-crash.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
