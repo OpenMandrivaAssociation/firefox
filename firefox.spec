@@ -32,7 +32,7 @@
 
 # Use Qt instead of GTK -- long term goal, but as of 47.0,
 # doesn't even compile yet
-%bcond_without qt
+%bcond_with qt
 
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
@@ -275,6 +275,9 @@ Patch11:	firefox-47.0-kde.patch
 Patch12:	mozilla-47.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
+# from fedora - fix for app chooser
+Patch43:	rhbz-1291190-appchooser-crash.patch
+
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -305,7 +308,7 @@ BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 # no idea why if {with qt}
 # causes parseExpressionFailure
-%if 1
+%if 0
 BuildRequires:	qmake5
 BuildRequires:	pkgconfig(QtCore5)
 BuildRequires:	pkgconfig(QtGui5)
