@@ -241,8 +241,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	47.0
-Release:	3
+Version:	48.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -270,9 +270,9 @@ Source100:      firefox.rpmlintrc
         )
 }
 Patch1:		firefox-6.0-lang.patch
-# Patches for kde integration of FF 
-Patch11:	firefox-47.0-kde.patch
-Patch12:	mozilla-47.0-kde.patch
+# Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
+Patch11:	firefox-48.0-kde.patch
+Patch12:	mozilla-48.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -478,11 +478,6 @@ ac_add_options --enable-default-toolkit=cairo-gtk2
 %endif
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
-ac_add_options --libdir="%{_libdir}"
-ac_add_options --sysconfdir="%{_sysconfdir}"
-ac_add_options --mandir="%{_mandir}"
-ac_add_options --includedir="%{_includedir}"
-ac_add_options --datadir="%{_datadir}"
 %ifarch %{ix86}
 ac_add_options --disable-optimize
 %else
@@ -496,13 +491,9 @@ ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
 %endif
-ac_add_options --with-system-ogg
-ac_add_options --with-system-harfbuzz
 ac_add_options --enable-system-pixman
 ac_add_options --enable-system-hunspell
-ac_add_options --enable-webm
 ac_add_options --enable-gio
-ac_add_options --disable-gnomevfs
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
@@ -519,14 +510,13 @@ ac_add_options --enable-system-sqlite
 %endif
 ac_add_options --disable-system-cairo
 ac_add_options --enable-startup-notification
-ac_add_options --enable-xinerama
 #ac_add_options --with-system-ply
 ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
-ac_add_options --enable-gstreamer=1.0
-ac_add_options --enable-media-plugins
-ac_add_options --enable-dash
+#ac_add_options --enable-gstreamer=1.0
+#ac_add_options --enable-media-plugins
+#ac_add_options --enable-dash
 %if %mdvver >= 201300
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
@@ -542,7 +532,6 @@ ac_add_options --disable-webrtc
 %endif
 %ifnarch %arm %mips
 ac_add_options --with-valgrind
-ac_add_options --enable-opus
 %endif
 ac_add_options --with-google-oauth-api-keyfile=$PWD/google-oauth-api-key
 ac_add_options --with-google-api-keyfile=$PWD/google-api-key
