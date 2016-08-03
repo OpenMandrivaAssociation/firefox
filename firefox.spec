@@ -346,6 +346,7 @@ BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
 %ifnarch %armx %mips
 BuildRequires:	valgrind
+BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
 Requires:	indexhtml
@@ -521,11 +522,6 @@ ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
-%endif
-%ifarch %arm
-%if "%{_target_cpu}" != "armv7l"
-ac_add_options --disable-methodjit
-ac_add_options --disable-tracejit
 %endif
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
