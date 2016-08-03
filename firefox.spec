@@ -523,6 +523,7 @@ ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
 %endif
+%ifarch %arm
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
 %endif
