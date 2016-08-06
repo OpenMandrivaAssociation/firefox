@@ -242,7 +242,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	48.0
-Release:	0.1
+Release:	0.2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -277,6 +277,7 @@ Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
+Patch44:	mozilla-1282843.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -479,6 +480,7 @@ ac_add_options --enable-default-toolkit=cairo-gtk2
 %endif
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
+ac_add_options --libdir="%{_libdir}"
 %ifarch %{ix86}
 ac_add_options --disable-optimize
 %else
