@@ -1,9 +1,9 @@
 sources:
+  autoconf-2.13.tar.gz: e4826c8bd85325067818f19b2b2ad2b625da66fc
   af.xpi: 58cafc05adf9c34090b8da60eed6d284ffde1913
   ar.xpi: 10b571aeb5056d4d2acfe04c96936176ac878097
-  as.xpi: 5189071f8ea046e2a469cd832b7092f3e5afec96
   ast.xpi: 42664a858d7abae843ce1a05e61370afc4e2a249
-  autoconf-2.13.tar.gz: e4826c8bd85325067818f19b2b2ad2b625da66fc
+  as.xpi: 5189071f8ea046e2a469cd832b7092f3e5afec96
   be.xpi: 271bb07b1eb8d58d19cffa299f884e6d26197415
   bg.xpi: cd827b89665d5e6bea70cc3a4a49c87c06d90fac
   bn-BD.xpi: b31466f89474ace00a91e3216b9939e78732fd1f
@@ -27,8 +27,6 @@ sources:
   eu.xpi: 8db52e82f28e0810b6d15b783be94ae10daed814
   fa.xpi: 4f585fa340b4e153a4499053b59479e64acaeed2
   fi.xpi: 7c846f4fd38b73a8ada5bf0b893b2e9bee87f3a8
-  firefox-47.0.source.tar.xz: 439dac5e9815ba5df6d509ebef8e29aa105b9708
-  firefox-48.0.source.tar.xz: 2b73cfc996861fe895ad7564d485bf9e35190767
   fr.xpi: b6fb0ab25b9a24eeddfdc54fd509809e30fd6042
   fy-NL.xpi: 60c375bf0b66275e37ff7fd3efec113cc5e3303c
   ga-IE.xpi: aa5d593754eae47b600a23d431a03c2e4d044724
@@ -78,3 +76,4 @@ sources:
   vi.xpi: 4af3761ed758020b9d6d1c9a69c8631da718c439
   zh-CN.xpi: 18cf12bdba02e565059d8718f261d0e15bd6f0d7
   zh-TW.xpi: 1db6d7f763dd8080ce60d3f485ed94598a5554e3
+  firefox-48.0.1.source.tar.xz: 95714df71633aac57219c88a0f799652da53901d
