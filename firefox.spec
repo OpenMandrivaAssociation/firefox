@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	48.0.1
+Version:	49.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -277,7 +277,7 @@ Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
-Patch44:	mozilla-1282843.patch
+#Patch44:	mozilla-1282843.patch
 
 # Not yet finished, but can't hurt
 Patch50:	firefox-48.0.1-qt-compile.patch
