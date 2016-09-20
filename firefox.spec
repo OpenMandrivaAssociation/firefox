@@ -30,7 +30,7 @@
 %define _requires_exceptions libxul.so
 %endif
 
-# Use Qt instead of GTK -- long term goal, but as of 47.0,
+# Use Qt instead of GTK -- long term goal, but as of 48.0.1,
 # doesn't even compile yet
 %bcond_with qt
 
@@ -241,8 +241,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	48.0
-Release:	0.2
+Version:	49.0
+Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -277,7 +277,9 @@ Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
-Patch44:	mozilla-1282843.patch
+
+# Not yet finished, but can't hurt
+Patch50:	firefox-48.0.1-qt-compile.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
