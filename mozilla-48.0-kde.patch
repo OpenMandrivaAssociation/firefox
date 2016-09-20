@@ -141,7 +141,7 @@ diff --git a/modules/libpref/moz.build b/modules/libpref/moz.build
  DEFINES['OS_ARCH'] = CONFIG['OS_ARCH']
  DEFINES['MOZ_WIDGET_TOOLKIT'] = CONFIG['MOZ_WIDGET_TOOLKIT']
  
- if CONFIG['GNU_CXX']:
+ FINAL_TARGET_PP_FILES += [
 diff --git a/python/mozbuild/mozpack/chrome/flags.py b/python/mozbuild/mozpack/chrome/flags.py
 --- a/python/mozbuild/mozpack/chrome/flags.py
 +++ b/python/mozbuild/mozpack/chrome/flags.py
@@ -187,12 +187,7 @@ diff --git a/python/mozbuild/mozpack/chrome/manifest.py b/python/mozbuild/mozpac
 diff --git a/toolkit/components/downloads/moz.build b/toolkit/components/downloads/moz.build
 --- a/toolkit/components/downloads/moz.build
 +++ b/toolkit/components/downloads/moz.build
-@@ -60,15 +60,16 @@ if not CONFIG['MOZ_SUITE']:
-         'nsDownloadManagerUI.js',
-         'nsDownloadManagerUI.manifest',
-     ]
- 
- FINAL_LIBRARY = 'xul'
+@@ -65,7 +65,8 @@
  
  LOCAL_INCLUDES += [
      '../protobuf',
@@ -202,9 +197,6 @@ diff --git a/toolkit/components/downloads/moz.build b/toolkit/components/downloa
  ]
  
  DEFINES['GOOGLE_PROTOBUF_NO_RTTI'] = True
- DEFINES['GOOGLE_PROTOBUF_NO_STATIC_INITIALIZER'] = True
- 
- CXXFLAGS += CONFIG['TK_CFLAGS']
 diff --git a/toolkit/components/downloads/nsDownloadManager.cpp b/toolkit/components/downloads/nsDownloadManager.cpp
 --- a/toolkit/components/downloads/nsDownloadManager.cpp
 +++ b/toolkit/components/downloads/nsDownloadManager.cpp
@@ -2709,11 +2701,11 @@ diff --git a/uriloader/exthandler/moz.build b/uriloader/exthandler/moz.build
 --- a/uriloader/exthandler/moz.build
 +++ b/uriloader/exthandler/moz.build
 @@ -75,17 +75,19 @@ elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'ui
- else:
-     # These files can't be built in unified mode because they redefine LOG.
      SOURCES += [
          osdir + '/nsOSHelperAppService.cpp',
      ]
+     if CONFIG['GNU_CXX']:
+         CXXFLAGS += ['-Wno-error=shadow']
  
  if 'gtk' in CONFIG['MOZ_WIDGET_TOOLKIT']:
      UNIFIED_SOURCES += [
