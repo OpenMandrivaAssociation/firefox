@@ -309,9 +309,7 @@ BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-# no idea why if {with qt}
-# causes parseExpressionFailure
-%if 0
+%if %{with qt}
 BuildRequires:	qmake5
 BuildRequires:	pkgconfig(QtCore5)
 BuildRequires:	pkgconfig(QtGui5)
@@ -439,7 +437,7 @@ export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 export CXX=g++
 export CC=gcc
 %else
-%global %optflags %{optflags} -Qunused-arguments
+%global optflags %{optflags} -Qunused-arguments
 %endif
 
 %if %{with qt}
