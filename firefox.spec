@@ -242,7 +242,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	49.0.1
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -350,6 +350,7 @@ BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
+BuildRequires:	rust
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -534,7 +535,7 @@ ac_add_options --with-valgrind
 %endif
 ac_add_options --with-google-oauth-api-keyfile=$PWD/google-oauth-api-key
 ac_add_options --with-google-api-keyfile=$PWD/google-api-key
-
+ac_add_options --enable-rust
 EOF
 
 # Show the config just for debugging
@@ -549,6 +550,7 @@ cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 
 export LDFLAGS="%ldflags"
 export PYTHON=python2
+
 make -f client.mk build
 
 %install
