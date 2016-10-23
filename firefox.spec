@@ -234,15 +234,15 @@
 %{expand:%(for lang in %{disabled_dict_langlist}; do echo "%%define with_dict_$lang 0"; done)}
 
 # Locales
-%{expand:%(for lang in %{langlist}; do echo "%%define locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
+%{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
 
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	49.0.1
-Release:	2
+Version:	49.0.2
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -274,6 +274,9 @@ Patch1:		firefox-6.0-lang.patch
 Patch11:	firefox-48.0-kde.patch
 Patch12:	mozilla-48.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
+
+# https://bugzilla.mozilla.org/show_bug.cgi?id=1264534
+Patch45:	https://hg.mozilla.org/mozilla-central/raw-rev/e1cac03485d9
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
@@ -402,7 +405,7 @@ Files and macros mainly for building Firefox extensions.
 # Expand all languages packages.
 %{expand:%(\
         for lang in %langlist; do\
-                echo "%%{expand:%%(sed "s!__LANG__!$lang!g" %{SOURCE13} 2> /dev/null)}";\
+                echo "%%{expand:%%(sed -e "s!__LANG__!$lang!g" %{SOURCE13} 2> /dev/null)}";\
         done\
         )
 }
