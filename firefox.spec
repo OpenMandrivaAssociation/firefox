@@ -234,22 +234,22 @@
 %{expand:%(for lang in %{disabled_dict_langlist}; do echo "%%define with_dict_$lang 0"; done)}
 
 # Locales
-%{expand:%(for lang in %{langlist}; do echo "%%define locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
+%{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
 
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	49.0
+Version:	49.0.2
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
-Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
+Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
 %else
-Source0:	http://ftp.mozilla.org/pub/mozilla.org/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
+Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -274,6 +274,9 @@ Patch1:		firefox-6.0-lang.patch
 Patch11:	firefox-48.0-kde.patch
 Patch12:	mozilla-48.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
+
+# https://bugzilla.mozilla.org/show_bug.cgi?id=1264534
+Patch45:	https://hg.mozilla.org/mozilla-central/raw-rev/e1cac03485d9
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
@@ -309,9 +312,7 @@ BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-# no idea why if {with qt}
-# causes parseExpressionFailure
-%if 0
+%if %{with qt}
 BuildRequires:	qmake5
 BuildRequires:	pkgconfig(QtCore5)
 BuildRequires:	pkgconfig(QtGui5)
@@ -403,7 +404,7 @@ Files and macros mainly for building Firefox extensions.
 # Expand all languages packages.
 %{expand:%(\
         for lang in %langlist; do\
-                echo "%%{expand:%%(sed "s!__LANG__!$lang!g" %{SOURCE13} 2> /dev/null)}";\
+                echo "%%{expand:%%(sed -e "s!__LANG__!$lang!g" %{SOURCE13} 2> /dev/null)}";\
         done\
         )
 }
@@ -439,7 +440,7 @@ export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 export CXX=g++
 export CC=gcc
 %else
-%global %optflags %{optflags} -Qunused-arguments
+%global optflags %{optflags} -Qunused-arguments
 %endif
 
 %if %{with qt}
@@ -536,7 +537,6 @@ ac_add_options --with-valgrind
 %endif
 ac_add_options --with-google-oauth-api-keyfile=$PWD/google-oauth-api-key
 ac_add_options --with-google-api-keyfile=$PWD/google-api-key
-
 EOF
 
 # Show the config just for debugging
@@ -551,6 +551,7 @@ cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 
 export LDFLAGS="%ldflags"
 export PYTHON=python2
+
 make -f client.mk build
 
 %install
