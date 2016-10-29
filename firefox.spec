@@ -353,7 +353,6 @@ BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
-BuildRequires:	rust
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -538,7 +537,6 @@ ac_add_options --with-valgrind
 %endif
 ac_add_options --with-google-oauth-api-keyfile=$PWD/google-oauth-api-key
 ac_add_options --with-google-api-keyfile=$PWD/google-api-key
-ac_add_options --enable-rust
 EOF
 
 # Show the config just for debugging
