@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	49.0.2
+Version:	50.0.1
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -271,18 +271,15 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-48.0-kde.patch
-Patch12:	mozilla-48.0-kde.patch
+Patch11:	firefox-50.0-kde.patch
+Patch12:	mozilla-50.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
-
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1264534
-Patch45:	https://hg.mozilla.org/mozilla-central/raw-rev/e1cac03485d9
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
 
 # Not yet finished, but can't hurt
-Patch50:	firefox-48.0.1-qt-compile.patch
+#Patch50:	firefox-48.0.1-qt-compile.patch
 
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
@@ -335,7 +332,7 @@ BuildRequires:	pkgconfig(libpulse)
 %endif
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr)
-BuildRequires:	pkgconfig(nss) >= 3.22.3
+BuildRequires:	pkgconfig(nss) >= 3.26.2
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
