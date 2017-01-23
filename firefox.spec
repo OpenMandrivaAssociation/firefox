@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	50.1.0
+Version:	51.0
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -271,8 +271,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-50.0-kde.patch
-Patch12:	mozilla-50.0-kde.patch
+Patch11:	firefox-51.0-kde.patch
+Patch12:	mozilla-51.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -424,7 +424,7 @@ cd ..
 
 # needed to regenerate certdata.c
 pushd security/nss/lib/ckfw/builtins
-perl ./certdata.perl < /etc/pki/tls/mozilla/certdata.txt
+perl ./certdata.perl /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
@@ -532,8 +532,7 @@ ac_add_options --disable-webrtc
 %ifnarch %arm %mips
 ac_add_options --with-valgrind
 %endif
-ac_add_options --with-google-oauth-api-keyfile=$PWD/google-oauth-api-key
-ac_add_options --with-google-api-keyfile=$PWD/google-api-key
+#ac_add_options --enable-rust
 EOF
 
 # Show the config just for debugging
