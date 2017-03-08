@@ -47,7 +47,7 @@
 %define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-i686/xpi/
 
 # Supported l10n language lists
-%define langlist af ar as ast be bg bn_IN bn_BD br bs ca cs cy da de el en_GB en_ZA eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mai mk ml mr nb_NO nl nn_NO or pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
+%define langlist af ar as ast bg bn_IN bn_BD br bs ca cs cy da de el en_GB en_ZA eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mai mk ml mr nb_NO nl nn_NO or pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
 
 # Disabled l10n languages, for any reason
 # - no locales-XX package:
@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	51.0
+Version:	52.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -271,8 +271,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-51.0-kde.patch
-Patch12:	mozilla-51.0-kde.patch
+Patch11:	firefox-52.0-kde.patch
+Patch12:	mozilla-52.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -490,8 +490,10 @@ ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
-%if %mdvver >= 201500
+%if %mdvver > 3000000
 ac_add_options --with-system-icu
+%endif
+%if %mdvver >= 201500
 ac_add_options --with-system-libvpx
 %endif
 ac_add_options --enable-system-pixman
