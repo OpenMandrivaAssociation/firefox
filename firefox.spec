@@ -501,7 +501,9 @@ ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
 %endif
 ac_add_options --enable-system-pixman
+%if %mdvver > 3000000
 ac_add_options --enable-system-hunspell
+%endif
 ac_add_options --enable-gio
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
