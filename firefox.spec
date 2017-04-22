@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	52.0.1
+Version:	53.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -271,8 +271,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-52.0-kde.patch
-Patch12:	mozilla-52.0-kde.patch
+Patch11:	firefox-53.0-kde.patch
+Patch12:	mozilla-53.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -325,7 +325,9 @@ BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
 BuildRequires:	pkgconfig(libnotify)
-BuildRequires:	pkgconfig(libpng) >= 1.4
+%if %mdvver >= 201500
+BuildRequires:	pkgconfig(libpng) >= 1.6.28
+%endif
 BuildRequires:	pkgconfig(libproxy-1.0)
 %if %mdvver >= 201300
 BuildRequires:	pkgconfig(libpulse)
@@ -350,6 +352,8 @@ BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
+BuildRequires:	rust >= 1.13
+BuildRequires:	cargo
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -497,7 +501,9 @@ ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
 %endif
 ac_add_options --enable-system-pixman
+%if %mdvver > 3000000
 ac_add_options --enable-system-hunspell
+%endif
 ac_add_options --enable-gio
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
