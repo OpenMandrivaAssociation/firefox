@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	52.0.1
+Version:	52.1.0
 Release:	0.1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -249,7 +249,7 @@ Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
 Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
 %else
-Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
+Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}esr/source/%{name}-%{version}esr.source.tar.xz
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -350,6 +350,7 @@ BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
+#BuildRequires:	rust
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -407,7 +408,7 @@ Files and macros mainly for building Firefox extensions.
 }
 
 %prep
-%setup -q -a 20
+%setup -q -a 20 -n %{name}-%{version}esr
 %apply_patches
 
 TOP="$(pwd)"
