@@ -14,9 +14,9 @@
 # Set up Google API keys, see http://www.chromium.org/developers/how-tos/api-keys
 # OpenMandriva key, id and secret
 # For your own builds, please get your own set of keys.
-%define    google_api_key AIzaSyAraWnKIFrlXznuwvd3gI-gqTozL-H-8MU
-%define    google_default_client_id 1089316189405-m0ropn3qa4p1phesfvi2urs7qps1d79o.apps.googleusercontent.com
-%define    google_default_client_secret RDdr-pHq2gStY4uw0m-zxXeo
+%define google_api_key AIzaSyAraWnKIFrlXznuwvd3gI-gqTozL-H-8MU
+%define google_default_client_id 1089316189405-m0ropn3qa4p1phesfvi2urs7qps1d79o.apps.googleusercontent.com
+%define google_default_client_secret RDdr-pHq2gStY4uw0m-zxXeo
 
 %define firefox_appid \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 %define firefox_langdir %{_datadir}/mozilla/extensions/%{firefox_appid}
@@ -242,7 +242,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	53.0
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -259,6 +259,7 @@ Source9:	kde.js
 Source10:	firefox-searchengines-yandex.xml
 Source13:	firefox-l10n-template.in
 Source20:	http://ftp.gnu.org/gnu/autoconf/autoconf-2.13.tar.gz
+Source21:	distribution.ini
 Source100:      firefox.rpmlintrc
 # l10n sources
 %{expand:%(\
@@ -540,7 +541,7 @@ ac_add_options --disable-webrtc
 %ifnarch %arm %mips
 ac_add_options --with-valgrind
 %endif
-#ac_add_options --enable-rust
+ac_add_options --enable-rust
 EOF
 
 # Show the config just for debugging
@@ -694,6 +695,10 @@ for lang in %{langlist}; do
 # l10n
     cp %{_sourcedir}/${language}.xpi %{buildroot}%{firefox_langdir}/langpack-${language}@firefox.mozilla.org.xpi
 done
+
+# Add distribution.ini
+mkdir -p %{buildroot}%{mozillalibdir}/distribution
+cp %{SOURCE21} %{buildroot}%{mozillalibdir}/distribution
 
 %pre
 if [ -d %{mozillalibdir}/dictionaries ]; then
