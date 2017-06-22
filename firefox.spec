@@ -241,8 +241,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	53.0.3
-Release:	1
+Version:	54.0
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -433,7 +433,7 @@ perl ./certdata.perl /etc/pki/tls/mozilla/certdata.txt
 popd
 
 %build
-%global optflags %{optflags} -g0
+%global optflags %{optflags} -g0 -fno-exceptions
 export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 
 %if %mdvver >= 201500
@@ -541,7 +541,6 @@ ac_add_options --disable-webrtc
 %ifnarch %arm %mips
 ac_add_options --with-valgrind
 %endif
-ac_add_options --enable-rust
 EOF
 
 # Show the config just for debugging
