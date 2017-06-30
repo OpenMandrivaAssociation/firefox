@@ -334,8 +334,8 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 %endif
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 3.13.1
-BuildRequires:	pkgconfig(nss) >= 3.28.1
+BuildRequires:	pkgconfig(nspr) >= 4.14.0
+BuildRequires:	pkgconfig(nss) >= 3.30.2
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -494,8 +494,8 @@ ac_add_options --enable-optimize
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
-ac_add_options --with-system-libevent
 %if %mdvver > 3000000
+ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 %endif
 %if %mdvver >= 201500
