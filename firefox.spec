@@ -242,7 +242,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	54.0.1
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -302,7 +302,9 @@ BuildRequires:	zip
 BuildRequires:	bzip2-devel
 BuildRequires:	jpeg-devel
 BuildRequires:	libiw-devel
-BuildRequires:	icu-devel
+%if %mdvver > 3000000
+BuildRequires:	icu-devel >= 59.1
+%endif
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(cairo) >= 1.10
