@@ -1,6 +1,11 @@
---- firefox-54.0/browser/base/content/browser-kde.xul.0011~	2017-06-14 09:57:27.510213706 +0200
-+++ firefox-54.0/browser/base/content/browser-kde.xul	2017-06-14 09:57:27.509213729 +0200
-@@ -0,0 +1,1136 @@
+# HG changeset patch
+# Parent  9ccba8e6b5fad738ce924ff40b4c5aa6f4bc12dd
+
+diff --git a/browser/base/content/browser-kde.xul b/browser/base/content/browser-kde.xul
+new file mode 100644
+--- /dev/null
++++ b/browser/base/content/browser-kde.xul
+@@ -0,0 +1,1306 @@
 +#filter substitution
 +<?xml version="1.0"?>
 +# -*- Mode: HTML -*-
@@ -12,11 +17,9 @@
 +<?xml-stylesheet href="chrome://browser/content/browser.css" type="text/css"?>
 +<?xml-stylesheet href="chrome://browser/content/places/places.css" type="text/css"?>
 +<?xml-stylesheet href="chrome://browser/content/usercontext/usercontext.css" type="text/css"?>
-+<?xml-stylesheet href="chrome://devtools/skin/devtools-browser.css" type="text/css"?>
 +<?xml-stylesheet href="chrome://browser/skin/controlcenter/panel.css" type="text/css"?>
 +<?xml-stylesheet href="chrome://browser/skin/customizableui/panelUI.css" type="text/css"?>
 +<?xml-stylesheet href="chrome://browser/skin/" type="text/css"?>
-+<?xml-stylesheet href="chrome://browser/skin/browser-lightweightTheme.css" type="text/css"?>
 +
 +<?xul-overlay href="chrome://global/content/editMenuOverlay.xul"?>
 +<?xul-overlay href="chrome://browser/content/baseMenuOverlay.xul"?>
@@ -30,6 +33,7 @@
 +        xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 +        xmlns:svg="http://www.w3.org/2000/svg"
 +        xmlns:html="http://www.w3.org/1999/xhtml"
++        xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 +        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 +        onload="gBrowserInit.onLoad()" onunload="gBrowserInit.onUnload()" onclose="return WindowIsClosing();"
 +        title="&mainWindow.title;"
@@ -56,7 +60,6 @@
 +#endif
 +        titlemenuseparator="&mainWindow.titlemodifiermenuseparator;"
 +        lightweightthemes="true"
-+        lightweightthemesfooter="browser-bottombox"
 +        windowtype="navigator:browser"
 +        macanimationtype="document"
 +        screenX="4" screenY="4"
@@ -111,7 +114,7 @@
 +      <menu id="context_sendTabToDevice" label="&sendTabToDevice.label;"
 +            accesskey="&sendTabToDevice.accesskey;" hidden="true">
 +        <menupopup id="context_sendTabToDevicePopupMenu"
-+                   onpopupshowing="gFxAccounts.populateSendTabToDevicesMenu(event.target, TabContextMenu.contextTab.linkedBrowser.currentURI.spec, TabContextMenu.contextTab.linkedBrowser.contentTitle);"/>
++                   onpopupshowing="gSync.populateSendTabToDevicesMenu(event.target, TabContextMenu.contextTab.linkedBrowser.currentURI.spec, TabContextMenu.contextTab.linkedBrowser.contentTitle);"/>
 +      </menu>
 +      <menuseparator/>
 +      <menuitem id="context_reloadAllTabs" label="&reloadAllTabs.label;" accesskey="&reloadAllTabs.accesskey;"
@@ -150,7 +153,8 @@
 +           noautofocus="true"
 +           hidden="true"
 +           overflowpadding="4"
-+           norolluponanchor="true" />
++           norolluponanchor="true"
++           nomaxresults="true" />
 +
 +    <!-- for search with one-off buttons -->
 +    <panel type="autocomplete" id="PopupSearchAutoComplete" noautofocus="true" hidden="true"/>
@@ -169,9 +173,10 @@
 +           hidden="true"
 +           orient="vertical"
 +           noautofocus="true"
++           noautohide="true"
 +           consumeoutsideclicks="false"
-+           level="parent">
-+      <iframe id="dateTimePopupFrame"/>
++           level="parent"
++           tabspecific="true">
 +    </panel>
 +
 +    <!-- for select dropdowns. The menupopup is what shows the list of options,
@@ -292,10 +297,53 @@
 +      </hbox>
 +      <hbox id="share-container" flex="1"/>
 +    </panel>
++    <panel id="sidebarMenu-popup"
++           class="cui-widget-panel"
++           role="group"
++           type="arrow"
++           hidden="true"
++           flip="slide"
++           orient="vertical"
++           position="bottomcenter topleft">
++      <toolbarbutton id="sidebar-switcher-bookmarks"
++                     class="subviewbutton subviewbutton-iconic"
++                     key="viewBookmarksSidebarKb"
++                     observes="viewBookmarksSidebar"
++                     oncommand="SidebarUI.show('viewBookmarksSidebar');">
++         <observes element="viewBookmarksSidebar" attribute="checked"/>
++       </toolbarbutton>
++      <toolbarbutton id="sidebar-switcher-history"
++                     label="&historyButton.label;"
++                     class="subviewbutton subviewbutton-iconic"
++                     key="key_gotoHistory"
++                     observes="viewHistorySidebar"
++                     oncommand="SidebarUI.show('viewHistorySidebar');">
++         <observes element="viewHistorySidebar" attribute="checked"/>
++       </toolbarbutton>
++      <toolbarbutton id="sidebar-switcher-tabs"
++                     label="&syncedTabs.sidebar.label;"
++                     class="subviewbutton subviewbutton-iconic"
++                     observes="viewTabsSidebar"
++                     oncommand="SidebarUI.show('viewTabsSidebar');">
++         <observes element="viewTabsSidebar" attribute="checked"/>
++       </toolbarbutton>
++      <toolbarseparator/>
++      <vbox id="sidebar-extensions"></vbox>
++      <toolbarseparator/>
++      <toolbarbutton id="sidebar-reverse-position"
++                     class="subviewbutton"
++                     oncommand="SidebarUI.reversePosition()"/>
++      <toolbarseparator/>
++      <toolbarbutton label="&sidebarMenuClose.label;"
++                     class="subviewbutton"
++                     oncommand="SidebarUI.hide()"/>
++    </panel>
 +
 +    <menupopup id="toolbar-context-menu"
 +               onpopupshowing="onViewToolbarsPopupShowing(event, document.getElementById('viewToolbarsMenuSeparator'));">
 +      <menuitem oncommand="gCustomizeMode.addToPanel(document.popupNode)"
++                photonaccesskey="&customizeMenu.pinToOverflowMenu.accesskey;"
++                photonlabel="&customizeMenu.pinToOverflowMenu.label;"
 +                accesskey="&customizeMenu.moveToPanel.accesskey;"
 +                label="&customizeMenu.moveToPanel.label;"
 +                contexttype="toolbaritem"
@@ -407,6 +455,58 @@
 +      </hbox>
 +    </panel>
 +
++    <panel id="page-action-panel"
++           class="cui-widget-panel"
++           role="group"
++           type="arrow"
++           hidden="true"
++           flip="slide"
++           position="bottomcenter topright"
++           noautofocus="true">
++      <photonpanelmultiview id="page-action-multiView"
++                            mainViewId="page-action-mainView">
++        <panelview id="page-action-mainView"
++                   class="PanelUI-subView">
++          <vbox class="panel-subview-body">
++            <toolbarbutton id="page-action-bookmark-button"
++                           class="subviewbutton subviewbutton-iconic"
++                           observes="bookmarkThisPageBroadcaster"
++                           command="Browser:AddBookmarkAs"
++                           onclick="gPageActionButton.panel.hidePopup();"/>
++            <toolbarseparator/>
++            <toolbarbutton id="page-action-copy-url-button"
++                           class="subviewbutton subviewbutton-iconic"
++                           label="&copyURLCmd.label;"
++                           command="PageAction:copyURL"/>
++            <toolbarbutton id="page-action-email-link-button"
++                           class="subviewbutton subviewbutton-iconic"
++                           label="&emailPageCmd.label;"
++                           command="PageAction:emailLink"/>
++            <toolbarbutton id="page-action-send-to-device-button"
++                           class="subviewbutton subviewbutton-iconic subviewbutton-nav"
++                           label="&sendToDevice.label;"
++                           closemenu="none"
++                           oncommand="gPageActionButton.showSendToDeviceView(this);"/>
++          </vbox>
++        </panelview>
++        <panelview id="page-action-sendToDeviceView"
++                   class="PanelUI-subView"
++                   title="&sendToDevice.viewTitle;">
++          <vbox id="page-action-sendToDeviceView-body" class="panel-subview-body">
++            <toolbarbutton id="page-action-sendToDevice-fxa-button"
++                           class="subviewbutton subviewbutton-iconic"
++                           label="&syncBrand.fxAccount.label;"
++                           shortcut="&sendToDevice.fxaRequired.label;"
++                           oncommand="gPageActionButton.fxaButtonClicked();"/>
++            <toolbarbutton id="page-action-no-devices-button"
++                           class="subviewbutton"
++                           label="&sendToDevice.noDevices.label;"
++                           disabled="true"/>
++          </vbox>
++        </panelview>
++      </photonpanelmultiview>
++    </panel>
++
 +    <!-- Bookmarks and history tooltip -->
 +    <tooltip id="bhTooltip"/>
 +
@@ -482,6 +582,10 @@
 +      <menuitem label="&syncedTabs.context.openAllInTabs.label;"
 +                accesskey="&syncedTabs.context.openAllInTabs.accesskey;"
 +                id="syncedTabsOpenAllInTabs"/>
++      <menuitem label="&syncedTabs.context.managedevices.label;"
++                accesskey="&syncedTabs.context.managedevices.accesskey;"
++                id="syncedTabsManageDevices"
++                oncommand="gSync.openDevicesManagementPage('syncedtabs-sidebar');"/>
 +      <menuitem label="&syncSyncNowItem.label;"
 +                accesskey="&syncSyncNowItem.accesskey;"
 +                id="syncedTabsRefresh"/>
@@ -514,6 +618,7 @@
 +                id="syncedTabsRefreshFilter"/>
 +    </menupopup>
 +  </popupset>
++  <box id="appMenu-viewCache" hidden="true"/>
 +
 +#ifdef CAN_DRAW_IN_TITLEBAR
 +<vbox id="titlebar">
@@ -617,7 +722,6 @@
 +        <menupopup id="alltabs-popup"
 +                   position="after_end">
 +          <menuitem id="alltabs_undoCloseTab"
-+                    class="menuitem-iconic"
 +                    key="key_undoCloseTab"
 +                    label="&undoCloseTab.label;"
 +                    observes="History:UndoCloseTab"/>
@@ -665,18 +769,43 @@
 +                     removable="false"
 +                     class="chromeclass-location" overflows="false">
 +          <toolbarbutton id="back-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
++                         removable="false" overflows="false"
 +                         label="&backCmd.label;"
 +                         command="Browser:BackOrBackDuplicate"
 +                         onclick="checkForMiddleClick(this, event);"
 +                         tooltip="back-button-tooltip"
 +                         context="backForwardMenu"/>
++#ifdef MOZ_PHOTON_THEME
++          <toolbarbutton id="forward-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
++                         removable="false" overflows="false"
++                         label="&forwardCmd.label;"
++                         command="Browser:ForwardOrForwardDuplicate"
++                         onclick="checkForMiddleClick(this, event);"
++                         tooltip="forward-button-tooltip"
++                         context="backForwardMenu"/>
++          <toolbaritem id="stop-reload-button"
++                       removable="false" overflows="false"
++                       class="chromeclass-toolbar-additional">
++            <toolbarbutton id="reload-button"
++                           class="toolbarbutton-1"
++                           command="Browser:ReloadOrDuplicate"
++                           onclick="checkForMiddleClick(this, event);"
++                           tooltip="dynamic-shortcut-tooltip"/>
++            <toolbarbutton id="stop-button"
++                           class="toolbarbutton-1"
++                           command="Browser:Stop"
++                           tooltip="dynamic-shortcut-tooltip"/>
++          </toolbaritem>
++#endif
 +          <hbox id="urlbar-wrapper" flex="1">
++#ifndef MOZ_PHOTON_THEME
 +            <toolbarbutton id="forward-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
 +                           label="&forwardCmd.label;"
 +                           command="Browser:ForwardOrForwardDuplicate"
 +                           onclick="checkForMiddleClick(this, event);"
 +                           tooltip="forward-button-tooltip"
 +                           context="backForwardMenu"/>
++#endif
 +            <textbox id="urlbar" flex="1"
 +                     placeholder="&urlbar.placeholder2;"
 +                     type="autocomplete"
@@ -706,6 +835,7 @@
 +                       consumeanchor="identity-box"
 +                       onclick="PageProxyClickHandler(event);"/>
 +                <image id="sharing-icon" mousethrough="always"/>
++                <image id="tracking-protection-icon"/>
 +                <box id="blocked-permissions-container" align="center">
 +                  <image data-permission-id="geo" class="blocked-permission-icon geo-icon" role="button"
 +                         tooltiptext="&urlbar.geolocationBlocked.tooltip;"/>
@@ -719,6 +849,8 @@
 +                         tooltiptext="&urlbar.microphoneBlocked.tooltip;"/>
 +                  <image data-permission-id="screen" class="blocked-permission-icon screen-icon" role="button"
 +                         tooltiptext="&urlbar.screenBlocked.tooltip;"/>
++                  <image data-permission-id="persistent-storage" class="blocked-permission-icon persistent-storage-icon" role="button"
++                         tooltiptext="&urlbar.persistentStorageBlocked.tooltip;"/>
 +                </box>
 +                <box id="notification-popup-box"
 +                     hidden="true"
@@ -735,8 +867,11 @@
 +                         tooltiptext="&urlbar.indexedDBNotificationAnchor.tooltip;"/>
 +                  <image id="password-notification-icon" class="notification-anchor-icon login-icon" role="button"
 +                         tooltiptext="&urlbar.passwordNotificationAnchor.tooltip;"/>
-+                  <image id="plugins-notification-icon" class="notification-anchor-icon plugin-icon" role="button"
-+                         tooltiptext="&urlbar.pluginsNotificationAnchor.tooltip;"/>
++                  <stack id="plugins-notification-icon" class="notification-anchor-icon" role="button" align="center"
++                         tooltiptext="&urlbar.pluginsNotificationAnchor.tooltip;">
++                    <image class="plugin-icon" />
++                    <image id="plugin-icon-badge" />
++                  </stack>
 +                  <image id="web-notifications-notification-icon" class="notification-anchor-icon desktop-notification-icon" role="button"
 +                         tooltiptext="&urlbar.webNotificationAnchor.tooltip;"/>
 +                  <image id="webRTC-shareDevices-notification-icon" class="notification-anchor-icon camera-icon" role="button"
@@ -753,9 +888,13 @@
 +                         tooltiptext="&urlbar.translatedNotificationAnchor.tooltip;"/>
 +                  <image id="eme-notification-icon" class="notification-anchor-icon drm-icon" role="button"
 +                         tooltiptext="&urlbar.emeNotificationAnchor.tooltip;"/>
++                  <image id="persistent-storage-notification-icon" class="notification-anchor-icon persistent-storage-icon" role="button"
++                         tooltiptext="&urlbar.persistentStorageNotificationAnchor.tooltip;"/>
 +                </box>
-+                <image id="tracking-protection-icon"/>
 +                <image id="connection-icon"/>
++                <image id="extension-icon"/>
++                <image id="remote-control-icon"
++                       tooltiptext="&urlbar.remoteControlNotificationAnchor.tooltip;"/>
 +                <hbox id="identity-icon-labels">
 +                  <label id="identity-icon-label" class="plain" flex="1"/>
 +                  <label id="identity-icon-country-label" class="plain"/>
@@ -777,26 +916,33 @@
 +                       onclick="ReaderParent.buttonClick(event);"/>
 +                <toolbarbutton id="urlbar-zoom-button"
 +                       onclick="FullZoom.reset();"
-+                       tooltiptext="&urlbar.zoomReset.tooltip;"
++                       tooltip="dynamic-shortcut-tooltip"
 +                       hidden="true"/>
 +              </hbox>
 +              <hbox id="userContext-icons" hidden="true">
 +                <label id="userContext-label"/>
 +                <image id="userContext-indicator"/>
 +              </hbox>
++#ifndef MOZ_PHOTON_THEME
 +              <toolbarbutton id="urlbar-go-button"
 +                             class="chromeclass-toolbar-additional"
 +                             onclick="gURLBar.handleCommand(event);"
 +                             tooltiptext="&goEndCap.tooltip;"/>
-+              <toolbarbutton id="urlbar-reload-button"
++              <toolbarbutton id="reload-button"
 +                             class="chromeclass-toolbar-additional"
 +                             command="Browser:ReloadOrDuplicate"
 +                             onclick="checkForMiddleClick(this, event);"
-+                             tooltiptext="&reloadButton.tooltip;"/>
-+              <toolbarbutton id="urlbar-stop-button"
++                             tooltip="dynamic-shortcut-tooltip"/>
++              <toolbarbutton id="stop-button"
 +                             class="chromeclass-toolbar-additional"
 +                             command="Browser:Stop"
-+                             tooltiptext="&stopButton.tooltip;"/>
++                             tooltip="dynamic-shortcut-tooltip"/>
++#else
++              <toolbarbutton id="urlbar-page-action-button"
++                             class="chromeclass-toolbar-additional"
++                             tooltiptext="&pageActionButton.tooltip;"
++                             onclick="gPageActionButton.onEvent(event);"/>
++#endif
 +            </textbox>
 +          </hbox>
 +        </toolbaritem>
@@ -883,6 +1029,19 @@
 +                                           new PlacesMenu(event, 'place:folder=UNFILED_BOOKMARKS',
 +                                                          PlacesUIUtils.getViewForNode(this.parentNode.parentNode).options);"/>
 +            </menu>
++            <menu id="BMB_mobileBookmarks"
++                  class="menu-iconic bookmark-item subviewbutton"
++                  label="&bookmarksMenuButton.mobile.label;"
++                  hidden="true"
++                  container="true">
++              <menupopup id="BMB_mobileBookmarksPopup"
++                         placespopup="true"
++                         context="placesContext"
++                         onpopupshowing="if (!this.parentNode._placesView)
++                                           new PlacesMenu(event, 'place:folder=MOBILE_BOOKMARKS',
++                                                          PlacesUIUtils.getViewForNode(this.parentNode.parentNode).options);"/>
++            </menu>
++
 +            <menuseparator/>
 +            <!-- Bookmarks menu items will go here -->
 +            <menuitem id="BMB_bookmarksShowAll"
@@ -1034,7 +1193,7 @@
 +
 +      <toolbarbutton id="new-window-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
 +                     label="&newNavigatorCmd.label;"
-+                     command="key_newNavigator"
++                     command="cmd_newNavigator"
 +                     tooltip="dynamic-shortcut-tooltip"
 +                     ondrop="newWindowButtonObserver.onDrop(event)"
 +                     ondragover="newWindowButtonObserver.onDragOver(event)"
@@ -1046,6 +1205,11 @@
 +                     type="checkbox"
 +                     label="&fullScreenCmd.label;"
 +                     tooltip="dynamic-shortcut-tooltip"/>
++#ifdef MOZ_PHOTON_THEME
++      <toolbarbutton id="library-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
++                     oncommand="PanelUI.showSubView('appMenu-libraryView', this, null, true);"
++                     label="&places.library.title;"/>
++#endif
 +    </toolbarpalette>
 +  </toolbox>
 +
@@ -1056,9 +1220,18 @@
 +      <vbox id="browser-border-start" hidden="true" layer="true"/>
 +      <vbox id="sidebar-box" hidden="true" class="chromeclass-extrachrome">
 +        <sidebarheader id="sidebar-header" align="center">
-+          <label id="sidebar-title" persist="value" flex="1" crop="end" control="sidebar"/>
++          <toolbarbutton id="sidebar-switcher-target" flex="1" class="tabbable">
++            <image id="sidebar-icon" consumeanchor="sidebar-switcher-target"/>
++            <label id="sidebar-title" persist="value" crop="end" flex="1" control="sidebar"/>
++            <image id="sidebar-switcher-arrow"/>
++          </toolbarbutton>
 +          <image id="sidebar-throbber"/>
-+          <toolbarbutton class="close-icon tabbable" tooltiptext="&sidebarCloseButton.tooltip;" oncommand="SidebarUI.hide();"/>
++# To ensure the button label's intrinsic width doesn't expand the sidebar
++# if the label is long, the button needs flex=1.
++# To ensure the button doesn't expand unnecessarily for short labels, the
++# spacer should significantly out-flex the button.
++          <spacer flex="1000"/>
++          <toolbarbutton id="sidebar-close" class="tabbable" tooltiptext="&sidebarCloseButton.tooltip;" oncommand="SidebarUI.hide();"/>
 +        </sidebarheader>
 +        <browser id="sidebar" flex="1" autoscroll="false" disablehistory="true" disablefullscreen="true"
 +                  style="min-width: 14em; width: 18em; max-width: 36em;" tooltip="aHTMLTooltip"/>
@@ -1116,6 +1289,7 @@
 +
 +  <svg:svg height="0">
 +#include tab-shape.inc.svg
++#ifndef MOZ_PHOTON_THEME
 +    <svg:clipPath id="urlbar-back-button-clip-path">
 +#ifndef XP_MACOSX
 +      <svg:path d="M -9,-4 l 0,1 a 15 15 0 0,1 0,30 l 0,1 l 10000,0 l 0,-32 l -10000,0 z" />
@@ -1128,6 +1302,7 @@
 +      <svg:path d="M -6,-2 l 0,1 a 15 15 0 0,1 0,30 l 0,1 l 10000,0 l 0,-32 l -10000,0 z" />
 +    </svg:clipPath>
 +#endif
++#endif
 +  </svg:svg>
 +
 +</vbox>
@@ -1137,9 +1312,15 @@
 +</deck>
 +
 +</window>
---- firefox-54.0/browser/base/jar.mn.0011~	2017-06-05 22:45:14.000000000 +0200
-+++ firefox-54.0/browser/base/jar.mn	2017-06-14 09:57:27.510213706 +0200
-@@ -63,6 +63,8 @@ browser.jar:
+diff --git a/browser/base/jar.mn b/browser/base/jar.mn
+--- a/browser/base/jar.mn
++++ b/browser/base/jar.mn
+@@ -58,16 +58,18 @@ browser.jar:
+         content/browser/aboutSocialError.xhtml        (content/aboutSocialError.xhtml)
+         content/browser/aboutProviderDirectory.xhtml  (content/aboutProviderDirectory.xhtml)
+         content/browser/aboutTabCrashed.css           (content/aboutTabCrashed.css)
+         content/browser/aboutTabCrashed.js            (content/aboutTabCrashed.js)
+         content/browser/aboutTabCrashed.xhtml         (content/aboutTabCrashed.xhtml)
  *       content/browser/browser.css                   (content/browser.css)
          content/browser/browser.js                    (content/browser.js)
  *       content/browser/browser.xul                   (content/browser.xul)
@@ -1148,9 +1329,20 @@
          content/browser/browser-addons.js             (content/browser-addons.js)
          content/browser/browser-captivePortal.js      (content/browser-captivePortal.js)
          content/browser/browser-ctrlTab.js            (content/browser-ctrlTab.js)
---- firefox-54.0/browser/components/build/nsModule.cpp.0011~	2017-01-16 17:16:49.000000000 +0100
-+++ firefox-54.0/browser/components/build/nsModule.cpp	2017-06-14 09:57:27.510213706 +0200
-@@ -13,7 +13,7 @@
+         content/browser/browser-customization.js      (content/browser-customization.js)
+         content/browser/browser-data-submission-info-bar.js (content/browser-data-submission-info-bar.js)
+         content/browser/browser-compacttheme.js       (content/browser-compacttheme.js)
+         content/browser/browser-feeds.js              (content/browser-feeds.js)
+         content/browser/browser-fullScreenAndPointerLock.js  (content/browser-fullScreenAndPointerLock.js)
+diff --git a/browser/components/build/nsModule.cpp b/browser/components/build/nsModule.cpp
+--- a/browser/components/build/nsModule.cpp
++++ b/browser/components/build/nsModule.cpp
+@@ -8,17 +8,17 @@
+ #include "nsBrowserCompsCID.h"
+ #include "DirectoryProvider.h"
+ 
+ #if defined(XP_WIN)
+ #include "nsWindowsShellService.h"
  #elif defined(XP_MACOSX)
  #include "nsMacShellService.h"
  #elif defined(MOZ_WIDGET_GTK)
@@ -1159,7 +1351,17 @@
  #endif
  
  #if defined(XP_WIN)
-@@ -36,8 +36,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(Directory
+ #include "nsIEHistoryEnumerator.h"
+ #endif
+ 
+ #include "rdf.h"
+ #include "nsFeedSniffer.h"
+@@ -31,18 +31,16 @@ using namespace mozilla::browser;
+ 
+ /////////////////////////////////////////////////////////////////////////////
+ 
+ NS_GENERIC_FACTORY_CONSTRUCTOR(DirectoryProvider)
+ #if defined(XP_WIN)
  NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindowsShellService)
  #elif defined(XP_MACOSX)
  NS_GENERIC_FACTORY_CONSTRUCTOR(nsMacShellService)
@@ -1168,7 +1370,17 @@
  #endif
  
  #if defined(XP_WIN)
-@@ -65,7 +63,7 @@ static const mozilla::Module::CIDEntry k
+ NS_GENERIC_FACTORY_CONSTRUCTOR(nsIEHistoryEnumerator)
+ #endif
+ 
+ NS_GENERIC_FACTORY_CONSTRUCTOR(nsFeedSniffer)
+ 
+@@ -60,17 +58,17 @@ NS_DEFINE_NAMED_CID(NS_WINIEHISTORYENUME
+ NS_DEFINE_NAMED_CID(NS_SHELLSERVICE_CID);
+ #endif
+ 
+ static const mozilla::Module::CIDEntry kBrowserCIDs[] = {
+     { &kNS_BROWSERDIRECTORYPROVIDER_CID, false, nullptr, DirectoryProviderConstructor },
  #if defined(XP_WIN)
      { &kNS_SHELLSERVICE_CID, false, nullptr, nsWindowsShellServiceConstructor },
  #elif defined(MOZ_WIDGET_GTK)
@@ -1177,22 +1389,44 @@
  #endif
      { &kNS_FEEDSNIFFER_CID, false, nullptr, nsFeedSnifferConstructor },
      { &kNS_BROWSER_ABOUT_REDIRECTOR_CID, false, nullptr, AboutRedirector::Create },
---- firefox-54.0/browser/components/preferences/in-content/main.js.0011~	2017-06-05 22:45:14.000000000 +0200
-+++ firefox-54.0/browser/components/preferences/in-content/main.js	2017-06-14 09:57:27.510213706 +0200
-@@ -39,6 +39,12 @@ var gMainPane = {
+ #if defined(XP_WIN)
+     { &kNS_WINIEHISTORYENUMERATOR_CID, false, nullptr, nsIEHistoryEnumeratorConstructor },
+ #elif defined(XP_MACOSX)
+     { &kNS_SHELLSERVICE_CID, false, nullptr, nsMacShellServiceConstructor },
+ #endif
+diff --git a/browser/components/preferences/in-content/main.js b/browser/components/preferences/in-content/main.js
+--- a/browser/components/preferences/in-content/main.js
++++ b/browser/components/preferences/in-content/main.js
+@@ -39,16 +39,23 @@ var gMainPane = {
+         // way to get all file type association prefs. So we don't know
+         // when the user will select the default.  We refresh here periodically
+         // in case the default changes. On other Windows OS's defaults can also
+         // be set while the prefs are open.
          window.setInterval(this.updateSetDefaultBrowser.bind(this), 1000);
        }
      }
+ 
 +    var env = Components.classes["@mozilla.org/process/environment;1"]
-+        .getService(Components.interfaces.nsIEnvironment);
++      .getService(Components.interfaces.nsIEnvironment);
 +    var kde_session = 0;
 +    if (env.get('KDE_FULL_SESSION') == "true") {
-+        kde_session = 1;
++      kde_session = 1;
 +    }
++
+     this.buildContentProcessCountMenuList();
+     this.updateDefaultPerformanceSettingsPref();
  
-     // set up the "use current page" label-changing listener
-     this._updateUseCurrentButton();
-@@ -687,6 +693,17 @@ var gMainPane = {
+     let defaultPerformancePref =
+       document.getElementById("browser.preferences.defaultPerformanceSettings.enabled");
+     defaultPerformancePref.addEventListener("change", () => {
+       this.updatePerformanceSettingsBox({duringChangeEvent: true});
+     });
+@@ -780,16 +787,27 @@ var gMainPane = {
+       let alwaysCheckPref = document.getElementById("browser.shell.checkDefaultBrowser");
+       alwaysCheckPref.value = true;
+ 
+       let shellSvc = getShellService();
+       if (!shellSvc)
          return;
        try {
          shellSvc.setDefaultBrowser(true, false);
@@ -1210,9 +1444,20 @@
        } catch (ex) {
          Cu.reportError(ex);
          return;
---- firefox-54.0/browser/components/shell/moz.build.0011~	2017-06-05 22:45:14.000000000 +0200
-+++ firefox-54.0/browser/components/shell/moz.build	2017-06-14 09:57:27.510213706 +0200
-@@ -43,6 +43,8 @@ elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'co
+       }
+ 
+       let selectedIndex = shellSvc.isDefaultBrowser(false, true) ? 1 : 0;
+       document.getElementById("setDefaultPane").selectedIndex = selectedIndex;
+     }
+diff --git a/browser/components/shell/moz.build b/browser/components/shell/moz.build
+--- a/browser/components/shell/moz.build
++++ b/browser/components/shell/moz.build
+@@ -37,16 +37,18 @@ if CONFIG['OS_ARCH'] == 'WINNT':
+     ]
+ elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'cocoa':
+     SOURCES += [
+         'nsMacShellService.cpp',
+     ]
  elif 'gtk' in CONFIG['MOZ_WIDGET_TOOLKIT']:
      SOURCES += [
          'nsGNOMEShellService.cpp',
@@ -1221,8 +1466,15 @@
      ]
  
  if SOURCES:
---- firefox-54.0/browser/components/shell/nsKDEShellService.cpp.0011~	2017-06-14 09:57:27.510213706 +0200
-+++ firefox-54.0/browser/components/shell/nsKDEShellService.cpp	2017-06-14 09:57:27.510213706 +0200
+     FINAL_LIBRARY = 'browsercomps'
+ 
+ EXTRA_COMPONENTS += [
+     'nsSetDefaultBrowser.js',
+     'nsSetDefaultBrowser.manifest',
+diff --git a/browser/components/shell/nsKDEShellService.cpp b/browser/components/shell/nsKDEShellService.cpp
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsKDEShellService.cpp
 @@ -0,0 +1,203 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1427,8 +1679,10 @@
 +    NS_ADDREF(*_retval = defaultReader);
 +    return NS_OK;
 +}
---- firefox-54.0/browser/components/shell/nsKDEShellService.h.0011~	2017-06-14 09:57:27.510213706 +0200
-+++ firefox-54.0/browser/components/shell/nsKDEShellService.h	2017-06-14 09:57:27.510213706 +0200
+diff --git a/browser/components/shell/nsKDEShellService.h b/browser/components/shell/nsKDEShellService.h
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsKDEShellService.h
 @@ -0,0 +1,30 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1460,8 +1714,10 @@
 +};
 +
 +#endif // nskdeshellservice_h____
---- firefox-54.0/browser/components/shell/nsUnixShellService.cpp.0011~	2017-06-14 09:57:27.510213706 +0200
-+++ firefox-54.0/browser/components/shell/nsUnixShellService.cpp	2017-06-14 09:57:27.510213706 +0200
+diff --git a/browser/components/shell/nsUnixShellService.cpp b/browser/components/shell/nsUnixShellService.cpp
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsUnixShellService.cpp
 @@ -0,0 +1,22 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1485,8 +1741,10 @@
 +        return nsKDEShellServiceConstructor( aOuter, aIID, aResult );
 +    return nsGNOMEShellServiceConstructor( aOuter, aIID, aResult );
 +}
---- firefox-54.0/browser/components/shell/nsUnixShellService.h.0011~	2017-06-14 09:57:27.510213706 +0200
-+++ firefox-54.0/browser/components/shell/nsUnixShellService.h	2017-06-14 09:57:27.510213706 +0200
+diff --git a/browser/components/shell/nsUnixShellService.h b/browser/components/shell/nsUnixShellService.h
+new file mode 100644
+--- /dev/null
++++ b/browser/components/shell/nsUnixShellService.h
 @@ -0,0 +1,15 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1503,13 +1761,25 @@
 +nsUnixShellServiceConstructor(nsISupports *aOuter, REFNSIID aIID, void **aResult);
 +
 +#endif // nsunixshellservice_h____
---- firefox-54.0/browser/installer/package-manifest.in.0011~	2017-06-14 09:57:27.511213682 +0200
-+++ firefox-54.0/browser/installer/package-manifest.in	2017-06-14 10:03:11.552151469 +0200
-@@ -650,6 +650,7 @@
+diff --git a/browser/installer/package-manifest.in b/browser/installer/package-manifest.in
+--- a/browser/installer/package-manifest.in
++++ b/browser/installer/package-manifest.in
+@@ -662,16 +662,18 @@
+ @RESPATH@/browser/defaults/blocklists
+ @RESPATH@/browser/defaults/pinning
+ 
+ ; Warning: changing the path to channel-prefs.js can cause bugs (Bug 756325)
  ; Technically this is an app pref file, but we are keeping it in the original
  ; gre location for now.
  @RESPATH@/defaults/pref/channel-prefs.js
-+@BINPATH@/defaults/pref/kde.js
  
++@BINPATH@/defaults/pref/kde.js
++
  ; Remote control protocol prefs
  ; defined in ../../testing/marionette/prefs/marionette.js
+ @RESPATH@/defaults/pref/marionette.js
+ 
+ ; Services (gre) prefs
+ @RESPATH@/defaults/pref/services-sync.js
+ 
+ ; [Layout Engine Resources]

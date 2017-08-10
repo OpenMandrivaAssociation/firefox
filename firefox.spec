@@ -241,8 +241,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	54.0.1
-Release:	2
+Version:	55.0.1
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -272,8 +272,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-53.0-kde.patch
-Patch12:	mozilla-53.0-kde.patch
+Patch11:	firefox-55.0-kde.patch
+Patch12:	mozilla-55.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -336,8 +336,8 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 %endif
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.14.0
-BuildRequires:	pkgconfig(nss) >= 3.30.2
+BuildRequires:	pkgconfig(nspr) >= 4.15.0
+BuildRequires:	pkgconfig(nss) >= 3.31
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -507,7 +507,6 @@ ac_add_options --enable-system-pixman
 %if %mdvver > 3000000
 ac_add_options --enable-system-hunspell
 %endif
-ac_add_options --enable-gio
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
