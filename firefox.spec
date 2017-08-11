@@ -44,7 +44,7 @@
 %define _enable_debug_packages %{nil}
 %define debug_package %{nil}
 
-%define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-i686/xpi/
+%define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-x86_64/xpi/
 
 # Supported l10n language lists
 %define langlist af ar as ast bg bn_IN bn_BD br bs ca cs cy da de el en_GB en_ZA eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mai mk ml mr nb_NO nl nn_NO or pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
@@ -241,8 +241,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	54.0
-Release:	2
+Version:	55.0.1
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -272,8 +272,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-53.0-kde.patch
-Patch12:	mozilla-53.0-kde.patch
+Patch11:	firefox-55.0-kde.patch
+Patch12:	mozilla-55.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -302,7 +302,9 @@ BuildRequires:	zip
 BuildRequires:	bzip2-devel
 BuildRequires:	jpeg-devel
 BuildRequires:	libiw-devel
-BuildRequires:	icu-devel
+%if %mdvver > 3000000
+BuildRequires:	icu-devel >= 59.1
+%endif
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(cairo) >= 1.10
@@ -334,8 +336,8 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 %endif
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.14.0
-BuildRequires:	pkgconfig(nss) >= 3.30.2
+BuildRequires:	pkgconfig(nspr) >= 4.15.0
+BuildRequires:	pkgconfig(nss) >= 3.31
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -505,7 +507,6 @@ ac_add_options --enable-system-pixman
 %if %mdvver > 3000000
 ac_add_options --enable-system-hunspell
 %endif
-ac_add_options --enable-gio
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
@@ -601,7 +602,7 @@ rm -f %{buildroot}%{mozillalibdir}/README.txt
 rm -f %{buildroot}%{mozillalibdir}/removed-files
 rm -f %{buildroot}%{mozillalibdir}/precomplete
 
-install -D -m644 browser/app/profile/prefs.js %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
+install -d -m755 %{buildroot}%{mozillalibdir}/browser/defaults/profile
 cat << EOF >> %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
 user_pref("browser.EULA.override", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
