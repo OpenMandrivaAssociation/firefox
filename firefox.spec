@@ -602,7 +602,7 @@ rm -f %{buildroot}%{mozillalibdir}/README.txt
 rm -f %{buildroot}%{mozillalibdir}/removed-files
 rm -f %{buildroot}%{mozillalibdir}/precomplete
 
-install -D -m644 browser/app/profile/prefs.js %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
+install -d -m755 %{buildroot}%{mozillalibdir}/browser/defaults/profile
 cat << EOF >> %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
 user_pref("browser.EULA.override", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
