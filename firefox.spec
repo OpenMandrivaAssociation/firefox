@@ -350,7 +350,7 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
-%ifnarch %armx %mips
+%ifnarch %mips
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
@@ -539,7 +539,7 @@ ac_add_options --enable-system-ffi
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
 %endif
-%ifnarch %arm %mips
+%ifnarch %mips
 ac_add_options --with-valgrind
 %endif
 EOF
