@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	55.0.3
+Version:	56.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -272,8 +272,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-55.0-kde.patch
-Patch12:	mozilla-55.0-kde.patch
+Patch11:	firefox-56.0-kde.patch
+Patch12:	mozilla-56.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -356,7 +356,7 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
 BuildRequires:	rust >= 1.13
-BuildRequires:	cargo
+BuildRequires:	cargo >= 0.18
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
