@@ -39,7 +39,7 @@
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
 %define nspr_version %(pkg-config --modversion nspr &>/dev/null && pkg-config --modversion nspr 2>/dev/null |sed -e 's!\.0!!' || echo 0)
 
-%define update_channel  release
+%define update_channel release
 
 %define _enable_debug_packages %{nil}
 %define debug_package %{nil}
@@ -241,7 +241,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	55.0.3
+Version:	56.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -272,8 +272,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-55.0-kde.patch
-Patch12:	mozilla-55.0-kde.patch
+Patch11:	firefox-56.0-kde.patch
+Patch12:	mozilla-56.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -332,9 +332,7 @@ BuildRequires:	pkgconfig(libnotify)
 BuildRequires:	pkgconfig(libpng) >= 1.6.28
 %endif
 BuildRequires:	pkgconfig(libproxy-1.0)
-%if %mdvver >= 201300
 BuildRequires:	pkgconfig(libpulse)
-%endif
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.15.0
 BuildRequires:	pkgconfig(nss) >= 3.31
@@ -350,13 +348,15 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
-%ifnarch %armx %mips
+BuildRequires:	cmake(Clang)
+BuildRequires:	cmake(LLVM)
+%ifnarch %mips
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
-BuildRequires:	rust >= 1.13
-BuildRequires:	cargo
+BuildRequires:	rust >= 1.21.0
+BuildRequires:	cargo >= 0.21.1
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -423,11 +423,6 @@ cd autoconf-2.13
 %make
 %make install
 cd ..
-
-#pushd js/src
-#autoconf-2.13
-#popd
-#autoconf-2.13
 
 # needed to regenerate certdata.c
 pushd security/nss/lib/ckfw/builtins
@@ -539,7 +534,7 @@ ac_add_options --enable-system-ffi
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
 %endif
-%ifnarch %arm %mips
+%ifnarch %mips
 ac_add_options --with-valgrind
 %endif
 EOF
