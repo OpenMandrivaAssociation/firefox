@@ -522,7 +522,7 @@ ac_add_options --enable-startup-notification
 ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
-ac_add_options --enable-gstreamer=1.0
+#ac_add_options --enable-gstreamer=1.0
 #ac_add_options --enable-media-plugins
 #ac_add_options --enable-dash
 %if %mdvver >= 201300
