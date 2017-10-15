@@ -39,7 +39,7 @@
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
 %define nspr_version %(pkg-config --modversion nspr &>/dev/null && pkg-config --modversion nspr 2>/dev/null |sed -e 's!\.0!!' || echo 0)
 
-%define update_channel  release
+%define update_channel release
 
 %define _enable_debug_packages %{nil}
 %define debug_package %{nil}
@@ -332,9 +332,7 @@ BuildRequires:	pkgconfig(libnotify)
 BuildRequires:	pkgconfig(libpng) >= 1.6.28
 %endif
 BuildRequires:	pkgconfig(libproxy-1.0)
-%if %mdvver >= 201300
 BuildRequires:	pkgconfig(libpulse)
-%endif
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.15.0
 BuildRequires:	pkgconfig(nss) >= 3.31
@@ -350,6 +348,8 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
+BuildRequires:	cmake(Clang)
+BuildRequires:	cmake(LLVM)
 %ifnarch %mips
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
@@ -423,11 +423,6 @@ cd autoconf-2.13
 %make
 %make install
 cd ..
-
-#pushd js/src
-#autoconf-2.13
-#popd
-#autoconf-2.13
 
 # needed to regenerate certdata.c
 pushd security/nss/lib/ckfw/builtins
@@ -527,7 +522,7 @@ ac_add_options --enable-startup-notification
 ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
 ac_add_options --enable-update-channel=%{update_channel}
-#ac_add_options --enable-gstreamer=1.0
+ac_add_options --enable-gstreamer=1.0
 #ac_add_options --enable-media-plugins
 #ac_add_options --enable-dash
 %if %mdvver >= 201300
