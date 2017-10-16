@@ -3,7 +3,7 @@
 @@ -1,4 +1,6 @@
  [build]
  args = [
-+"-I/usr/local/include/nspr",
++"-I/usr/include/nspr",
 +"-I/usr/X11R6/include/pixman-1",
      @BINDGEN_CFLAGS@
  ]
