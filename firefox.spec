@@ -431,6 +431,8 @@ popd
 
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
+%global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
+
 export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 
 %if %mdvver >= 201500
