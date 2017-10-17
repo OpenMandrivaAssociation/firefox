@@ -278,7 +278,6 @@ Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
-Patch44:	external-nspr-lib-fix.patch
 
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
