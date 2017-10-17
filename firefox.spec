@@ -278,7 +278,6 @@ Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
-Patch44:	external-nspr-lib-fix.patch
 
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
@@ -538,6 +537,12 @@ ac_add_options --disable-webrtc
 %ifnarch %mips
 ac_add_options --with-valgrind
 %endif
+ac_add_options --with-google-api-keyfile=../google-api-key
+ac_add_options --enable-release
+ac_add_options --enable-pie
+ac_add_options --disable-stylo
+# Workaround for stylo build
+ac_add_options BINDGEN_CFLAGS="$(pkg-config nspr pixman-1 --cflags)"
 EOF
 
 # Show the config just for debugging
