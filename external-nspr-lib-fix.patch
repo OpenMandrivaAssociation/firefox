@@ -1,9 +1,0 @@
---- firefox-56.0.1/layout/style/bindgen.toml.in~	2017-09-14 21:16:05.022228720 +0100
-+++ firefox-56.0.1/layout/style/bindgen.toml.in	2017-10-16 16:16:32.720594832 +0100
-@@ -1,4 +1,6 @@
- [build]
- args = [
-+"-I/usr/include/nspr4",
-+"-I/usr/include/pixman-1",
-     @BINDGEN_CFLAGS@
- ]
