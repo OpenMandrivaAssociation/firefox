@@ -348,8 +348,8 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 BuildRequires:	nss-static-devel
-BuildRequires:	cmake(Clang)
-BuildRequires:	cmake(LLVM)
+BuildRequires:	clang-devel
+BuildRequires:	llvm-devel
 %ifnarch %mips
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
