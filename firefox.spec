@@ -242,7 +242,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	56.0.1
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -282,6 +282,8 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
+Patch51:	firefox-56.0-build-error.patch
+Patch52:	rhbz-1497932.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -435,6 +437,7 @@ export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 
 %if %mdvver >= 201500
 %ifarch %ix86
+%global %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
 # still requires gcc
 export CXX=g++
 export CC=gcc
@@ -540,7 +543,7 @@ ac_add_options --with-valgrind
 ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 ac_add_options --enable-pie
-ac_add_options --disable-stylo
+#ac_add_options --disable-stylo
 # Workaround for stylo build
 ac_add_options BINDGEN_CFLAGS="$(pkg-config nspr pixman-1 --cflags)"
 EOF
