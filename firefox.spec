@@ -437,7 +437,7 @@ export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 
 %if %mdvver >= 201500
 %ifarch %ix86
-%global %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
+%global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
 # still requires gcc
 export CXX=g++
 export CC=gcc
