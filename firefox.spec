@@ -489,7 +489,7 @@ ac_add_options --libdir="%{_libdir}"
 %ifarch %{ix86}
 ac_add_options --disable-optimize
 %else
-ac_add_options --enable-optimize
+ac_add_options --enable-optimize="-O2"
 %endif
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
