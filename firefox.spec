@@ -230,8 +230,7 @@
 
 # Defaults (all languages enabled by default)
 # dicts
-%{expand:%(for lang in %{langlist}; do echo "%%define with_dict_$lang 1"; done)}
-%{expand:%(for lang in %{disabled_dict_langlist}; do echo "%%define with_dict_$lang 0"; done)}
+%{expand:%(for lang in %{langlist}; do if echo " %{disabled_dict_langlist} " |grep -q " $lang "; then echo "%%define with_dict_$lang 0"; else echo "%%define with_dict_$lang 1"; fi; done)}
 
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
