@@ -240,8 +240,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	56.0.1
-Release:	2
+Version:	57.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -271,8 +271,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-56.0-kde.patch
-Patch12:	mozilla-56.0-kde.patch
+Patch11:	firefox-57.0-kde.patch
+Patch12:	mozilla-57.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -281,8 +281,6 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
-Patch51:	firefox-56.0-build-error.patch
-Patch52:	rhbz-1497932.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
