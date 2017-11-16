@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent  faadbf89d1cb02eefec4c5dfd3ab86bc20d815d5
+# Parent  87a32e5d11e9d652e331a5f852bb951069b20c4a
 Description: Add KDE integration to Firefox (toolkit parts)
 Author: Wolfgang Rosenauer <wolfgang@rosenauer.org>
 Author: Lubos Lunak <lunak@suse.com>
@@ -9,10 +9,10 @@ Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=140751
 diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
 --- a/modules/libpref/Preferences.cpp
 +++ b/modules/libpref/Preferences.cpp
-@@ -33,16 +33,17 @@
+@@ -37,16 +37,17 @@
  #include "nsIZipReader.h"
  #include "nsPrefBranch.h"
- #include "nsXPIDLString.h"
+ #include "nsString.h"
  #include "nsCRT.h"
  #include "nsCOMArray.h"
  #include "nsXPCOMCID.h"
@@ -27,7 +27,7 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
  #include "prefread.h"
  #include "prefapi_private_data.h"
  
-@@ -1435,16 +1436,34 @@ pref_LoadPrefsInDir(nsIFile* aDir, char 
+@@ -1413,16 +1414,34 @@ pref_LoadPrefsInDir(nsIFile* aDir, char 
  
  static nsresult pref_LoadPrefsInDirList(const char *listId)
  {
@@ -62,7 +62,7 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
      return NS_OK;
  
    bool hasMore;
-@@ -1460,17 +1479,17 @@ static nsresult pref_LoadPrefsInDirList(
+@@ -1438,17 +1457,17 @@ static nsresult pref_LoadPrefsInDirList(
  
      nsAutoCString leaf;
      path->GetNativeLeafName(leaf);
@@ -79,9 +79,9 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
  
  static nsresult pref_ReadPrefFromJar(nsZipArchive* jarReader, const char *name)
  {
-   nsZipItemPtr<char> manifest(jarReader, name, true);
-   NS_ENSURE_TRUE(manifest.Buffer(), NS_ERROR_NOT_AVAILABLE);
-@@ -1566,24 +1585,36 @@ pref_InitInitialObjects()
+   nsCString manifest;
+   MOZ_TRY_VAR(manifest, URLPreloader::ReadZip(jarReader, nsDependentCString(name)));
+@@ -1544,24 +1563,36 @@ pref_InitInitialObjects()
    /* these pref file names should not be used: we process them after all other application pref files for backwards compatibility */
    static const char* specialFiles[] = {
  #if defined(XP_MACOSX)
@@ -121,7 +121,7 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
 diff --git a/modules/libpref/moz.build b/modules/libpref/moz.build
 --- a/modules/libpref/moz.build
 +++ b/modules/libpref/moz.build
-@@ -33,16 +33,20 @@ EXPORTS.mozilla += [
+@@ -31,16 +31,20 @@ EXPORTS.mozilla += [
  UNIFIED_SOURCES += [
      'nsPrefBranch.cpp',
      'nsPrefsFactory.cpp',
@@ -166,8 +166,7 @@ diff --git a/python/mozbuild/mozpack/chrome/flags.py b/python/mozbuild/mozpack/c
 diff --git a/python/mozbuild/mozpack/chrome/manifest.py b/python/mozbuild/mozpack/chrome/manifest.py
 --- a/python/mozbuild/mozpack/chrome/manifest.py
 +++ b/python/mozbuild/mozpack/chrome/manifest.py
-@@ -33,16 +33,17 @@ class ManifestEntry(object):
-         'application',
+@@ -34,16 +34,17 @@ class ManifestEntry(object):
          'platformversion',
          'os',
          'osversion',
@@ -175,7 +174,8 @@ diff --git a/python/mozbuild/mozpack/chrome/manifest.py b/python/mozbuild/mozpac
          'xpcnativewrappers',
          'tablet',
          'process',
-+        'desktop',
+         'contentaccessible',
++	'desktop',
      ]
  
      def __init__(self, base, *flags):
@@ -568,7 +568,7 @@ new file mode 100644
 +            if (/Win/.test(navigator.platform)) {
 +              var spacer = document.getAnonymousElementByAttribute(this, "anonid", "spacer");
 +              spacer.removeAttribute("hidden");
-+              spacer.setAttribute("flex", shown["extra2"] ? "1" : "0");
++              spacer.setAttribute("flex", shown.extra2 ? "1" : "0");
 +            }
 +          }
 +        ]]>
@@ -803,7 +803,7 @@ new file mode 100644
 +      </field>
 +      <field name="rootBranchInternal">
 +        Components.classes["@mozilla.org/preferences-service;1"]
-+                  .getService(Components.interfaces.nsIPrefBranchInternal);
++                  .getService(Components.interfaces.nsIPrefBranch);
 +      </field>
 +      <property name="type" readonly="true">
 +        <getter>
@@ -1083,7 +1083,7 @@ new file mode 100644
 +              return fontEnumerator.getStandardFamilyName(family);
 +            case "file":
 +              var f = this._branch
-+                          .getComplexValue(this.name, Components.interfaces.nsILocalFile);
++                          .getComplexValue(this.name, Components.interfaces.nsIFile);
 +              return f;
 +            default:
 +              this._reportUnknownType();
@@ -1128,14 +1128,14 @@ new file mode 100644
 +            var lf;
 +            if (typeof(val) == "string") {
 +              lf = Components.classes["@mozilla.org/file/local;1"]
-+                             .createInstance(Components.interfaces.nsILocalFile);
++                             .createInstance(Components.interfaces.nsIFile);
 +              lf.persistentDescriptor = val;
 +              if (!lf.exists())
 +                lf.initWithPath(val);
 +            } else
-+              lf = val.QueryInterface(Components.interfaces.nsILocalFile);
++              lf = val.QueryInterface(Components.interfaces.nsIFile);
 +            this.preferences.rootBranch
-+                .setComplexValue(this.name, Components.interfaces.nsILocalFile, lf);
++                .setComplexValue(this.name, Components.interfaces.nsIFile, lf);
 +            break;
 +          default:
 +            this._reportUnknownType();
@@ -2883,7 +2883,7 @@ diff --git a/uriloader/exthandler/unix/nsKDERegistry.cpp b/uriloader/exthandler/
 new file mode 100644
 --- /dev/null
 +++ b/uriloader/exthandler/unix/nsKDERegistry.cpp
-@@ -0,0 +1,88 @@
+@@ -0,0 +1,87 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -2893,7 +2893,6 @@ new file mode 100644
 +#include "prlink.h"
 +#include "prmem.h"
 +#include "nsString.h"
-+#include "nsILocalFile.h"
 +#include "nsMIMEInfoUnix.h"
 +#include "nsAutoPtr.h"
 +#include "nsKDEUtils.h"
@@ -2989,8 +2988,8 @@ new file mode 100644
 +#include "nsTArray.h"
 +
 +class nsMIMEInfoBase;
-+class nsAutoCString;
-+class nsCString;
++//class nsAutoCString;
++//class nsCString;
 +
 +class nsKDERegistry
 +{
@@ -3126,10 +3125,10 @@ diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exth
  #include "nsString.h"
  #include "nsReadableUtils.h"
  #include "nsUnicharUtils.h"
- #include "nsXPIDLString.h"
  #include "nsIURL.h"
  #include "nsIFileStreams.h"
-@@ -1143,26 +1143,26 @@ nsresult nsOSHelperAppService::OSProtoco
+ #include "nsILineInputStream.h"
+@@ -1142,26 +1142,26 @@ nsresult nsOSHelperAppService::OSProtoco
      ContentAction::Action::defaultActionForScheme(QString(aProtocolScheme) + ':');
  
    if (action.isValid())
@@ -3158,7 +3157,7 @@ diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exth
  
  nsresult nsOSHelperAppService::GetFileTokenForPath(const char16_t * platformAppPath, nsIFile ** aFile)
  {
-@@ -1249,17 +1249,17 @@ nsOSHelperAppService::GetFromExtension(c
+@@ -1248,17 +1248,17 @@ nsOSHelperAppService::GetFromExtension(c
                                           mime_types_description,
                                           true);
  
@@ -3177,7 +3176,7 @@ diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exth
  
      rv = LookUpTypeAndDescription(NS_ConvertUTF8toUTF16(aFileExt),
                                    majorType,
-@@ -1370,17 +1370,17 @@ nsOSHelperAppService::GetFromType(const 
+@@ -1369,17 +1369,17 @@ nsOSHelperAppService::GetFromType(const 
    nsAutoString extensions, mime_types_description;
    LookUpExtensionsAndDescription(majorType,
                                   minorType,
@@ -3276,7 +3275,7 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
  
    mFilters.AppendElement(filter);
    mFilterNames.AppendElement(name);
-@@ -371,16 +375,34 @@ nsFilePicker::Show(int16_t *aReturn)
+@@ -371,16 +375,37 @@ nsFilePicker::Show(int16_t *aReturn)
  
  NS_IMETHODIMP
  nsFilePicker::Open(nsIFilePickerShownCallback *aCallback)
@@ -3287,23 +3286,26 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
  
 +  // KDE file picker is not handled via callback
 +  if( nsKDEUtils::kdeSupport()) {
-+    int16_t result;
 +    mCallback = aCallback;
 +    mRunning = true;
-+    NS_ADDREF_THIS();
-+    kdeFileDialog(&result);
-+    if (mCallback) {
-+      mCallback->Done(result);
-+      mCallback = nullptr;
-+    } else {
-+      mResult = result;
-+    }
-+    mRunning = false;
-+    NS_RELEASE_THIS();
++    g_idle_add([](gpointer data) -> gboolean {
++      nsFilePicker* queuedPicker = (nsFilePicker*) data;
++      int16_t result;
++      queuedPicker->kdeFileDialog(&result);
++      if (queuedPicker->mCallback) {
++        queuedPicker->mCallback->Done(result);
++        queuedPicker->mCallback = nullptr;
++      } else {
++        queuedPicker->mResult = result;
++      }
++      queuedPicker->mRunning = false;
++      return G_SOURCE_REMOVE;
++    }, this);
++
 +    return NS_OK;
 +  }
 +
-   nsXPIDLCString title;
+   nsCString title;
    title.Adopt(ToNewUTF8String(mTitle));
  
    GtkWindow *parent_widget =
@@ -3311,7 +3313,7 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
  
    GtkFileChooserAction action = GetGtkFileChooserAction(mMode);
  
-@@ -603,8 +625,235 @@ nsFilePicker::Done(GtkWidget* file_choos
+@@ -603,8 +628,233 @@ nsFilePicker::Done(GtkWidget* file_choos
    if (mCallback) {
      mCallback->Done(result);
      mCallback = nullptr;
@@ -3351,7 +3353,7 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
 +    if( mMode == modeOpen && mFilters.Length() == 1 && mFilters[ 0 ].EqualsLiteral( "..apps" ))
 +        return kdeAppsDialog( aReturn );
 +
-+    nsXPIDLCString title;
++    nsCString title;
 +    title.Adopt(ToNewUTF8String(mTitle));
 +
 +    const char* arg = NULL;
@@ -3408,8 +3410,6 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
 +    else
 +      startdir = ToNewUTF8String(mDefault);
 +  }
-+  if( startdir.IsEmpty())
-+      startdir = ".";
 +
 +    nsAutoCString filters;
 +    PRInt32 count = mFilters.Length();
@@ -3520,7 +3520,7 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
 +    {
 +    NS_ENSURE_ARG_POINTER(aReturn);
 +
-+    nsXPIDLCString title;
++    nsCString title;
 +    title.Adopt(ToNewUTF8String(mTitle));
 +
 +    nsTArray<nsCString> command;
@@ -3726,7 +3726,7 @@ diff --git a/xpcom/components/moz.build b/xpcom/components/moz.build
 diff --git a/xpcom/io/nsLocalFileUnix.cpp b/xpcom/io/nsLocalFileUnix.cpp
 --- a/xpcom/io/nsLocalFileUnix.cpp
 +++ b/xpcom/io/nsLocalFileUnix.cpp
-@@ -46,16 +46,17 @@
+@@ -45,16 +45,17 @@
  #include "prproces.h"
  #include "nsIDirectoryEnumerator.h"
  #include "nsISimpleEnumerator.h"
@@ -3744,7 +3744,7 @@ diff --git a/xpcom/io/nsLocalFileUnix.cpp b/xpcom/io/nsLocalFileUnix.cpp
  #include "prmem.h"
  #include "plbase64.h"
  
-@@ -1941,59 +1942,74 @@ nsLocalFile::SetPersistentDescriptor(con
+@@ -1938,59 +1939,74 @@ nsLocalFile::SetPersistentDescriptor(con
    return InitWithNativePath(aPersistentDescriptor);
  #endif
  }

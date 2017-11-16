@@ -230,8 +230,7 @@
 
 # Defaults (all languages enabled by default)
 # dicts
-%{expand:%(for lang in %{langlist}; do echo "%%define with_dict_$lang 1"; done)}
-%{expand:%(for lang in %{disabled_dict_langlist}; do echo "%%define with_dict_$lang 0"; done)}
+%{expand:%(for lang in %{langlist}; do if echo " %{disabled_dict_langlist} " |grep -q " $lang "; then echo "%%define with_dict_$lang 0"; else echo "%%define with_dict_$lang 1"; fi; done)}
 
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
@@ -241,8 +240,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	56.0.1
-Release:	2
+Version:	57.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -272,8 +271,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-56.0-kde.patch
-Patch12:	mozilla-56.0-kde.patch
+Patch11:	firefox-57.0-kde.patch
+Patch12:	mozilla-57.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -282,8 +281,6 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
-Patch51:	firefox-56.0-build-error.patch
-Patch52:	rhbz-1497932.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -489,7 +486,7 @@ ac_add_options --libdir="%{_libdir}"
 %ifarch %{ix86}
 ac_add_options --disable-optimize
 %else
-ac_add_options --enable-optimize
+ac_add_options --enable-optimize="-O2"
 %endif
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
@@ -543,7 +540,8 @@ ac_add_options --with-valgrind
 ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 ac_add_options --enable-pie
-#ac_add_options --disable-stylo
+# stylo wont build at the momemnt, stack dump in bindgen cb 16/11/2017
+ac_add_options --disable-stylo
 # Workaround for stylo build
 ac_add_options BINDGEN_CFLAGS="$(pkg-config nspr pixman-1 --cflags)"
 EOF
