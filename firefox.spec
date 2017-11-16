@@ -439,7 +439,11 @@ export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 export CXX=g++
 export CC=gcc
 %else
-%global optflags %{optflags} -Qunused-arguments
+#global optflags %{optflags} -Qunused-arguments
+# CB 16/11/2017 - build with clang gives:
+# fatal error: error in backend: IO failure on output stream.
+export CXX=g++
+export CC=gcc
 %endif
 
 %if %{with qt}
