@@ -540,7 +540,8 @@ ac_add_options --with-valgrind
 ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 ac_add_options --enable-pie
-#ac_add_options --disable-stylo
+# stylo wont build at the momemnt, stack dump in bindgen cb 16/11/2017
+ac_add_options --disable-stylo
 # Workaround for stylo build
 ac_add_options BINDGEN_CFLAGS="$(pkg-config nspr pixman-1 --cflags)"
 EOF
