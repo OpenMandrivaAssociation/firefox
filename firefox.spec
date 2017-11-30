@@ -240,7 +240,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	57.0
+Version:	57.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -439,11 +439,7 @@ export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 export CXX=g++
 export CC=gcc
 %else
-#global optflags %{optflags} -Qunused-arguments
-# CB 16/11/2017 - build with clang gives:
-# fatal error: error in backend: IO failure on output stream.
-export CXX=g++
-export CC=gcc
+%global optflags %{optflags} -Qunused-arguments
 %endif
 
 %if %{with qt}
