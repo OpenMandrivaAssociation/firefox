@@ -281,6 +281,12 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
+# (tpg) try to fix build with stylo enabled
+# https://bugzilla.mozilla.org/show_bug.cgi?id=1341234
+Patch100:	firefox-57.0.4-Bug-1341234-1721ccb0d0d6.patch
+Patch101:	firefox-57.0.4-Bug-1341234-9b5adaaf6156.patch
+Patch102:	firefox-57.0.4-Bug-1341234-16278cfafaa9.patch
+Patch103:	firefox-57.0.4-Bug-1341234-5471d0611032.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -544,8 +550,6 @@ ac_add_options --enable-pie
 %ifarch %{ix86}
 ac_add_options --disable-stylo
 %endif
-# Workaround for stylo build
-ac_add_options BINDGEN_CFLAGS="$(pkg-config nspr pixman-1 --cflags)"
 EOF
 
 # Show the config just for debugging
