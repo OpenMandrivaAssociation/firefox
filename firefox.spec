@@ -289,13 +289,9 @@ Patch102:	firefox-57.0.4-Bug-1341234-16278cfafaa9.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
-BuildRequires:	pkgconfig(python2)
-%if %mdvver >= 201500
-BuildRequires:	python2
-BuildRequires:	python2-distribute
-%else
-BuildRequires:  python
-BuildRequires:  python-distribute
+BuildRequires:	pkgconfig(python)
+BuildRequires:	python
+BuildRequires:	python-distribute
 %endif
 #(tpg) this is in contrib
 #BuildRequires:	python-ply
@@ -561,8 +557,7 @@ mkdir -p obj/ipc/chromium
 cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 %endif
 
-export LDFLAGS="%ldflags"
-export PYTHON=python2
+export LDFLAGS="%{ldflags}"
 
 make -f client.mk build
 
