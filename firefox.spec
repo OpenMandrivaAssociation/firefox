@@ -292,7 +292,6 @@ BuildRequires:	makedepend
 BuildRequires:	pkgconfig(python)
 BuildRequires:	python
 BuildRequires:	python-distribute
-%endif
 #(tpg) this is in contrib
 #BuildRequires:	python-ply
 BuildRequires:	rootcerts >= 1:20110830.00
