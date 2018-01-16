@@ -286,7 +286,6 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 Patch100:	firefox-57.0.4-Bug-1341234-1721ccb0d0d6.patch
 Patch101:	firefox-57.0.4-Bug-1341234-9b5adaaf6156.patch
 Patch102:	firefox-57.0.4-Bug-1341234-16278cfafaa9.patch
-Patch103:	firefox-57.0.4-Bug-1341234-5471d0611032.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
