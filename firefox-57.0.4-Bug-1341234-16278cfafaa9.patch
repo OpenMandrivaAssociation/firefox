@@ -1,0 +1,44 @@
+diff -Naur firefox-57.0.4/build/moz.configure/toolchain.configure firefox-57.0.4.tpg/build/moz.configure/toolchain.configure
+--- firefox-57.0.4/build/moz.configure/toolchain.configure	2017-11-02 16:16:32.000000000 +0000
++++ firefox-57.0.4.tpg/build/moz.configure/toolchain.configure	2018-01-16 14:23:44.872154225 +0000
+@@ -902,15 +902,12 @@
+        help='Options bindgen should pass to the C/C++ parser')
+ 
+ @depends('BINDGEN_CFLAGS')
+-@checking('bindgen cflags', lambda s: s if s and s.strip() else 'no')
++@checking('bindgen cflags', lambda s: s if s else 'no')
+ def bindgen_cflags(value):
+     if value and len(value):
+-        # Reformat the env value for substitution into a toml list.
+-        flags = value[0].split()
+-        return ', '.join('"' + flag + '"' for flag in flags)
+-    return ''
++        return value[0].split()
+ 
+-set_config('BINDGEN_CFLAGS', bindgen_cflags)
++add_old_configure_assignment('_BINDGEN_CFLAGS', bindgen_cflags)
+ 
+ @depends(c_compiler)
+ def default_debug_flags(compiler_info):
+diff -Naur firefox-57.0.4/layout/style/bindgen.toml.in firefox-57.0.4.tpg/layout/style/bindgen.toml.in
+--- firefox-57.0.4/layout/style/bindgen.toml.in	2017-09-14 20:16:05.000000000 +0000
++++ firefox-57.0.4.tpg/layout/style/bindgen.toml.in	2018-01-16 14:24:26.077134838 +0000
+@@ -1,4 +1,4 @@
+ [build]
+ args = [
+-    @BINDGEN_CFLAGS@
++    @BINDGEN_SYSTEM_FLAGS@
+ ]
+diff -Naur firefox-57.0.4/old-configure.in firefox-57.0.4.tpg/old-configure.in
+--- firefox-57.0.4/old-configure.in	2017-11-02 16:16:31.000000000 +0000
++++ firefox-57.0.4.tpg/old-configure.in	2018-01-16 14:25:03.923115693 +0000
+@@ -4458,6 +4458,9 @@
+ AC_SUBST_LIST(MOZ_CAIRO_OSLIBS)
+ AC_SUBST(MOZ_TREE_PIXMAN)
+ 
++BINDGEN_SYSTEM_FLAGS="$_BINDGEN_CFLAGS $NSPR_CFLAGS $NSS_CFLAGS $MOZ_PIXMAN_CFLAGS $MOZ_CAIRO_CFLAGS"
++AC_SUBST_TOML_LIST(BINDGEN_SYSTEM_FLAGS)
++
+ dnl ========================================================
+ dnl disable xul
+ dnl ========================================================
