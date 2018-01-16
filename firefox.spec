@@ -283,9 +283,8 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 
 # (tpg) try to fix build with stylo enabled
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1341234
-Patch100:	firefox-57.0.4-Bug-1341234-1721ccb0d0d6.patch
-Patch101:	firefox-57.0.4-Bug-1341234-9b5adaaf6156.patch
-Patch102:	firefox-57.0.4-Bug-1341234-16278cfafaa9.patch
+Patch100:	mozilla-bindgen-systemlibs.patch
+Patch101:	mozilla-rust-1.23.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
