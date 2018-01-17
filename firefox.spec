@@ -541,10 +541,9 @@ ac_add_options --with-valgrind
 ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 ac_add_options --enable-pie
-# stylo wont build at the momemnt, stack dump in bindgen cb 16/11/2017
-#ifarch %{ix86}
+%ifarch %{ix86}
 ac_add_options --disable-stylo
-#endif
+%endif
 EOF
 
 # Show the config just for debugging
