@@ -285,6 +285,8 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1341234
 Patch100:	mozilla-bindgen-systemlibs.patch
 Patch101:	mozilla-rust-1.23.patch
+# (cb) fix for float128 being a complex type
+Patch102:	firefox-57.0.4-bindgen_float128.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
