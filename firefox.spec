@@ -241,7 +241,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	57.0.4
-Release:	2
+Release:	3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -517,7 +517,7 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
-ac_add_options --disable-system-cairo
+ac_add_options --enable-system-cairo
 ac_add_options --enable-startup-notification
 #ac_add_options --with-system-ply
 ac_add_options --with-distribution-id=org.openmandriva
@@ -541,6 +541,10 @@ ac_add_options --with-valgrind
 ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 ac_add_options --enable-pie
+%ifarch x86_64 aarch64
+ac_add_options --enable-rust-simd
+ac_add_options --enable-elf-hack
+%endif
 %ifarch %{ix86}
 ac_add_options --disable-stylo
 %endif
