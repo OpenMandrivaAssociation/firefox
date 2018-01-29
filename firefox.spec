@@ -240,8 +240,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	57.0.4
-Release:	3
+Version:	58.0.1
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -271,8 +271,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-57.0-kde.patch
-Patch12:	mozilla-57.0-kde.patch
+Patch11:	firefox-58.0-kde.patch
+Patch12:	mozilla-58.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -281,10 +281,6 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
-# (tpg) try to fix build with stylo enabled
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1341234
-Patch100:	mozilla-bindgen-systemlibs.patch
-Patch101:	mozilla-rust-1.23.patch
 # (cb) fix for float128 being a complex type
 Patch102:	firefox-57.0.4-bindgen_float128.patch
 #BuildConflicts:	libreoffice-core
@@ -329,13 +325,13 @@ BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
 BuildRequires:	pkgconfig(libnotify)
 %if %mdvver >= 201500
-BuildRequires:	pkgconfig(libpng) >= 1.6.28
+BuildRequires:	pkgconfig(libpng) >= 1.6.34
 %endif
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.15.0
-BuildRequires:	pkgconfig(nss) >= 3.31
+BuildRequires:	pkgconfig(nspr) >= 4.17.0
+BuildRequires:	pkgconfig(nss) >= 3.34.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -562,7 +558,7 @@ cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 
 export LDFLAGS="%{ldflags}"
 
-make -f client.mk build
+./mach build
 
 %install
 make -C obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0

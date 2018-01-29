@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent  2504512f9a9ba7b52dd99745d15f049f2a03f4f4
+# Parent  5be2231eadfb6de978e93c0ba95469e8a4d54cb0
 Description: Add KDE integration to Firefox (toolkit parts)
 Author: Wolfgang Rosenauer <wolfgang@rosenauer.org>
 Author: Lubos Lunak <lunak@suse.com>
@@ -9,32 +9,32 @@ Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=140751
 diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
 --- a/modules/libpref/Preferences.cpp
 +++ b/modules/libpref/Preferences.cpp
-@@ -37,16 +37,17 @@
- #include "nsIZipReader.h"
- #include "nsPrefBranch.h"
- #include "nsString.h"
- #include "nsCRT.h"
- #include "nsCOMArray.h"
+@@ -75,16 +75,17 @@
  #include "nsXPCOMCID.h"
- #include "nsAutoPtr.h"
- #include "nsPrintfCString.h"
+ #include "nsXPCOM.h"
+ #include "nsXULAppAPI.h"
+ #include "nsZipArchive.h"
+ #include "plbase64.h"
+ #include "PLDHashTable.h"
+ #include "plstr.h"
+ #include "prlink.h"
 +#include "nsKDEUtils.h"
  
- #include "nsQuickSort.h"
- #include "PLDHashTable.h"
+ #ifdef MOZ_CRASHREPORTER
+ #include "nsICrashReporter.h"
+ #endif
  
- #include "prefapi.h"
- #include "prefread.h"
- #include "prefapi_private_data.h"
- 
-@@ -1413,16 +1414,34 @@ pref_LoadPrefsInDir(nsIFile* aDir, char 
- 
- static nsresult pref_LoadPrefsInDirList(const char *listId)
+ #ifdef XP_WIN
+ #include "windows.h"
+ #endif
+@@ -4324,16 +4325,34 @@ pref_LoadPrefsInDirList(const char* aLis
  {
    nsresult rv;
-   nsCOMPtr<nsIProperties> dirSvc(do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv));
-   if (NS_FAILED(rv))
+   nsCOMPtr<nsIProperties> dirSvc(
+     do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv));
+   if (NS_FAILED(rv)) {
      return rv;
+   }
  
 +  // make sure we load these special files after all the others
 +  static const char* specialFiles[] = {
@@ -55,34 +55,34 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
 +  }
 +
    nsCOMPtr<nsISimpleEnumerator> list;
-   dirSvc->Get(listId,
-               NS_GET_IID(nsISimpleEnumerator),
-               getter_AddRefs(list));
-   if (!list)
+   dirSvc->Get(aListId, NS_GET_IID(nsISimpleEnumerator), getter_AddRefs(list));
+   if (!list) {
      return NS_OK;
+   }
  
    bool hasMore;
-@@ -1438,17 +1457,17 @@ static nsresult pref_LoadPrefsInDirList(
+   while (NS_SUCCEEDED(list->HasMoreElements(&hasMore)) && hasMore) {
+@@ -4344,17 +4363,17 @@ pref_LoadPrefsInDirList(const char* aLis
+     }
  
-     nsAutoCString leaf;
-     path->GetNativeLeafName(leaf);
+     nsCOMPtr<nsIFile> path = do_QueryInterface(elem);
+     if (!path) {
+       continue;
+     }
  
      // Do we care if a file provided by this process fails to load?
-     if (Substring(leaf, leaf.Length() - 4).EqualsLiteral(".xpi"))
-       ReadExtensionPrefs(path);
-     else
--      pref_LoadPrefsInDir(path, nullptr, 0);
-+      pref_LoadPrefsInDir(path, specialFiles, MOZ_ARRAY_LENGTH(specialFiles));
+-    pref_LoadPrefsInDir(path, nullptr, 0);
++    pref_LoadPrefsInDir(path, specialFiles, ArrayLength(specialFiles));
    }
+ 
    return NS_OK;
  }
  
- static nsresult pref_ReadPrefFromJar(nsZipArchive* jarReader, const char *name)
+ static nsresult
+ pref_ReadPrefFromJar(nsZipArchive* aJarReader, const char* aName)
  {
-   nsCString manifest;
-   MOZ_TRY_VAR(manifest, URLPreloader::ReadZip(jarReader, nsDependentCString(name)));
-@@ -1544,24 +1563,36 @@ pref_InitInitialObjects()
-   /* these pref file names should not be used: we process them after all other application pref files for backwards compatibility */
+@@ -4461,25 +4480,37 @@ pref_InitInitialObjects()
+   // application pref files for backwards compatibility.
    static const char* specialFiles[] = {
  #if defined(XP_MACOSX)
      "macprefs.js"
@@ -92,7 +92,8 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
      "unix.js"
 +    , "" // placeholder for KDE  (empty is otherwise harmless)
  #if defined(_AIX)
-     , "aix.js"
+     ,
+     "aix.js"
  #endif
  #elif defined(XP_BEOS)
      "beos.js"
@@ -110,24 +111,24 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
 +    }
 +  }
 +
-   rv = pref_LoadPrefsInDir(defaultPrefDir, specialFiles, ArrayLength(specialFiles));
-   if (NS_FAILED(rv))
+   rv = pref_LoadPrefsInDir(
+     defaultPrefDir, specialFiles, ArrayLength(specialFiles));
+   if (NS_FAILED(rv)) {
      NS_WARNING("Error parsing application default preferences.");
+   }
  
    // Load jar:$app/omni.jar!/defaults/preferences/*.js
    // or jar:$gre/omni.jar!/defaults/preferences/*.js.
-   RefPtr<nsZipArchive> appJarReader = mozilla::Omnijar::GetReader(mozilla::Omnijar::APP);
-   // GetReader(mozilla::Omnijar::APP) returns null when $app == $gre, in which
 diff --git a/modules/libpref/moz.build b/modules/libpref/moz.build
 --- a/modules/libpref/moz.build
 +++ b/modules/libpref/moz.build
-@@ -31,16 +31,20 @@ EXPORTS.mozilla += [
+@@ -27,16 +27,20 @@ XPIDL_MODULE = 'pref'
+ EXPORTS.mozilla += [
+     'Preferences.h',
+ ]
+ 
  UNIFIED_SOURCES += [
-     'nsPrefBranch.cpp',
-     'nsPrefsFactory.cpp',
-     'prefapi.cpp',
      'Preferences.cpp',
-     'prefread.cpp',
  ]
  
 +LOCAL_INCLUDES += [
@@ -187,24 +188,20 @@ diff --git a/python/mozbuild/mozpack/chrome/manifest.py b/python/mozbuild/mozpac
 diff --git a/toolkit/components/downloads/moz.build b/toolkit/components/downloads/moz.build
 --- a/toolkit/components/downloads/moz.build
 +++ b/toolkit/components/downloads/moz.build
-@@ -37,16 +37,17 @@ UNIFIED_SOURCES += [
+@@ -17,9 +17,13 @@ XPIDL_SOURCES += [
+ XPIDL_MODULE = 'downloads'
+ 
+ UNIFIED_SOURCES += [
      'nsDownloadManager.cpp'
  ]
  
  FINAL_LIBRARY = 'xul'
  
- LOCAL_INCLUDES += [
-     '../protobuf',
-     '/ipc/chromium/src',
-+    '/toolkit/xre',
-     'chromium'
- ]
- 
- DEFINES['GOOGLE_PROTOBUF_NO_RTTI'] = True
- DEFINES['GOOGLE_PROTOBUF_NO_STATIC_INITIALIZER'] = True
- 
++LOCAL_INCLUDES += [
++    '/toolkit/xre'
++]
++
  CXXFLAGS += CONFIG['TK_CFLAGS']
- 
 diff --git a/toolkit/content/jar.mn b/toolkit/content/jar.mn
 --- a/toolkit/content/jar.mn
 +++ b/toolkit/content/jar.mn
@@ -246,7 +243,7 @@ diff --git a/toolkit/content/widgets/dialog-kde.xml b/toolkit/content/widgets/di
 new file mode 100644
 --- /dev/null
 +++ b/toolkit/content/widgets/dialog-kde.xml
-@@ -0,0 +1,455 @@
+@@ -0,0 +1,459 @@
 +<?xml version="1.0"?>
 +<!-- This Source Code Form is subject to the terms of the Mozilla Public
 +   - License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -434,8 +431,12 @@ new file mode 100644
 +                       focusedElt.getAttribute("noinitialfocus") == "true") {
 +                  document.commandDispatcher.advanceFocusIntoSubtree(focusedElt);
 +                  focusedElt = document.commandDispatcher.focusedElement;
-+                  if (focusedElt == initialFocusedElt)
++                  if (focusedElt == initialFocusedElt) {
++                    if (focusedElt.getAttribute("noinitialfocus") == "true") {
++                      focusedElt.blur();
++                    }
 +                    break;
++                  }
 +                }
 +
 +                if (initialFocusedElt.localName == "tab") {
@@ -2119,7 +2120,7 @@ new file mode 100644
 diff --git a/toolkit/mozapps/downloads/nsHelperAppDlg.js b/toolkit/mozapps/downloads/nsHelperAppDlg.js
 --- a/toolkit/mozapps/downloads/nsHelperAppDlg.js
 +++ b/toolkit/mozapps/downloads/nsHelperAppDlg.js
-@@ -628,17 +628,17 @@ nsUnknownContentTypeDialog.prototype = {
+@@ -626,17 +626,17 @@ nsUnknownContentTypeDialog.prototype = {
        else
          typeString = mimeInfo.MIMEType;
      }
@@ -2138,7 +2139,7 @@ diff --git a/toolkit/mozapps/downloads/nsHelperAppDlg.js b/toolkit/mozapps/downl
    },
  
    // Returns true if opening the default application makes sense.
-@@ -802,17 +802,17 @@ nsUnknownContentTypeDialog.prototype = {
+@@ -800,17 +800,17 @@ nsUnknownContentTypeDialog.prototype = {
        switch (this.dialogElement("openHandler").selectedIndex) {
        case 0:
          // No app need be specified in this case.
@@ -2157,7 +2158,7 @@ diff --git a/toolkit/mozapps/downloads/nsHelperAppDlg.js b/toolkit/mozapps/downl
      this.mDialog.document.documentElement.getButton("accept").disabled = !ok;
    },
  
-@@ -1067,30 +1067,57 @@ nsUnknownContentTypeDialog.prototype = {
+@@ -1065,30 +1065,57 @@ nsUnknownContentTypeDialog.prototype = {
  
        if (params.handlerApp &&
            params.handlerApp.executable &&
@@ -2548,7 +2549,7 @@ new file mode 100644
 +        if ( !rstr ) return false;
 +
 +        rstr->SetData( out[i] );
-+        result->AppendElement( rstr, false );
++        result->AppendElement( rstr );
 +        }
 +
 +    NS_ADDREF( *output = result);
@@ -2770,11 +2771,11 @@ diff --git a/uriloader/exthandler/moz.build b/uriloader/exthandler/moz.build
          'android/nsExternalSharingAppService.cpp',
          'android/nsExternalURLHandlerService.cpp',
          'android/nsMIMEInfoAndroid.cpp',
-@@ -125,16 +127,17 @@ include('/ipc/chromium/chromium-config.m
- 
+@@ -129,16 +131,17 @@ include('/ipc/chromium/chromium-config.m
  FINAL_LIBRARY = 'xul'
  
  LOCAL_INCLUDES += [
+     '/docshell/base',
      '/dom/base',
      '/dom/ipc',
      '/netwerk/base',
@@ -3109,11 +3110,11 @@ diff --git a/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp b/uriloader/exthandler
 diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exthandler/unix/nsOSHelperAppService.cpp
 --- a/uriloader/exthandler/unix/nsOSHelperAppService.cpp
 +++ b/uriloader/exthandler/unix/nsOSHelperAppService.cpp
-@@ -10,17 +10,17 @@
- #if defined(MOZ_ENABLE_CONTENTACTION)
- #include <contentaction/contentaction.h>
- #include <QString>
- #endif
+@@ -5,17 +5,17 @@
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+ 
+ #include <sys/types.h>
+ #include <sys/stat.h>
  
  #include "nsOSHelperAppService.h"
  #include "nsMIMEInfoUnix.h"
@@ -3128,20 +3129,29 @@ diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exth
  #include "nsIURL.h"
  #include "nsIFileStreams.h"
  #include "nsILineInputStream.h"
-@@ -1142,26 +1142,26 @@ nsresult nsOSHelperAppService::OSProtoco
-     ContentAction::Action::defaultActionForScheme(QString(aProtocolScheme) + ':');
+@@ -1128,17 +1128,17 @@ nsOSHelperAppService::GetHandlerAndDescr
  
-   if (action.isValid())
-     *aHandlerExists = true;
- #endif
+ nsresult nsOSHelperAppService::OSProtocolHandlerExists(const char * aProtocolScheme, bool * aHandlerExists)
+ {
+   nsresult rv = NS_OK;
  
+   if (!XRE_IsContentProcess()) {
  #ifdef MOZ_WIDGET_GTK
-   // Check the GNOME registry for a protocol handler
--  *aHandlerExists = nsGNOMERegistry::HandlerExists(aProtocolScheme);
-+  *aHandlerExists = nsCommonRegistry::HandlerExists(aProtocolScheme);
+     // Check the GNOME registry for a protocol handler
+-    *aHandlerExists = nsGNOMERegistry::HandlerExists(aProtocolScheme);
++    *aHandlerExists = nsCommonRegistry::HandlerExists(aProtocolScheme);
+ #else
+     *aHandlerExists = false;
  #endif
+   } else {
+     *aHandlerExists = false;
+     nsCOMPtr<nsIHandlerService> handlerSvc = do_GetService(NS_HANDLERSERVICE_CONTRACTID, &rv);
+     if (NS_SUCCEEDED(rv) && handlerSvc) {
+       rv = handlerSvc->ExistsForProtocol(nsCString(aProtocolScheme), aHandlerExists);
+@@ -1146,17 +1146,17 @@ nsresult nsOSHelperAppService::OSProtoco
+   }
  
-   return NS_OK;
+   return rv;
  }
  
  NS_IMETHODIMP nsOSHelperAppService::GetApplicationDescription(const nsACString& aScheme, nsAString& _retval)
@@ -3157,7 +3167,7 @@ diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exth
  
  nsresult nsOSHelperAppService::GetFileTokenForPath(const char16_t * platformAppPath, nsIFile ** aFile)
  {
-@@ -1248,17 +1248,17 @@ nsOSHelperAppService::GetFromExtension(c
+@@ -1243,17 +1243,17 @@ nsOSHelperAppService::GetFromExtension(c
                                           mime_types_description,
                                           true);
  
@@ -3176,7 +3186,7 @@ diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exth
  
      rv = LookUpTypeAndDescription(NS_ConvertUTF8toUTF16(aFileExt),
                                    majorType,
-@@ -1369,17 +1369,17 @@ nsOSHelperAppService::GetFromType(const 
+@@ -1364,17 +1364,17 @@ nsOSHelperAppService::GetFromType(const 
    nsAutoString extensions, mime_types_description;
    LookUpExtensionsAndDescription(majorType,
                                   minorType,
