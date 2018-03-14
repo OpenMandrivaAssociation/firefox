@@ -24,11 +24,7 @@
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner2.0.
-%if %{_use_internal_dependency_generator}
 %define __noautoreq 'libxul.so'
-%else
-%define _requires_exceptions libxul.so
-%endif
 
 # Use Qt instead of GTK -- long term goal, but as of 48.0.1,
 # doesn't even compile yet
@@ -240,15 +236,17 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	58.0.1
-Release:	2
+Version:	59.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
 Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
 %else
-Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
+#Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
+%define hashver c61f5f5ead48c78a80c80db5c489bdc7cfaf8175
+Source0:	https://hg.mozilla.org/releases/mozilla-release/archive/%{hashver}.tar.bz2
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -271,8 +269,8 @@ Source100:      firefox.rpmlintrc
 }
 Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-58.0-kde.patch
-Patch12:	mozilla-58.0-kde.patch
+Patch11:	firefox-59.0-kde.patch
+Patch12:	mozilla-59.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -410,7 +408,7 @@ Files and macros mainly for building Firefox extensions.
 }
 
 %prep
-%setup -q -a 20
+%setup -qn mozilla-release-%{hashver} -a 20
 %apply_patches
 
 TOP="$(pwd)"
@@ -455,7 +453,7 @@ export CC=gcc
 echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
 
-sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
+#sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
 export MOZCONFIG=`pwd`/mozconfig
 cat << EOF > $MOZCONFIG
 %if %{with qt}
@@ -513,7 +511,9 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
+%if %mdvver > 3000000
 ac_add_options --enable-system-cairo
+%endif
 ac_add_options --enable-startup-notification
 #ac_add_options --with-system-ply
 ac_add_options --with-distribution-id=org.openmandriva
