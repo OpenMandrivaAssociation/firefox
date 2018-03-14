@@ -511,7 +511,9 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
+%if %mdvver > 3000000
 ac_add_options --enable-system-cairo
+%endif
 ac_add_options --enable-startup-notification
 #ac_add_options --with-system-ply
 ac_add_options --with-distribution-id=org.openmandriva
