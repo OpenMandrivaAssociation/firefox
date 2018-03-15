@@ -267,7 +267,10 @@ Source100:      firefox.rpmlintrc
         done\
         )
 }
-Patch1:		firefox-6.0-lang.patch
+# (crazy) this is not meant to work anymore like this starting with ff 59.0
+#  see : https://bugzilla.mozilla.org/show_bug.cgi?id=1414390
+#  also put this in a js file , is better
+#Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
 Patch11:	firefox-59.0-kde.patch
 Patch12:	mozilla-59.0-kde.patch
@@ -603,6 +606,7 @@ rm -f %{buildroot}%{mozillalibdir}/README.txt
 rm -f %{buildroot}%{mozillalibdir}/removed-files
 rm -f %{buildroot}%{mozillalibdir}/precomplete
 
+## why this is not in one place , eg: vendor.js ?! ( crazy )
 install -d -m755 %{buildroot}%{mozillalibdir}/browser/defaults/profile
 cat << EOF >> %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
 user_pref("browser.EULA.override", true);
@@ -646,8 +650,11 @@ EOF
 # documentation: http://kb.mozillazine.org/About:config_entries#Extensions.
 # or in toolkit/mozapps/extensions/AddonManager.jsm
 # we also need to disable the "disable addon selection dialog"
-cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/preferences/mga.js
-pref("general.useragent.locale", "chrome://global/locale/intl.properties");
+# NOTE: before touching intl.* look first:
+#  https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Internationalization
+#  https://bugzilla.mozilla.org/show_bug.cgi?id=1414390
+cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/preferences/vendor.js
+pref("intl.locale.requested", "");
 pref("extensions.autoDisableScopes", 0);
 pref("extensions.shownSelectionUI", true);
 EOF
@@ -671,6 +678,9 @@ cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common
 sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
 sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/exalead.xml
 
+
+## (crazy) why the appid? not used since 57.0 or so
+## also what is the magic of that _extdir ? does not make any sense..
 mkdir -p %{buildroot}%{_sys_macros_dir}
 cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 # Macros from %{name} package
