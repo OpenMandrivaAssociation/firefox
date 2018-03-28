@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	59.0.1
+Version:	59.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -245,7 +245,7 @@ Url:		http://www.mozilla.com/firefox/
 Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
 %else
 #Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
-%define hashver 3db9e3d52b17563efca181ccbb50deb8660c59ae
+%define hashver 239e434d6d2b8e1e2b697c3416d1e96d48fe98e5
 Source0:	https://hg.mozilla.org/releases/mozilla-release/archive/%{hashver}.tar.bz2
 %endif
 Source4:	%{name}.desktop
