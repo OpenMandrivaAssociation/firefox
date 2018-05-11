@@ -329,8 +329,8 @@ BuildRequires:	pkgconfig(libpng) >= 1.6.34
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.17.0
-BuildRequires:	pkgconfig(nss) >= 3.34.1
+BuildRequires:	pkgconfig(nspr) >= 4.19.0
+BuildRequires:	pkgconfig(nss) >= 3.36.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
