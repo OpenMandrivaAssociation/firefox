@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	59.0.2
+Version:	60.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -244,9 +244,7 @@ Url:		http://www.mozilla.com/firefox/
 %if 0%{?prel}
 Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
 %else
-#Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
-%define hashver 239e434d6d2b8e1e2b697c3416d1e96d48fe98e5
-Source0:	https://hg.mozilla.org/releases/mozilla-release/archive/%{hashver}.tar.bz2
+Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
 %endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
@@ -272,8 +270,8 @@ Source100:      firefox.rpmlintrc
 #  also put this in a js file , is better
 #Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-59.0-kde.patch
-Patch12:	mozilla-59.0-kde.patch
+Patch11:	firefox-60.0-kde.patch
+Patch12:	mozilla-60.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -283,7 +281,7 @@ Patch43:	rhbz-1291190-appchooser-crash.patch
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
 # (cb) fix for float128 being a complex type
-Patch102:	firefox-57.0.4-bindgen_float128.patch
+#Patch102:	firefox-57.0.4-bindgen_float128.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -331,8 +329,8 @@ BuildRequires:	pkgconfig(libpng) >= 1.6.34
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.17.0
-BuildRequires:	pkgconfig(nss) >= 3.34.1
+BuildRequires:	pkgconfig(nspr) >= 4.19.0
+BuildRequires:	pkgconfig(nss) >= 3.36.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -352,8 +350,8 @@ BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
-BuildRequires:	rust >= 1.21.0
-BuildRequires:	cargo >= 0.21.1
+BuildRequires:	rust >= 1.24.0
+BuildRequires:	cargo >= 0.25.0
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -411,7 +409,7 @@ Files and macros mainly for building Firefox extensions.
 }
 
 %prep
-%setup -qn mozilla-release-%{hashver} -a 20
+%setup -qn %{name}-%{version} -a 20
 %apply_patches
 
 TOP="$(pwd)"
@@ -515,7 +513,8 @@ ac_add_options --with-system-png
 ac_add_options --enable-system-sqlite
 %endif
 %if %mdvver > 3000000
-ac_add_options --enable-system-cairo
+# https://bugzilla.mozilla.org/show_bug.cgi?id=1432751 - system cairo is no longer supported and will be removed
+#ac_add_options --enable-system-cairo
 %endif
 ac_add_options --enable-startup-notification
 #ac_add_options --with-system-ply
