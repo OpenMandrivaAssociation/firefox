@@ -351,7 +351,7 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
 BuildRequires:	rust >= 1.24.0
-BuildRequires:	cargo >= 0.21.1
+BuildRequires:	cargo >= 0.25.0
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
