@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	60.0.2
+Version:	61.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -270,8 +270,8 @@ Source100:      firefox.rpmlintrc
 #  also put this in a js file , is better
 #Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-60.0-kde.patch
-Patch12:	mozilla-60.0-kde.patch
+Patch11:	firefox-61.0-kde.patch
+Patch12:	mozilla-61.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
