@@ -287,6 +287,9 @@ BuildRequires:	doxygen
 BuildRequires:	makedepend
 BuildRequires:	pkgconfig(python)
 BuildRequires:	python
+%if %mdvver <= 3000000
+BuildRequires:  python3.6
+%endif
 BuildRequires:	python-distribute
 #(tpg) this is in contrib
 #BuildRequires:	python-ply
