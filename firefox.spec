@@ -546,9 +546,6 @@ ac_add_options --enable-pie
 ac_add_options --enable-rust-simd
 ac_add_options --enable-elf-hack
 %endif
-%ifarch %{ix86}
-ac_add_options --disable-stylo
-%endif
 EOF
 
 # Show the config just for debugging
