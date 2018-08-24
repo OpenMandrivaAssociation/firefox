@@ -265,10 +265,6 @@ Source100:      firefox.rpmlintrc
         done\
         )
 }
-# (crazy) this is not meant to work anymore like this starting with ff 59.0
-#  see : https://bugzilla.mozilla.org/show_bug.cgi?id=1414390
-#  also put this in a js file , is better
-#Patch1:		firefox-6.0-lang.patch
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
 Patch11:	firefox-61.0-kde.patch
 Patch12:	mozilla-61.0-kde.patch
