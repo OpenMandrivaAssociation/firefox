@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	61.0.2
+Version:	62.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -252,6 +252,7 @@ Source6:	firefox-searchengines-exalead.xml
 Source8:	firefox-searchengines-askcom.xml
 Source9:	kde.js
 Source10:	firefox-searchengines-yandex.xml
+Source12:	firefox-omv-default-prefs.js
 Source13:	firefox-l10n-template.in
 Source20:	http://ftp.gnu.org/gnu/autoconf/autoconf-2.13.tar.gz
 Source21:	distribution.ini
@@ -266,8 +267,8 @@ Source100:      firefox.rpmlintrc
         )
 }
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-61.0-kde.patch
-Patch12:	mozilla-61.0-kde.patch
+Patch11:	firefox-62.0-kde.patch
+Patch12:	mozilla-62.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -329,11 +330,13 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.19.0
-BuildRequires:	pkgconfig(nss) >= 3.36.1
+BuildRequires:	pkgconfig(nss) >= 3.38.0
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
-BuildRequires:	pkgconfig(sqlite3) >= 3.7.7.1
+%if %mdvver > 3000000
+BuildRequires:	pkgconfig(sqlite3) >= 3.24.0
+%endif
 BuildRequires:	pkgconfig(theoradec)
 BuildRequires:	pkgconfig(vorbis)
 BuildRequires:	pkgconfig(vpx)
@@ -509,9 +512,9 @@ ac_add_options --with-system-bz2
 ac_add_options --with-system-jpeg
 %if %mdvver >= 201500
 ac_add_options --with-system-png
-ac_add_options --enable-system-sqlite
 %endif
 %if %mdvver > 3000000
+ac_add_options --enable-system-sqlit
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1432751 - system cairo is no longer supported and will be removed
 #ac_add_options --enable-system-cairo
 %endif
@@ -601,32 +604,6 @@ rm -f %{buildroot}%{mozillalibdir}/README.txt
 rm -f %{buildroot}%{mozillalibdir}/removed-files
 rm -f %{buildroot}%{mozillalibdir}/precomplete
 
-## why this is not in one place , eg: vendor.js ?! ( crazy )
-install -d -m755 %{buildroot}%{mozillalibdir}/browser/defaults/profile
-cat << EOF >> %{buildroot}%{mozillalibdir}/browser/defaults/profile/prefs.js
-user_pref("browser.EULA.override", true);
-user_pref("browser.shell.checkDefaultBrowser", false);
-user_pref("browser.ctrlTab.previews", true);
-user_pref("browser.tabs.insertRelatedAfterCurrent", true);
-user_pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
-pref("browser.startup.homepage_override.mstone", "ignore");
-user_pref("browser.backspace_action", 2);
-user_pref("browser.display.use_system_colors", true);
-user_pref("browser.download.folderList", 1);
-user_pref("browser.link.open_external", 3);
-user_pref("app.update.auto", false);
-user_pref("app.update.enabled", false);
-user_pref("app.update.autoInstallEnabled", false);
-user_pref("security.ssl.require_safe_negotiation", false);
-user_pref("dom.ipc.plugins.enabled.nswrapper*", false);
-user_pref("extensions.autoDisableScopes", 0);
-user_pref("extensions.shownSelectionUI", true);
-user_pref("network.manage-offline-status", true);
-user_pref("browser.shell.checkDefaultBrowser", false);
-user_pref("media.gstreamer.enabled", true);
-user_pref("media.webaudio.enabled", true);
-EOF
-
 # display icon for Firefox button
 mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome
 cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome/userChrome.css
@@ -635,24 +612,7 @@ cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome/userCh
 }
 EOF
 
-# files in this directory are read on every startup, and can change/add
-# preferences for existing profiles
-# extensions.autoDisableScopes is a new preference added in firefox 8
-# it defines "scopes" where newly installed addons are disabled by default
-# this is an additive bit field, and the value defaults to 15 (1+2+4+8)
-# we need to remove system scope (8) from it so language packs and other addons
-# which are installed systemwide won't get marked as 3rd party and disabled
-# documentation: http://kb.mozillazine.org/About:config_entries#Extensions.
-# or in toolkit/mozapps/extensions/AddonManager.jsm
-# we also need to disable the "disable addon selection dialog"
-# NOTE: before touching intl.* look first:
-#  https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Internationalization
-#  https://bugzilla.mozilla.org/show_bug.cgi?id=1414390
-cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/preferences/vendor.js
-pref("intl.locale.requested", "");
-pref("extensions.autoDisableScopes", 0);
-pref("extensions.shownSelectionUI", true);
-EOF
+%{__cp} %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/defaults/preferences
 
 # use the system myspell dictionaries
 rm -fr %{buildroot}%{mozillalibdir}/dictionaries
