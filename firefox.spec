@@ -511,7 +511,7 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 %endif
 %if %mdvver > 3000000
-ac_add_options --enable-system-sqlit
+ac_add_options --enable-system-sqlite
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1432751 - system cairo is no longer supported and will be removed
 #ac_add_options --enable-system-cairo
 %endif
