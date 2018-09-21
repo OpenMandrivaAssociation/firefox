@@ -314,18 +314,14 @@ BuildRequires:	pkgconfig(QtGui5)
 BuildRequires:	pkgconfig(QtWidgets5)
 %else
 BuildRequires:	pkgconfig(gtk+-2.0)
-%if %mdvver >= 201500
 BuildRequires:	pkgconfig(gtk+-3.0)
-%endif
 %endif
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
 BuildRequires:	pkgconfig(libnotify)
-%if %mdvver >= 201500
 BuildRequires:	pkgconfig(libpng) >= 1.6.34
-%endif
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
@@ -373,10 +369,8 @@ Obsoletes:	firefox-ext-weave-sync
 Obsoletes:	firefox-beta < 11
 # (tpg) needed for bookmarks
 Requires(post):	desktop-common-data
-%if %mdvver >= 201500
 # (tpg) fix bug https://issues.openmandriva.org/show_bug.cgi?id=1525
 Requires:	gtk3-modules
-%endif
 
 %description
 The award-winning Web browser is now faster, more secure, and fully
@@ -430,7 +424,6 @@ popd
 %global optflags %{optflags} -g0 -fno-exceptions
 export AUTOCONF=`pwd`/ac213bin/bin/autoconf
 
-%if %mdvver >= 201500
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
 # still requires gcc
@@ -446,7 +439,6 @@ export CC=gcc
 # force gcc for now
 export CXX=g++
 export CC=gcc
-%endif
 %endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
@@ -468,15 +460,11 @@ mk_add_options BUILD_OFFICIAL=1
 mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --host=%{_host}
-%if %mdvver >= 201500
 %if %{with qt}
 ac_add_options --enable-default-toolkit=cairo-qt
 ac_add_options --with-qtdir=%{_libdir}/qt5
 %else
 ac_add_options --enable-default-toolkit=cairo-gtk3
-%endif
-%else
-ac_add_options --enable-default-toolkit=cairo-gtk2
 %endif
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
@@ -493,9 +481,7 @@ ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 %endif
-%if %mdvver >= 201500
 ac_add_options --with-system-libvpx
-%endif
 ac_add_options --enable-system-pixman
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
@@ -507,9 +493,7 @@ ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
 ac_add_options --with-system-jpeg
-%if %mdvver >= 201500
 ac_add_options --with-system-png
-%endif
 %if %mdvver > 3000000
 ac_add_options --enable-system-sqlite
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1432751 - system cairo is no longer supported and will be removed
@@ -523,11 +507,9 @@ ac_add_options --enable-update-channel=%{update_channel}
 #ac_add_options --enable-gstreamer=1.0
 #ac_add_options --enable-media-plugins
 #ac_add_options --enable-dash
-%if %mdvver >= 201300
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
-%endif
 %ifarch %arm
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
@@ -538,7 +520,7 @@ ac_add_options --with-valgrind
 ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 ac_add_options --enable-pie
-%ifarch x86_64 aarch64
+%ifarch %{x86_64} aarch64
 ac_add_options --enable-rust-simd
 ac_add_options --enable-elf-hack
 %endif
