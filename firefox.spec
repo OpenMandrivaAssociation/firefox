@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	62.0.3
+Version:	63.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -267,8 +267,8 @@ Source100:      firefox.rpmlintrc
         )
 }
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-62.0-kde.patch
-Patch12:	mozilla-62.0-kde.patch
+Patch11:	firefox-63.0-kde.patch
+Patch12:	mozilla-63.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -348,7 +348,7 @@ BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
-BuildRequires:	rust >= 1.24.0
+BuildRequires:	rust >= 1.28.0
 BuildRequires:	cargo >= 0.25.0
 Requires:	indexhtml
 # fixes bug #42096
