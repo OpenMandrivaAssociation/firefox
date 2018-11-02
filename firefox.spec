@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	63.0
+Version:	63.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -255,6 +255,7 @@ Source10:	firefox-searchengines-yandex.xml
 Source12:	firefox-omv-default-prefs.js
 Source13:	firefox-l10n-template.in
 Source20:	http://ftp.gnu.org/gnu/autoconf/autoconf-2.13.tar.gz
+Source22:	cbindgen-vendor.tar.xz
 Source21:	distribution.ini
 Source100:      firefox.rpmlintrc
 # l10n sources
@@ -273,6 +274,7 @@ Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
+Patch44:	prio-nss-build.patch
 
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
@@ -349,7 +351,8 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
 BuildRequires:	rust >= 1.28.0
-BuildRequires:	cargo >= 0.25.0
+BuildRequires:	cargo >= 0.30.0
+BuildRequires:	nodejs >= 8.12
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -415,6 +418,20 @@ cd autoconf-2.13
 %make install
 cd ..
 
+mkdir -p my_rust_vendor
+cd my_rust_vendor
+tar xf %{SOURCE22}
+cd -
+mkdir -p .cargo
+cat > .cargo/config <<EOL
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "`pwd`/my_rust_vendor"
+EOL
+env CARGO_HOME=.cargo cargo install cbindgen
+
 # needed to regenerate certdata.c
 pushd security/nss/lib/ckfw/builtins
 perl ./certdata.perl /etc/pki/tls/mozilla/certdata.txt
@@ -423,6 +440,8 @@ popd
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
 export AUTOCONF=`pwd`/ac213bin/bin/autoconf
+
+export PATH=`pwd`/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
