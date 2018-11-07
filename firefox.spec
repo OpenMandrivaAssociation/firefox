@@ -24,7 +24,7 @@
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner2.0.
-%define __noautoreq 'libxul.so'
+%global __requires_exclude libxul.so
 
 # Use Qt instead of GTK -- long term goal, but as of 48.0.1,
 # doesn't even compile yet
