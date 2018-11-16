@@ -24,7 +24,7 @@
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner2.0.
-%define __noautoreq 'libxul.so'
+%global __requires_exclude libxul.so
 
 # Use Qt instead of GTK -- long term goal, but as of 48.0.1,
 # doesn't even compile yet
@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	63.0.1
+Version:	63.0.3
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
