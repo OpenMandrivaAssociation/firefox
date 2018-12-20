@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	63.0.3
+Version:	64.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -268,13 +268,12 @@ Source100:      firefox.rpmlintrc
         )
 }
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-63.0-kde.patch
-Patch12:	mozilla-63.0-kde.patch
+Patch11:	firefox-64.0-kde.patch
+Patch12:	mozilla-64.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
 Patch43:	rhbz-1291190-appchooser-crash.patch
-Patch44:	prio-nss-build.patch
 
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
@@ -328,7 +327,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.19.0
-BuildRequires:	pkgconfig(nss) >= 3.38.0
+BuildRequires:	pkgconfig(nss) >= 3.40.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -350,7 +349,7 @@ BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 %endif
-BuildRequires:	rust >= 1.28.0
+BuildRequires:	rust >= 1.29.0
 BuildRequires:	cargo >= 0.30.0
 BuildRequires:	nodejs >= 8.12
 Requires:	indexhtml
@@ -538,7 +537,6 @@ ac_add_options --with-valgrind
 %endif
 ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
-ac_add_options --enable-pie
 %ifarch %{x86_64} aarch64
 ac_add_options --enable-rust-simd
 ac_add_options --enable-elf-hack
