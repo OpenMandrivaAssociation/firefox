@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	64.0
+Version:	64.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -539,6 +539,8 @@ ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
 ac_add_options --enable-rust-simd
+%endif
+%ifarch %{x86_64}
 ac_add_options --enable-elf-hack
 %endif
 EOF
