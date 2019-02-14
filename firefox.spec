@@ -499,7 +499,9 @@ ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 %endif
+%if %mdvver <= 3000000
 ac_add_options --with-system-libvpx
+%endif
 ac_add_options --enable-system-pixman
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
