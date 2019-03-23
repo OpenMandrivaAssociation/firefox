@@ -1,11 +1,11 @@
 # HG changeset patch
-# Parent  693f0baece29cc958a7d91b89fd12e3b89a502e3
+# Parent  87262204aa945e6fce864193d103a93659bf76f6
 
 diff --git a/browser/base/content/browser-kde.xul b/browser/base/content/browser-kde.xul
 new file mode 100644
 --- /dev/null
 +++ b/browser/base/content/browser-kde.xul
-@@ -0,0 +1,1395 @@
+@@ -0,0 +1,1408 @@
 +#filter substitution
 +<?xml version="1.0"?>
 +# -*- Mode: HTML -*-
@@ -276,6 +276,8 @@ new file mode 100644
 +           noautofocus="true"
 +           hidden="true"
 +           flip="none"
++           consumeoutsideclicks="never"
++           norolluponanchor="true"
 +           level="parent">
 +      <html:div class="urlbarView-body-outer">
 +        <html:div class="urlbarView-body-inner">
@@ -579,6 +581,7 @@ new file mode 100644
 +           position="bottomcenter topright"
 +           tabspecific="true"
 +           noautofocus="true"
++           pocket-title="&saveToPocketCmd.label;"
 +           copyURL-title="&pageAction.copyLink.label;"
 +           emailLink-title="&emailPageCmd.label;"
 +           sendToDevice-notReadyTitle="&sendToDevice.syncNotReady.label;"
@@ -771,13 +774,11 @@ new file mode 100644
 +               aria-label="&tabsToolbar.label;"
 +               context="toolbar-context-menu"
 +               flex="1">
-+        <vbox flex="1" class="toolbar-items">
-+          <spacer flex="1000"/>
 +
++        <hbox class="titlebar-spacer" type="pre-tabs"/>
++
++        <hbox flex="1" align="end" class="toolbar-items">
 +          <hbox id="TabsToolbar-customization-target" flex="1">
-+            <hbox class="titlebar-spacer" type="pre-tabs"
-+                  skipintoolbarset="true"/>
-+
 +            <tabs id="tabbrowser-tabs"
 +                  flex="1"
 +                  setfocus="false"
@@ -805,19 +806,15 @@ new file mode 100644
 +                           label="&listAllTabs.label;"
 +                           tooltiptext="&listAllTabs.label;"
 +                           removable="false"/>
-+
-+            <hbox class="titlebar-spacer" type="post-tabs"
-+                  ordinal="1000"
-+                  skipintoolbarset="true"/>
 +          </hbox>
-+        </vbox>
++        </hbox>
++
++        <hbox class="titlebar-spacer" type="post-tabs"/>
 +
 +#ifndef XP_MACOSX
 +        <button class="accessibility-indicator" tooltiptext="&accessibilityIndicator.tooltip;"
-+                ordinal="1000"
-+                aria-live="polite" skipintoolbarset="true"/>
-+        <hbox class="private-browsing-indicator" skipintoolbarset="true"
-+              ordinal="1000"/>
++                aria-live="polite"/>
++        <hbox class="private-browsing-indicator"/>
 +#endif
 +
 +#include titlebar-items.inc.xul
@@ -1045,7 +1042,22 @@ new file mode 100644
 +                       class="urlbar-icon urlbar-page-action"
 +                       role="button"
 +                       tooltiptext="&pageActionButton.tooltip;"
-+                       onmousedown="BrowserPageActions.mainButtonClicked(event);"/>
++                       onmousedown="BrowserPageActions.mainButtonClicked(event);"
++                       onkeypress="BrowserPageActions.mainButtonClicked(event);"/>
++                <hbox id="pocket-button-box"
++                      hidden="true"
++                      class="urlbar-icon-wrapper urlbar-page-action"
++                      onclick="BrowserPageActions.doCommandForAction(PageActions.actionForID('pocket'), event, this);">
++                  <image id="pocket-button"
++                         class="urlbar-icon"
++                         tooltiptext="&pocketButton.tooltiptext;"
++                         role="button"/>
++                  <hbox id="pocket-button-animatable-box">
++                    <image id="pocket-button-animatable-image"
++                           tooltiptext="&pocketButton.tooltiptext;"
++                           role="presentation"/>
++                  </hbox>
++                </hbox>
 +                <hbox id="star-button-box"
 +                      hidden="true"
 +                      class="urlbar-icon-wrapper urlbar-page-action"
@@ -1097,6 +1109,7 @@ new file mode 100644
 +        <toolbarbutton id="library-button" class="toolbarbutton-1 chromeclass-toolbar-additional subviewbutton-nav"
 +                       removable="true"
 +                       onmousedown="PanelUI.showSubView('appMenu-libraryView', this, event);"
++                       onkeypress="PanelUI.showSubView('appMenu-libraryView', this, event);"
 +                       closemenu="none"
 +                       cui-areatype="toolbar"
 +                       tooltiptext="&libraryButton.tooltip;"
@@ -1431,21 +1444,21 @@ diff --git a/browser/components/build/nsModule.cpp b/browser/components/build/ns
  #include "DirectoryProvider.h"
  
  #if defined(XP_WIN)
- #include "nsWindowsShellService.h"
+ #  include "nsWindowsShellService.h"
  #elif defined(XP_MACOSX)
- #include "nsMacShellService.h"
+ #  include "nsMacShellService.h"
  #elif defined(MOZ_WIDGET_GTK)
--#include "nsGNOMEShellService.h"
-+#include "nsUnixShellService.h"
+-#  include "nsGNOMEShellService.h"
++#  include "nsUnixShellService.h"
  #endif
+ #include "nsIToolkitShellService.h"
  
  #if defined(MOZ_WIDGET_COCOA)
- #include "nsMacAttribution.h"
+ #  include "nsMacAttribution.h"
  #endif
  
  #if defined(XP_WIN)
- #include "nsIEHistoryEnumerator.h"
-@@ -33,18 +33,16 @@ using namespace mozilla::browser;
+@@ -34,18 +34,16 @@ using namespace mozilla::browser;
  
  /////////////////////////////////////////////////////////////////////////////
  
@@ -1464,7 +1477,7 @@ diff --git a/browser/components/build/nsModule.cpp b/browser/components/build/ns
  
  #if defined(XP_WIN)
  NS_GENERIC_FACTORY_CONSTRUCTOR(nsIEHistoryEnumerator)
-@@ -67,17 +65,17 @@ NS_DEFINE_NAMED_CID(NS_MACATTRIBUTIONSER
+@@ -64,17 +62,17 @@ NS_DEFINE_NAMED_CID(NS_MACATTRIBUTIONSER
  #endif
  
  static const mozilla::Module::CIDEntry kBrowserCIDs[] = {
@@ -1475,12 +1488,12 @@ diff --git a/browser/components/build/nsModule.cpp b/browser/components/build/ns
  #elif defined(MOZ_WIDGET_GTK)
 -    { &kNS_SHELLSERVICE_CID, false, nullptr, nsGNOMEShellServiceConstructor },
 +    { &kNS_SHELLSERVICE_CID, false, nullptr, nsUnixShellServiceConstructor },
+ #elif defined(XP_MACOSX)
+     { &kNS_SHELLSERVICE_CID, false, nullptr, nsMacShellServiceConstructor },
  #endif
      { &kNS_BROWSER_ABOUT_REDIRECTOR_CID, false, nullptr, AboutRedirector::Create },
  #if defined(XP_WIN)
      { &kNS_WINIEHISTORYENUMERATOR_CID, false, nullptr, nsIEHistoryEnumeratorConstructor },
- #elif defined(XP_MACOSX)
-     { &kNS_SHELLSERVICE_CID, false, nullptr, nsMacShellServiceConstructor },
  #endif
  #if defined(MOZ_WIDGET_COCOA)
 diff --git a/browser/components/preferences/in-content/main.js b/browser/components/preferences/in-content/main.js
@@ -1510,7 +1523,7 @@ diff --git a/browser/components/preferences/in-content/main.js b/browser/compone
      performanceSettingsLink.setAttribute("href", performanceSettingsUrl);
  
      this.updateDefaultPerformanceSettingsPref();
-@@ -1012,16 +1019,27 @@ var gMainPane = {
+@@ -1021,16 +1028,27 @@ var gMainPane = {
        // Reset exponential backoff delay time in order to do visual update in pollForDefaultBrowser.
        this._backoffIndex = 0;
  
@@ -1541,30 +1554,30 @@ diff --git a/browser/components/preferences/in-content/main.js b/browser/compone
 diff --git a/browser/components/shell/moz.build b/browser/components/shell/moz.build
 --- a/browser/components/shell/moz.build
 +++ b/browser/components/shell/moz.build
-@@ -39,16 +39,18 @@ if CONFIG['OS_ARCH'] == 'WINNT':
-     ]
- elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'cocoa':
-     SOURCES += [
-         'nsMacShellService.cpp',
+@@ -29,16 +29,18 @@ if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'coco
      ]
  elif 'gtk' in CONFIG['MOZ_WIDGET_TOOLKIT']:
+     XPIDL_SOURCES += [
+         'nsIGNOMEShellService.idl',
+     ]
+ 
      SOURCES += [
          'nsGNOMEShellService.cpp',
 +        'nsKDEShellService.cpp',
 +        'nsUnixShellService.cpp',
      ]
- 
- if SOURCES:
-     FINAL_LIBRARY = 'browsercomps'
- 
- EXTRA_JS_MODULES += [
-     'HeadlessShell.jsm',
-     'ShellService.jsm',
+ elif CONFIG['OS_ARCH'] == 'WINNT':
+     SOURCES += [
+         'nsWindowsShellService.cpp',
+     ]
+     LOCAL_INCLUDES += [
+         '../../../other-licenses/nsis/Contrib/CityHash/cityhash',
+     ]
 diff --git a/browser/components/shell/nsKDEShellService.cpp b/browser/components/shell/nsKDEShellService.cpp
 new file mode 100644
 --- /dev/null
 +++ b/browser/components/shell/nsKDEShellService.cpp
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,150 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -1598,13 +1611,10 @@ new file mode 100644
 +NS_IMPL_ISUPPORTS(nsKDEShellService, nsIGNOMEShellService, nsIShellService)
 +
 +NS_IMETHODIMP
-+nsKDEShellService::IsDefaultBrowser(bool aStartupCheck,
-+                                    bool aForAllTypes,
++nsKDEShellService::IsDefaultBrowser(bool aForAllTypes,
 +                                    bool* aIsDefaultBrowser)
 +{
 +    *aIsDefaultBrowser = false;
-+    if (aStartupCheck)
-+        mCheckedThisSession = true;
 +
 +    nsCOMPtr<nsIMutableArray> command = do_CreateInstance( NS_ARRAY_CONTRACTID );
 +    if (!command)
@@ -1722,7 +1732,7 @@ diff --git a/browser/components/shell/nsKDEShellService.h b/browser/components/s
 new file mode 100644
 --- /dev/null
 +++ b/browser/components/shell/nsKDEShellService.h
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,32 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -1732,10 +1742,12 @@ new file mode 100644
 +#define nskdeshellservice_h____
 +
 +#include "nsIGNOMEShellService.h"
++#include "nsToolkitShellService.h"
 +#include "nsString.h"
 +#include "mozilla/Attributes.h"
 +
-+class nsKDEShellService final : public nsIGNOMEShellService
++class nsKDEShellService final : public nsIGNOMEShellService,
++                                public nsToolkitShellService
 +{
 +public:
 +  nsKDEShellService() : mCheckedThisSession(false) { }
@@ -1803,7 +1815,7 @@ new file mode 100644
 diff --git a/browser/installer/package-manifest.in b/browser/installer/package-manifest.in
 --- a/browser/installer/package-manifest.in
 +++ b/browser/installer/package-manifest.in
-@@ -451,16 +451,18 @@
+@@ -452,16 +452,18 @@
  @RESPATH@/browser/defaults/settings/pinning
  @RESPATH@/browser/defaults/settings/main
  

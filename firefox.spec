@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	65.0.1
+Version:	66.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -268,8 +268,8 @@ Source100:      firefox.rpmlintrc
         )
 }
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-65.0-kde.patch
-Patch12:	mozilla-65.0-kde.patch
+Patch11:	firefox-66.0-kde.patch
+Patch12:	mozilla-66.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -537,7 +537,7 @@ ac_add_options --disable-webrtc
 %ifnarch %mips
 ac_add_options --with-valgrind
 %endif
-ac_add_options --with-google-api-keyfile=../google-api-key
+#ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
 ac_add_options --enable-rust-simd
