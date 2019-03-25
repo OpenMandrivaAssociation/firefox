@@ -352,6 +352,7 @@ BuildRequires:	yasm >= 1.0.1
 BuildRequires:	rust >= 1.29.0
 BuildRequires:	cargo >= 0.30.0
 BuildRequires:	nodejs >= 8.12
+BuildRequires:	pkgconfig(jemalloc)
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -514,6 +515,8 @@ ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
 ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
+ac_add_options --enable-jemalloc
+ac_add_options --enable-replace-malloc
 %if %mdvver > 3000000
 ac_add_options --enable-system-sqlite
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1432751 - system cairo is no longer supported and will be removed
