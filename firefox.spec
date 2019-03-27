@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	65.0.1
+Version:	66.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -268,8 +268,8 @@ Source100:      firefox.rpmlintrc
         )
 }
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-65.0-kde.patch
-Patch12:	mozilla-65.0-kde.patch
+Patch11:	firefox-66.0-kde.patch
+Patch12:	mozilla-66.0-kde.patch
 Patch42:	mozilla-42.0-libproxy.patch
 
 # from fedora - fix for app chooser
@@ -352,6 +352,7 @@ BuildRequires:	yasm >= 1.0.1
 BuildRequires:	rust >= 1.29.0
 BuildRequires:	cargo >= 0.30.0
 BuildRequires:	nodejs >= 8.12
+BuildRequires:	pkgconfig(jemalloc)
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -499,7 +500,9 @@ ac_add_options --with-system-zlib
 ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 %endif
+%if %mdvver <= 3000000
 ac_add_options --with-system-libvpx
+%endif
 ac_add_options --enable-system-pixman
 ac_add_options --disable-gconf
 ac_add_options --disable-updater
@@ -512,6 +515,8 @@ ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
 ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
+ac_add_options --enable-jemalloc
+ac_add_options --enable-replace-malloc
 %if %mdvver > 3000000
 ac_add_options --enable-system-sqlite
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1432751 - system cairo is no longer supported and will be removed
@@ -535,7 +540,7 @@ ac_add_options --disable-webrtc
 %ifnarch %mips
 ac_add_options --with-valgrind
 %endif
-ac_add_options --with-google-api-keyfile=../google-api-key
+#ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
 ac_add_options --enable-rust-simd
