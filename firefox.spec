@@ -348,6 +348,7 @@ BuildRequires:	llvm-devel
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
+BuildRequires:	nasm
 %endif
 BuildRequires:	rust >= 1.29.0
 BuildRequires:	cargo >= 0.30.0
