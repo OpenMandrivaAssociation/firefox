@@ -544,7 +544,7 @@ ac_add_options --with-valgrind
 #ac_add_options --with-google-api-keyfile=../google-api-key
 ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
-ac_add_options --enable-rust-simd
+#ac_add_options --enable-rust-simd
 %endif
 %ifarch %{x86_64}
 ac_add_options --enable-elf-hack
