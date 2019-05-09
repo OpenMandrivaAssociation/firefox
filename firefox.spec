@@ -446,6 +446,7 @@ export PATH=`pwd`/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
+%global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
 # still requires gcc
 export CXX=g++
 export CC=gcc
@@ -492,6 +493,7 @@ ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 %ifarch %{ix86}
+ac_add_options --enable-linker=ld.bfd
 ac_add_options --disable-optimize
 %else
 ac_add_options --enable-optimize="-O2"
