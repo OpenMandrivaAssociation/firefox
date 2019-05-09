@@ -493,7 +493,7 @@ ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 %ifarch %{ix86}
-ac_add_options --enable-linker=ld.bfd
+ac_add_options --enable-linker=bfd
 ac_add_options --disable-optimize
 %else
 ac_add_options --enable-optimize="-O2"
