@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	66.0.4
+Version:	66.0.5
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -449,6 +449,8 @@ export PATH=`pwd`/.cargo/bin:$PATH
 # still requires gcc
 export CXX=g++
 export CC=gcc
+# avoid oom with rust
+export RUSTFLAGS="-Cdebuginfo=0"
 %else
 %global optflags %{optflags} -Qunused-arguments
 %endif
