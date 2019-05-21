@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent  f55e33a10c2a23625826ef6f8dbe18d5a455d29e
+# Parent  cafacdb0b7c50666e5dcc927684a23e8733206a5
 Description: Add KDE integration to Firefox (toolkit parts)
 Author: Wolfgang Rosenauer <wolfgang@rosenauer.org>
 Author: Lubos Lunak <lunak@suse.com>
@@ -27,7 +27,7 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
  #ifdef XP_WIN
  #  include "windows.h"
  #endif
-@@ -4467,25 +4468,37 @@ float MOZ_MAYBE_UNUSED GetPref<float>(co
+@@ -4493,25 +4494,37 @@ float MOZ_MAYBE_UNUSED GetPref<float>(co
    // application pref files for backwards compatibility.
    static const char* specialFiles[] = {
  #if defined(XP_MACOSX)
@@ -65,7 +65,7 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
  
    // Load jar:$app/omni.jar!/defaults/preferences/*.js
    // or jar:$gre/omni.jar!/defaults/preferences/*.js.
-@@ -4533,17 +4546,17 @@ float MOZ_MAYBE_UNUSED GetPref<float>(co
+@@ -4559,17 +4572,17 @@ float MOZ_MAYBE_UNUSED GetPref<float>(co
        }
  
        nsCOMPtr<nsIFile> path = do_QueryInterface(elem);
@@ -97,21 +97,21 @@ diff --git a/modules/libpref/moz.build b/modules/libpref/moz.build
  ]
  
 +LOCAL_INCLUDES += [
-+     '/toolkit/xre'
++    '/toolkit/xre'
 +]
 +
+ XPCOM_MANIFESTS += [
+     'components.conf',
+ ]
+ 
  include('/ipc/chromium/chromium-config.mozbuild')
  
  FINAL_LIBRARY = 'xul'
  
- DEFINES['OS_ARCH'] = CONFIG['OS_ARCH']
- DEFINES['MOZ_WIDGET_TOOLKIT'] = CONFIG['MOZ_WIDGET_TOOLKIT']
- if CONFIG['MOZ_ENABLE_WEBRENDER']:
-     DEFINES['MOZ_ENABLE_WEBRENDER'] = True
 diff --git a/python/mozbuild/mozpack/chrome/flags.py b/python/mozbuild/mozpack/chrome/flags.py
 --- a/python/mozbuild/mozpack/chrome/flags.py
 +++ b/python/mozbuild/mozpack/chrome/flags.py
-@@ -220,16 +220,17 @@ class Flags(OrderedDict):
+@@ -223,16 +223,17 @@ class Flags(OrderedDict):
          'contentaccessible': Flag,
          'os': StringFlag,
          'osversion': VersionFlag,
@@ -153,7 +153,7 @@ diff --git a/python/mozbuild/mozpack/chrome/manifest.py b/python/mozbuild/mozpac
 diff --git a/toolkit/components/downloads/moz.build b/toolkit/components/downloads/moz.build
 --- a/toolkit/components/downloads/moz.build
 +++ b/toolkit/components/downloads/moz.build
-@@ -41,10 +41,14 @@ EXTRA_JS_MODULES += [
+@@ -41,10 +41,14 @@ XPCOM_MANIFESTS += [
  
  if CONFIG['MOZ_PLACES']:
      EXTRA_JS_MODULES += [
@@ -171,25 +171,25 @@ diff --git a/toolkit/components/downloads/moz.build b/toolkit/components/downloa
 diff --git a/toolkit/content/jar.mn b/toolkit/content/jar.mn
 --- a/toolkit/content/jar.mn
 +++ b/toolkit/content/jar.mn
-@@ -65,16 +65,18 @@ toolkit.jar:
+@@ -63,16 +63,18 @@ toolkit.jar:
+    content/global/widgets.css
+    content/global/bindings/autocomplete.xml    (widgets/autocomplete.xml)
     content/global/bindings/button.xml          (widgets/button.xml)
     content/global/bindings/calendar.js         (widgets/calendar.js)
-    content/global/bindings/checkbox.xml        (widgets/checkbox.xml)
     content/global/bindings/datekeeper.js       (widgets/datekeeper.js)
     content/global/bindings/datepicker.js       (widgets/datepicker.js)
-    content/global/bindings/datetimebox.xml     (widgets/datetimebox.xml)
     content/global/bindings/datetimebox.css     (widgets/datetimebox.css)
  *  content/global/bindings/dialog.xml          (widgets/dialog.xml)
 +*  content/global/bindings/dialog-kde.xml      (widgets/dialog-kde.xml)
 +% override chrome://global/content/bindings/dialog.xml chrome://global/content/bindings/dialog-kde.xml desktop=kde
     content/global/bindings/general.xml         (widgets/general.xml)
     content/global/bindings/menu.xml            (widgets/menu.xml)
-    content/global/bindings/menulist.xml        (widgets/menulist.xml)
-    content/global/bindings/notification.xml    (widgets/notification.xml)
     content/global/bindings/popup.xml           (widgets/popup.xml)
     content/global/bindings/radio.xml           (widgets/radio.xml)
     content/global/bindings/richlistbox.xml     (widgets/richlistbox.xml)
     content/global/bindings/scrollbox.xml       (widgets/scrollbox.xml)
+    content/global/bindings/spinner.js          (widgets/spinner.js)
+    content/global/bindings/tabbox.xml          (widgets/tabbox.xml)
 diff --git a/toolkit/content/widgets/dialog-kde.xml b/toolkit/content/widgets/dialog-kde.xml
 new file mode 100644
 --- /dev/null
@@ -702,10 +702,10 @@ new file mode 100644
 +  </binding>
 +
 +</bindings>
-diff --git a/toolkit/mozapps/downloads/nsHelperAppDlg.js b/toolkit/mozapps/downloads/nsHelperAppDlg.js
---- a/toolkit/mozapps/downloads/nsHelperAppDlg.js
-+++ b/toolkit/mozapps/downloads/nsHelperAppDlg.js
-@@ -1033,30 +1033,60 @@ nsUnknownContentTypeDialog.prototype = {
+diff --git a/toolkit/mozapps/downloads/HelperAppDlg.jsm b/toolkit/mozapps/downloads/HelperAppDlg.jsm
+--- a/toolkit/mozapps/downloads/HelperAppDlg.jsm
++++ b/toolkit/mozapps/downloads/HelperAppDlg.jsm
+@@ -1030,30 +1030,60 @@ nsUnknownContentTypeDialog.prototype = {
  
        if (params.handlerApp &&
            params.handlerApp.executable &&
@@ -794,14 +794,14 @@ diff --git a/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp b/toolkit/sy
  #include "nsIURI.h"
 +#include "nsKDEUtils.h"
  
+ using namespace mozilla;
+ 
  class nsUnixSystemProxySettings final : public nsISystemProxySettings {
   public:
    NS_DECL_ISUPPORTS
    NS_DECL_NSISYSTEMPROXYSETTINGS
  
-   nsUnixSystemProxySettings() : mSchemeProxySettings(4) {}
-   nsresult Init();
-@@ -42,16 +43,18 @@ class nsUnixSystemProxySettings final : 
+@@ -44,16 +45,18 @@ class nsUnixSystemProxySettings final : 
                                     nsACString& aResult);
    nsresult GetProxyFromGConf(const nsACString& aScheme, const nsACString& aHost,
                               int32_t aPort, nsACString& aResult);
@@ -820,7 +820,7 @@ diff --git a/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp b/toolkit/sy
  nsUnixSystemProxySettings::GetMainThreadOnly(bool* aMainThreadOnly) {
    // dbus prevents us from being threadsafe, but this routine should not block
    // anyhow
-@@ -488,16 +491,19 @@ nsresult nsUnixSystemProxySettings::GetP
+@@ -487,22 +490,51 @@ nsresult nsUnixSystemProxySettings::GetP
    return NS_OK;
  }
  
@@ -840,16 +840,7 @@ diff --git a/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp b/toolkit/sy
  
    return GetProxyFromEnvironment(aScheme, aHost, aPort, aResult);
  }
-@@ -521,8 +527,34 @@ static const mozilla::Module::CIDEntry k
- static const mozilla::Module::ContractIDEntry kUnixProxyContracts[] = {
-     {NS_SYSTEMPROXYSETTINGS_CONTRACTID, &kNS_UNIXSYSTEMPROXYSERVICE_CID},
-     {nullptr}};
  
- static const mozilla::Module kUnixProxyModule = {
-     mozilla::Module::kVersion, kUnixProxyCIDs, kUnixProxyContracts};
- 
- NSMODULE_DEFN(nsUnixProxyModule) = &kUnixProxyModule;
-+
 +nsresult
 +nsUnixSystemProxySettings::GetProxyFromKDE(const nsACString& aScheme,
 +                                           const nsACString& aHost,
@@ -875,10 +866,16 @@ diff --git a/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp b/toolkit/sy
 +  return NS_OK;
 +}
 +
++
+ NS_IMPL_COMPONENT_FACTORY(nsUnixSystemProxySettings) {
+   auto result = MakeRefPtr<nsUnixSystemProxySettings>();
+   result->Init();
+   return result.forget().downcast<nsISupports>();
+ }
 diff --git a/toolkit/xre/moz.build b/toolkit/xre/moz.build
 --- a/toolkit/xre/moz.build
 +++ b/toolkit/xre/moz.build
-@@ -81,17 +81,19 @@ elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'co
+@@ -83,17 +83,19 @@ elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'co
          '../components/printingui',
      ]
  elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'uikit':
@@ -897,7 +894,7 @@ diff --git a/toolkit/xre/moz.build b/toolkit/xre/moz.build
          'nsNativeAppSupportDefault.cpp',
      ]
  
- if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk3':
+ if CONFIG['MOZ_HAS_REMOTE']:
 diff --git a/toolkit/xre/nsKDEUtils.cpp b/toolkit/xre/nsKDEUtils.cpp
 new file mode 100644
 --- /dev/null
@@ -1343,7 +1340,7 @@ diff --git a/uriloader/exthandler/HandlerServiceParent.cpp b/uriloader/exthandle
 diff --git a/uriloader/exthandler/moz.build b/uriloader/exthandler/moz.build
 --- a/uriloader/exthandler/moz.build
 +++ b/uriloader/exthandler/moz.build
-@@ -76,17 +76,19 @@ else:
+@@ -80,17 +80,19 @@ else:
      SOURCES += [
          osdir + '/nsOSHelperAppService.cpp',
      ]
@@ -1363,7 +1360,7 @@ diff --git a/uriloader/exthandler/moz.build b/uriloader/exthandler/moz.build
          'android/nsExternalURLHandlerService.cpp',
          'android/nsMIMEInfoAndroid.cpp',
      ]
-@@ -120,16 +122,17 @@ include('/ipc/chromium/chromium-config.m
+@@ -130,16 +132,17 @@ include('/ipc/chromium/chromium-config.m
  FINAL_LIBRARY = 'xul'
  
  LOCAL_INCLUDES += [
@@ -1797,7 +1794,7 @@ diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exth
 diff --git a/widget/gtk/moz.build b/widget/gtk/moz.build
 --- a/widget/gtk/moz.build
 +++ b/widget/gtk/moz.build
-@@ -116,16 +116,17 @@ include('/ipc/chromium/chromium-config.m
+@@ -121,16 +121,17 @@ include('/ipc/chromium/chromium-config.m
  
  FINAL_LIBRARY = 'xul'
  
@@ -1914,7 +1911,7 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
  
    GtkFileChooserAction action = GetGtkFileChooserAction(mMode);
  
-@@ -571,16 +598,240 @@ void nsFilePicker::Done(void *file_choos
+@@ -572,16 +599,240 @@ void nsFilePicker::Done(void *file_choos
      mCallback->Done(result);
      mCallback = nullptr;
    } else {
@@ -2315,7 +2312,7 @@ diff --git a/xpcom/components/ManifestParser.cpp b/xpcom/components/ManifestPars
 diff --git a/xpcom/components/moz.build b/xpcom/components/moz.build
 --- a/xpcom/components/moz.build
 +++ b/xpcom/components/moz.build
-@@ -44,12 +44,13 @@ LOCAL_INCLUDES += [
+@@ -66,14 +66,15 @@ LOCAL_INCLUDES += [
      '!..',
      '../base',
      '../build',
@@ -2329,6 +2326,8 @@ diff --git a/xpcom/components/moz.build b/xpcom/components/moz.build
  
  if 'gtk' in CONFIG['MOZ_WIDGET_TOOLKIT']:
      CXXFLAGS += CONFIG['TK_CFLAGS']
+ 
+ include('/ipc/chromium/chromium-config.mozbuild')
 diff --git a/xpcom/io/nsLocalFileUnix.cpp b/xpcom/io/nsLocalFileUnix.cpp
 --- a/xpcom/io/nsLocalFileUnix.cpp
 +++ b/xpcom/io/nsLocalFileUnix.cpp
