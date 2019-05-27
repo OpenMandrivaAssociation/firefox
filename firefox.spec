@@ -282,7 +282,9 @@ Patch12:	mozilla-67.0-kde.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
-BuildRequires:	pkgconfig(python)
+BuildRequires:	pkgconfig(python2)
+BuildRequires:	python2
+BuildRequires:	pkgconfig(python3)
 BuildRequires:	python
 %if %mdvver <= 3000000
 BuildRequires:  python3.6
