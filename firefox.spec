@@ -267,6 +267,9 @@ Source100:      firefox.rpmlintrc
         done\
         )
 }
+
+Patch0:		firefox-67.0-webrtc-compile.patch
+
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
 Patch11:	firefox-67.0-kde.patch
 Patch12:	mozilla-67.0-kde.patch

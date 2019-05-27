@@ -1,0 +1,11 @@
+diff -up firefox-67.0/media/webrtc/trunk/webrtc/rtc_base/physicalsocketserver.cc.omv~ firefox-67.0/media/webrtc/trunk/webrtc/rtc_base/physicalsocketserver.cc
+--- firefox-67.0/media/webrtc/trunk/webrtc/rtc_base/physicalsocketserver.cc.omv~	2019-05-27 21:10:21.190087292 +0200
++++ firefox-67.0/media/webrtc/trunk/webrtc/rtc_base/physicalsocketserver.cc	2019-05-27 21:10:51.665087602 +0200
+@@ -7,6 +7,7 @@
+  *  in the file PATENTS.  All contributing project authors may
+  *  be found in the AUTHORS file in the root of the source tree.
+  */
++#define _DEFAULT_SOURCE 1 // for SIOCGSTAMP
+ #include "rtc_base/physicalsocketserver.h"
+ 
+ #if defined(_MSC_VER) && _MSC_VER < 1300
