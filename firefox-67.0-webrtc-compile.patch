@@ -5,7 +5,7 @@ diff -up firefox-67.0/media/webrtc/trunk/webrtc/rtc_base/physicalsocketserver.cc
   *  in the file PATENTS.  All contributing project authors may
   *  be found in the AUTHORS file in the root of the source tree.
   */
-+#define _DEFAULT_SOURCE 1 // for SIOCGSTAMP
++#define SIOCGSTAMP 0x8906
  #include "rtc_base/physicalsocketserver.h"
  
  #if defined(_MSC_VER) && _MSC_VER < 1300
