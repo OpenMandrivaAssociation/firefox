@@ -236,7 +236,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	67.0
+Version:	67.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -267,6 +267,9 @@ Source100:      firefox.rpmlintrc
         done\
         )
 }
+
+Patch0:		firefox-67.0-webrtc-compile.patch
+
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
 Patch11:	firefox-67.0-kde.patch
 Patch12:	mozilla-67.0-kde.patch
@@ -282,7 +285,9 @@ Patch12:	mozilla-67.0-kde.patch
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
-BuildRequires:	pkgconfig(python)
+BuildRequires:	pkgconfig(python2)
+BuildRequires:	python2
+BuildRequires:	pkgconfig(python3)
 BuildRequires:	python
 %if %mdvver <= 3000000
 BuildRequires:  python3.6
