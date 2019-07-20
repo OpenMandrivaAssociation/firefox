@@ -43,7 +43,7 @@
 %define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-x86_64/xpi/
 
 # Supported l10n language lists
-%define langlist af ar as ast bg bn_IN bn_BD br bs ca cs cy da de el en_GB en_ZA eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mai mk ml mr nb_NO nl nn_NO or pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
+%define langlist af ar ast bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
 
 # Disabled l10n languages, for any reason
 # - no locales-XX package:
@@ -59,18 +59,14 @@
 %define langname_ar Arabic
 %define language_ast ast
 %define langname_ast Asturian
-%define language_as as
-%define langname_as Assamese
 %define language_af af
 %define langname_af Afrikaans
 %define language_be be
 %define langname_be Belarusian
 %define language_bg bg
 %define langname_bg Bulgarian
-%define language_bn_BD bn-BD
-%define langname_bn_BD Bengali
-%define language_bn_IN bn-IN
-%define langname_bn_IN Bengali
+%define language_bn bn
+%define langname_bn Bengali
 %define language_br br
 %define langname_br Breton
 %define language_bs bs
@@ -89,8 +85,6 @@
 %define langname_el Greek
 %define language_en_GB en-GB
 %define langname_en_GB British English
-%define language_en_ZA en-ZA
-%define langname_en_ZA English (South Africa)
 %define language_eo eo
 %define langname_eo Esperanto
 %define language_es_AR es-AR
@@ -155,12 +149,8 @@
 %define langname_lt Lithuanian
 %define language_lv lv
 %define langname_lv Latvian
-%define language_mai mai
-%define langname_mai Maithili
 %define language_mk mk
 %define langname_mk Macedonian
-%define language_ml ml
-%define langname_ml Malayalam
 %define language_mr mr
 %define langname_mr Marathi
 %define language_nb_NO nb-NO
@@ -171,8 +161,6 @@
 %define langname_nl Dutch
 %define language_nso nso
 %define langname_nso Northern Sotho
-%define language_or or
-%define langname_or Oriya
 %define language_pa_IN pa-IN
 %define langname_pa_IN Punjabi (gurmukhi)
 %define language_pl pl
@@ -236,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	68.0
+Version:	68.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
