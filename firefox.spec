@@ -542,9 +542,7 @@ ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
 #ac_add_options --enable-rust-simd
 %endif
-%ifarch %{x86_64}
-ac_add_options --enable-elf-hack
-%endif
+ac_add_options --disable-elf-hack
 EOF
 
 # Show the config just for debugging
