@@ -1,7 +1,3 @@
-# Problem with clang+LTO as of 3.8.0-0.260001.1:
-# Compile failure with
-# Assertion `!N->isTemporary() && "Expected all forward declarations to be resolved"' failed.
-%define _disable_lto 1
 #
 # WARNING, READ FIRST:
 #
@@ -438,7 +434,6 @@ export PATH=$(pwd)/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
-%global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
 # still requires gcc
 export CXX=g++
 export CC=gcc
