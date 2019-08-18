@@ -217,7 +217,7 @@
 %{expand:%(for lang in %{langlist}; do if echo " %{disabled_dict_langlist} " |grep -q " $lang "; then echo "%%define with_dict_$lang 0"; else echo "%%define with_dict_$lang 1"; fi; done)}
 
 # Locales
-%{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
+%{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang $(echo $lang | cut -d _ -f 1) "; done)}
 
 Summary:	Next generation web browser
 Name:		firefox
@@ -264,7 +264,7 @@ Patch12:	mozilla-68.0-kde.patch
 
 # from fedora - fix for app chooser
 #Patch43:	rhbz-1291190-appchooser-crash.patch
-
+Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
@@ -421,7 +421,7 @@ cat > .cargo/config <<EOL
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "`pwd`/my_rust_vendor"
+directory = "$(pwd)/my_rust_vendor"
 EOL
 env CARGO_HOME=.cargo cargo install cbindgen
 
@@ -432,9 +432,9 @@ popd
 
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
-export AUTOCONF=`pwd`/ac213bin/bin/autoconf
+export AUTOCONF=$(pwd)/ac213bin/bin/autoconf
 
-export PATH=`pwd`/.cargo/bin:$PATH
+export PATH=$(pwd)/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
@@ -464,11 +464,11 @@ echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
 
 #sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
-export MOZCONFIG=`pwd`/mozconfig
+export MOZCONFIG=$(pwd)/mozconfig
 cat << EOF > $MOZCONFIG
 %if %{with qt}
-export CFLAGS="`pkg-config --cflags glib-2.0`"
-export CXXFLAGS="`pkg-config --cflags glib-2.0`"
+export CFLAGS="$(pkg-config --cflags glib-2.0)"
+export CXXFLAGS="$(pkg-config --cflags glib-2.0)"
 %endif
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
@@ -543,6 +543,8 @@ ac_add_options --enable-release
 #ac_add_options --enable-rust-simd
 %endif
 ac_add_options --disable-elf-hack
+# (tpg) use LLD if build with LLVM/clang
+ac_add_options --enable-linker=lld
 EOF
 
 # Show the config just for debugging
