@@ -438,9 +438,7 @@ export PATH=$(pwd)/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
-%if %mdvver <= 3000000
 %global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
-%endif
 # still requires gcc
 export CXX=g++
 export CC=gcc
