@@ -438,7 +438,9 @@ export PATH=$(pwd)/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
+%if %mdvver <= 3000000
 %global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
+%endif
 # still requires gcc
 export CXX=g++
 export CC=gcc
@@ -540,9 +542,13 @@ ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
 #ac_add_options --enable-rust-simd
 %endif
+%ifnarch aarch64
 ac_add_options --disable-elf-hack
+%endif
+%if %mdvver > 3000000
 # (tpg) use LLD if build with LLVM/clang
 ac_add_options --enable-linker=lld
+%endif
 EOF
 
 # Show the config just for debugging
