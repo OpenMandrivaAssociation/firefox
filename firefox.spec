@@ -43,7 +43,7 @@
 %define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-x86_64/xpi/
 
 # Supported l10n language lists
-%define langlist af ar as ast bg bn_IN bn_BD br bs ca cs cy da de el en_GB en_ZA eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mai mk ml mr nb_NO nl nn_NO or pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
+%define langlist af ar ast bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
 
 # Disabled l10n languages, for any reason
 # - no locales-XX package:
@@ -59,18 +59,14 @@
 %define langname_ar Arabic
 %define language_ast ast
 %define langname_ast Asturian
-%define language_as as
-%define langname_as Assamese
 %define language_af af
 %define langname_af Afrikaans
 %define language_be be
 %define langname_be Belarusian
 %define language_bg bg
 %define langname_bg Bulgarian
-%define language_bn_BD bn-BD
-%define langname_bn_BD Bengali
-%define language_bn_IN bn-IN
-%define langname_bn_IN Bengali
+%define language_bn bn
+%define langname_bn Bengali
 %define language_br br
 %define langname_br Breton
 %define language_bs bs
@@ -89,8 +85,6 @@
 %define langname_el Greek
 %define language_en_GB en-GB
 %define langname_en_GB British English
-%define language_en_ZA en-ZA
-%define langname_en_ZA English (South Africa)
 %define language_eo eo
 %define langname_eo Esperanto
 %define language_es_AR es-AR
@@ -155,12 +149,8 @@
 %define langname_lt Lithuanian
 %define language_lv lv
 %define langname_lv Latvian
-%define language_mai mai
-%define langname_mai Maithili
 %define language_mk mk
 %define langname_mk Macedonian
-%define language_ml ml
-%define langname_ml Malayalam
 %define language_mr mr
 %define langname_mr Marathi
 %define language_nb_NO nb-NO
@@ -171,8 +161,6 @@
 %define langname_nl Dutch
 %define language_nso nso
 %define langname_nso Northern Sotho
-%define language_or or
-%define langname_or Oriya
 %define language_pa_IN pa-IN
 %define langname_pa_IN Punjabi (gurmukhi)
 %define language_pl pl
@@ -229,14 +217,14 @@
 %{expand:%(for lang in %{langlist}; do if echo " %{disabled_dict_langlist} " |grep -q " $lang "; then echo "%%define with_dict_$lang 0"; else echo "%%define with_dict_$lang 1"; fi; done)}
 
 # Locales
-%{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang `echo $lang | cut -d _ -f 1` "; done)}
+%{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang $(echo $lang | cut -d _ -f 1) "; done)}
 
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	67.0.4
+Version:	68.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -271,12 +259,12 @@ Source100:      firefox.rpmlintrc
 Patch0:		firefox-67.0-webrtc-compile.patch
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-67.0-kde.patch
-Patch12:	mozilla-67.0-kde.patch
+Patch11:	firefox-68.0-kde.patch
+Patch12:	mozilla-68.0-kde.patch
 
 # from fedora - fix for app chooser
 #Patch43:	rhbz-1291190-appchooser-crash.patch
-
+Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 # Not yet finished, but can't hurt
 #Patch50:	firefox-48.0.1-qt-compile.patch
 
@@ -331,7 +319,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.21.0
-BuildRequires:	pkgconfig(nss) >= 3.41
+BuildRequires:	pkgconfig(nss) >= 3.44.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -354,8 +342,8 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
-BuildRequires:	rust >= 1.29.0
-BuildRequires:	cargo >= 0.30.0
+BuildRequires:	rust >= 1.34.0
+BuildRequires:	cargo >= 0.35.0
 BuildRequires:	nodejs >= 8.12
 BuildRequires:	pkgconfig(jemalloc)
 Requires:	indexhtml
@@ -433,7 +421,7 @@ cat > .cargo/config <<EOL
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "`pwd`/my_rust_vendor"
+directory = "$(pwd)/my_rust_vendor"
 EOL
 env CARGO_HOME=.cargo cargo install cbindgen
 
@@ -444,9 +432,9 @@ popd
 
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
-export AUTOCONF=`pwd`/ac213bin/bin/autoconf
+export AUTOCONF=$(pwd)/ac213bin/bin/autoconf
 
-export PATH=`pwd`/.cargo/bin:$PATH
+export PATH=$(pwd)/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
@@ -476,11 +464,11 @@ echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
 
 #sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
-export MOZCONFIG=`pwd`/mozconfig
+export MOZCONFIG=$(pwd)/mozconfig
 cat << EOF > $MOZCONFIG
 %if %{with qt}
-export CFLAGS="`pkg-config --cflags glib-2.0`"
-export CXXFLAGS="`pkg-config --cflags glib-2.0`"
+export CFLAGS="$(pkg-config --cflags glib-2.0)"
+export CXXFLAGS="$(pkg-config --cflags glib-2.0)"
 %endif
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
@@ -517,8 +505,6 @@ ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
-#ac_add_options --enable-chrome-format=jar
-#ac_add_options --enable-update-channel=beta
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
@@ -554,8 +540,14 @@ ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
 #ac_add_options --enable-rust-simd
 %endif
-%ifarch %{x86_64}
-ac_add_options --enable-elf-hack
+%ifnarch aarch64
+ac_add_options --disable-elf-hack
+%endif
+%if %mdvver > 3000000
+%ifnarch %ix86
+# (tpg) use LLD if build with LLVM/clang
+ac_add_options --enable-linker=lld
+%endif
 %endif
 EOF
 
