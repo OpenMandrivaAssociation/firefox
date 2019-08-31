@@ -505,8 +505,6 @@ ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
-#ac_add_options --enable-chrome-format=jar
-#ac_add_options --enable-update-channel=beta
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-bz2
