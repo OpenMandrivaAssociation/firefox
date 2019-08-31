@@ -543,7 +543,7 @@ ac_add_options --enable-release
 %ifnarch aarch64
 ac_add_options --disable-elf-hack
 %endif
-%if %mdvver > 3000000
+%if %mdvver > 4000000
 %ifnarch %ix86
 # (tpg) use LLD if build with LLVM/clang
 ac_add_options --enable-linker=lld
