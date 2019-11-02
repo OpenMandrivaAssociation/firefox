@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	69.0.3
+Version:	70.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -259,8 +259,8 @@ Source100:      firefox.rpmlintrc
 Patch0:		firefox-67.0-webrtc-compile.patch
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-69.0-kde.patch
-Patch12:	mozilla-69.0-kde.patch
+Patch11:	firefox-70.0-kde.patch
+Patch12:	mozilla-70.0-kde.patch
 
 # from fedora - fix for app chooser
 #Patch43:	rhbz-1291190-appchooser-crash.patch
@@ -319,7 +319,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.21.0
-BuildRequires:	pkgconfig(nss) >= 3.45.0
+BuildRequires:	pkgconfig(nss) >= 3.46.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -414,16 +414,17 @@ cd ..
 mkdir -p my_rust_vendor
 cd my_rust_vendor
 tar xf %{SOURCE22}
-cd -
 mkdir -p .cargo
 cat > .cargo/config <<EOL
 [source.crates-io]
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "$(pwd)/my_rust_vendor"
+directory = "$(pwd)"
 EOL
 env CARGO_HOME=.cargo cargo install cbindgen
+
+cd -
 
 # needed to regenerate certdata.c
 pushd security/nss/lib/ckfw/builtins
@@ -434,7 +435,7 @@ popd
 %global optflags %{optflags} -g0 -fno-exceptions
 export AUTOCONF=$(pwd)/ac213bin/bin/autoconf
 
-export PATH=$(pwd)/.cargo/bin:$PATH
+export PATH=$(pwd)/my_rust_vendor/.cargo/bin:$PATH
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
