@@ -480,7 +480,7 @@ ac_add_options --host=%{_host}
 ac_add_options --enable-default-toolkit=cairo-qt
 ac_add_options --with-qtdir=%{_libdir}/qt5
 %else
-ac_add_options --enable-default-toolkit=cairo-gtk3
+ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 %endif
 ac_add_options --target=%{_target_platform}
 ac_add_options --prefix="%{_prefix}"
