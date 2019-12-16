@@ -299,6 +299,7 @@ BuildRequires:	pkgconfig(cairo) >= 1.10
 BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
+BuildRequires:  pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 %if %{with qt}
 BuildRequires:	qmake5
