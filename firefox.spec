@@ -403,7 +403,7 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %setup -qn %{name}-%{version} -a 20
-%apply_patches
+%autopatch -p1
 
 TOP="$(pwd)"
 cd autoconf-2.13
@@ -426,11 +426,6 @@ EOL
 env CARGO_HOME=.cargo cargo install cbindgen
 
 cd -
-
-# needed to regenerate certdata.c
-pushd security/nss/lib/ckfw/builtins
-perl ./certdata.perl /etc/pki/tls/mozilla/certdata.txt
-popd
 
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
