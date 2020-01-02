@@ -273,16 +273,9 @@ Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-e
 #BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
-BuildRequires:	pkgconfig(python2)
-BuildRequires:	python2
 BuildRequires:	pkgconfig(python3)
-BuildRequires:	python
-%if %mdvver <= 3000000
-BuildRequires:  python3.6
-%endif
+BuildRequires:	python3
 BuildRequires:	python-distribute
-#(tpg) this is in contrib
-#BuildRequires:	python-ply
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
