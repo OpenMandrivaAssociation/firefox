@@ -288,7 +288,6 @@ BuildRequires:	icu-devel >= 59.1
 %endif
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
-BuildRequires:	pkgconfig(cairo) >= 1.10
 BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
