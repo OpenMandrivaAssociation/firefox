@@ -483,6 +483,10 @@ ac_add_options --enable-optimize="-O2"
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
+ac_add_options --enable-necko-wifi
+%ifarch %{ix86} %{x86_64}
+ac_add_options --enable-av1
+%endif
 %if %mdvver > 3000000
 ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
