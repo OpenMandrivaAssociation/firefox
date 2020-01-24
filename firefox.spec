@@ -263,15 +263,13 @@ Patch1:		firefox-72.0.2-sqlite-3.31.patch
 Patch11:	firefox-71.0-kde.patch
 Patch12:	mozilla-71.0-kde.patch
 
+Patch14:        build-aarch64-skia.patch
+Patch15:        build-arm-libopus.patch
+
 # from fedora - fix for app chooser
 #Patch43:	rhbz-1291190-appchooser-crash.patch
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
-# Not yet finished, but can't hurt
-#Patch50:	firefox-48.0.1-qt-compile.patch
 
-# (cb) fix for float128 being a complex type
-#Patch102:	firefox-57.0.4-bindgen_float128.patch
-#BuildConflicts:	libreoffice-core
 BuildRequires:	doxygen
 BuildRequires:	makedepend
 BuildRequires:	pkgconfig(python2)
