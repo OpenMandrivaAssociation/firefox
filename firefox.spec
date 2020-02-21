@@ -336,7 +336,7 @@ BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
 BuildRequires:	rust >= 1.35.0
-BuildRequires:	cargo >= 0.36.0
+BuildRequires:	cargo >= 0.41.0
 BuildRequires:	nodejs >= 8.12
 BuildRequires:	pkgconfig(jemalloc)
 Requires:	indexhtml
