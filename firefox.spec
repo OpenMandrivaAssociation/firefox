@@ -224,8 +224,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	73.0.1
-Release:	2
+Version:	74.0
+Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -311,8 +311,8 @@ BuildRequires:	pkgconfig(libpng) >= 1.6.34
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.21.0
-BuildRequires:	pkgconfig(nss) >= 3.47.1
+BuildRequires:	pkgconfig(nspr) >= 4.25.0
+BuildRequires:	pkgconfig(nss) >= 3.50
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
