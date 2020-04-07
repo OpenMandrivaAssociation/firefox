@@ -1404,14 +1404,14 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
 +    return NS_OK;
 +  }
 +
-   nsCString title;
-   title.Adopt(ToNewUTF8String(mTitle));
+   NS_ConvertUTF16toUTF8 title(mTitle);
  
    GtkWindow* parent_widget =
        GTK_WINDOW(mParentWidget->GetNativeData(NS_NATIVE_SHELLWIDGET));
  
    GtkFileChooserAction action = GetGtkFileChooserAction(mMode);
- 
+
+   const gchar* accept_button;
 @@ -572,16 +599,240 @@ void nsFilePicker::Done(void* file_choos
      mCallback->Done(result);
      mCallback = nullptr;

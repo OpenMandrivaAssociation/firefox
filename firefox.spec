@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	74.0
+Version:	75.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -312,7 +312,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.25.0
-BuildRequires:	pkgconfig(nss) >= 3.50
+BuildRequires:	pkgconfig(nss) >= 3.51
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -335,9 +335,9 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
-BuildRequires:	rust >= 1.35.0
-BuildRequires:	cargo >= 0.41.0
-BuildRequires:	nodejs >= 8.12
+BuildRequires:	rust >= 1.41.0
+BuildRequires:	cargo >= 1.41.0
+BuildRequires:	nodejs >= 10.19
 BuildRequires:	pkgconfig(jemalloc)
 Requires:	indexhtml
 # fixes bug #42096
@@ -505,11 +505,6 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-jemalloc
 ac_add_options --enable-replace-malloc
-%if %mdvver > 3000000
-ac_add_options --enable-system-sqlite
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1432751 - system cairo is no longer supported and will be removed
-#ac_add_options --enable-system-cairo
-%endif
 ac_add_options --enable-startup-notification
 #ac_add_options --with-system-ply
 ac_add_options --with-distribution-id=org.openmandriva
