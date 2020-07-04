@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	77.0
+Version:	78.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -260,8 +260,8 @@ Patch0:		firefox-67.0-webrtc-compile.patch
 #Patch1:		firefox-72.0.2-sqlite-3.31.patch
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-77.0-kde.patch
-Patch12:	mozilla-77.0-kde.patch
+Patch11:	firefox-78.0-kde.patch
+Patch12:	mozilla-78.0-kde.patch
 
 Patch14:        build-aarch64-skia.patch
 Patch15:        build-arm-libopus.patch
@@ -494,7 +494,6 @@ ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
 %endif
 ac_add_options --enable-system-pixman
-ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
