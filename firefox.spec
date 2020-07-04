@@ -284,7 +284,7 @@ BuildRequires:	bzip2-devel
 BuildRequires:	jpeg-devel
 BuildRequires:	libiw-devel
 %if %mdvver > 3000000
-BuildRequires:	icu-devel >= 59.1
+#BuildRequires:	icu-devel >= 1:67.1
 %endif
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
@@ -312,7 +312,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.25.0
-BuildRequires:	pkgconfig(nss) >= 3.52.1
+BuildRequires:	pkgconfig(nss) >= 3.53.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -488,7 +488,7 @@ ac_add_options --enable-av1
 %endif
 %if %mdvver > 3000000
 ac_add_options --with-system-libevent
-ac_add_options --with-system-icu
+#ac_add_options --with-system-icu
 %endif
 %if %mdvver <= 3000000
 ac_add_options --with-system-libvpx
@@ -499,12 +499,10 @@ ac_add_options --disable-tests
 ac_add_options --disable-debug
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
-ac_add_options --with-system-bz2
 ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-jemalloc
 ac_add_options --enable-replace-malloc
-ac_add_options --enable-startup-notification
 #ac_add_options --with-system-ply
 ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
