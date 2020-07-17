@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	78.0.1
+Version:	78.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -272,7 +272,6 @@ Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-e
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
-BuildRequires:	pkgconfig(python2)
 BuildRequires:	pkgconfig(python3)
 BuildRequires:	python3
 BuildRequires:	python-distribute
