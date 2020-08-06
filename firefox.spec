@@ -265,6 +265,8 @@ Patch12:	mozilla-78.0-kde.patch
 
 Patch14:        build-aarch64-skia.patch
 Patch15:        build-arm-libopus.patch
+# fix build on rust 1.45
+Patch16: 	bug1654465.diff
 
 # from fedora - fix for app chooser
 #Patch43:	rhbz-1291190-appchooser-crash.patch
