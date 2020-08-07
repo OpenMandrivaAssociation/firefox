@@ -257,7 +257,6 @@ Source100:      firefox.rpmlintrc
 }
 
 Patch0:		firefox-67.0-webrtc-compile.patch
-#Patch1:		firefox-72.0.2-sqlite-3.31.patch
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
 Patch11:	firefox-78.0-kde.patch
@@ -268,8 +267,6 @@ Patch15:        build-arm-libopus.patch
 # fix build on rust 1.45
 Patch16: 	bug1654465.diff
 
-# from fedora - fix for app chooser
-#Patch43:	rhbz-1291190-appchooser-crash.patch
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 
 BuildRequires:	doxygen
