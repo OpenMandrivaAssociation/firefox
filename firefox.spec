@@ -266,6 +266,7 @@ Patch14:        build-aarch64-skia.patch
 Patch15:        build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
+Patch45:	build-nspr.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -308,7 +309,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.26.0
-BuildRequires:	pkgconfig(nss) >= 3.54
+BuildRequires:	pkgconfig(nss) >= 3.55
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
