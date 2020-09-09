@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	79.0
+Version:	80.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -259,13 +259,11 @@ Source100:      firefox.rpmlintrc
 Patch0:		firefox-67.0-webrtc-compile.patch
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-78.0-kde.patch
-Patch12:	mozilla-78.0-kde.patch
+Patch11:	firefox-80.0-kde.patch
+Patch12:	mozilla-80.0-kde.patch
 
 Patch14:        build-aarch64-skia.patch
 Patch15:        build-arm-libopus.patch
-# fix build on rust 1.45
-Patch16: 	bug1654465.diff
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 
