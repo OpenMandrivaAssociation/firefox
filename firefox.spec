@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	80.0.1
+Version:	81.0.2
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -266,7 +266,6 @@ Patch14:        build-aarch64-skia.patch
 Patch15:        build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
-Patch45:	build-nspr.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -421,6 +420,7 @@ cd -
 export AUTOCONF=$(pwd)/ac213bin/bin/autoconf
 
 export PATH=$(pwd)/my_rust_vendor/.cargo/bin:$PATH
+export MACH_USE_SYSTEM_PYTHON=1
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security

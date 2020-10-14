@@ -1294,10 +1294,10 @@ diff --git a/widget/gtk/moz.build b/widget/gtk/moz.build
 --- a/widget/gtk/moz.build
 +++ b/widget/gtk/moz.build
 @@ -133,16 +133,17 @@ include('/ipc/chromium/chromium-config.m
- FINAL_LIBRARY = 'xul'
  
  LOCAL_INCLUDES += [
      '/layout/base',
+     '/layout/forms',
      '/layout/generic',
      '/layout/xul',
      '/other-licenses/atk-1.0',
