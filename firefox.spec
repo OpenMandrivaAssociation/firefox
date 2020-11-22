@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	82.0.3
+Version:	83.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -255,8 +255,6 @@ Source100:      firefox.rpmlintrc
         done\
         )
 }
-
-Patch0:		firefox-67.0-webrtc-compile.patch
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
 Patch11:	firefox-80.0-kde.patch
@@ -308,7 +306,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.26.0
-BuildRequires:	pkgconfig(nss) >= 3.57
+BuildRequires:	pkgconfig(nss) >= 3.58
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
