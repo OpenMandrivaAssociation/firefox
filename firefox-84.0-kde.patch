@@ -69,24 +69,24 @@ diff --git a/browser/components/preferences/main.js b/browser/components/prefere
 diff --git a/browser/components/shell/moz.build b/browser/components/shell/moz.build
 --- a/browser/components/shell/moz.build
 +++ b/browser/components/shell/moz.build
-@@ -34,16 +34,18 @@ if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'coco
+@@ -34,16 +34,18 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "coco
      ]
- elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk':
+ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
      XPIDL_SOURCES += [
-         'nsIGNOMEShellService.idl',
+         "nsIGNOMEShellService.idl",
      ]
  
      SOURCES += [
-         'nsGNOMEShellService.cpp',
-+        'nsKDEShellService.cpp',
-+        'nsUnixShellService.cpp',
+         "nsGNOMEShellService.cpp",
++        "nsKDEShellService.cpp",
++        "nsUnixShellService.cpp",
      ]
-     if CONFIG['MOZ_ENABLE_DBUS']:
+     if CONFIG["MOZ_ENABLE_DBUS"]:
          SOURCES += [
-             'nsGNOMEShellDBusHelper.cpp',
-             'nsGNOMEShellSearchProvider.cpp',
+             "nsGNOMEShellDBusHelper.cpp",
+             "nsGNOMEShellSearchProvider.cpp",
          ]
-         include('/ipc/chromium/chromium-config.mozbuild')
+         include("/ipc/chromium/chromium-config.mozbuild")
  
 diff --git a/browser/components/shell/nsKDEShellService.cpp b/browser/components/shell/nsKDEShellService.cpp
 new file mode 100644

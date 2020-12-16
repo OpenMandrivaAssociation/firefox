@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	83.0
+Version:	84.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -257,8 +257,8 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-80.0-kde.patch
-Patch12:	mozilla-80.0-kde.patch
+Patch11:	firefox-84.0-kde.patch
+Patch12:	mozilla-84.0-kde.patch
 
 Patch14:        build-aarch64-skia.patch
 Patch15:        build-arm-libopus.patch
