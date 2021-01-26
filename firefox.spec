@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	84.0.1
+Version:	85.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -306,7 +306,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.26.0
-BuildRequires:	pkgconfig(nss) >= 3.58
+BuildRequires:	pkgconfig(nss) >= 3.60
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -329,8 +329,8 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
-BuildRequires:	rust >= 1.43.0
-BuildRequires:	cargo >= 1.43.0
+BuildRequires:	rust >= 1.47.0
+BuildRequires:	cargo >= 1.47.0
 BuildRequires:	nodejs >= 10.19
 BuildRequires:	pkgconfig(jemalloc)
 Requires:	indexhtml
