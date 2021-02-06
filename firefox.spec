@@ -390,7 +390,7 @@ Files and macros mainly for building Firefox extensions.
 
 mkdir -p my_rust_vendor
 cd my_rust_vendor
-%{__tar} xf %{SOURCE2}
+%{__tar} xf %{SOURCE22}
 mkdir -p .cargo
 cat > .cargo/config <<EOL
 [source.crates-io]
