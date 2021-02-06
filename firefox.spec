@@ -440,8 +440,8 @@ echo -n "%google_default_client_id %google_default_client_secret" > google-oauth
 #sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
 export MOZCONFIG=$(pwd)/mozconfig
 cat << EOF > $MOZCONFIG
-ac_add_options --target=%{_target_platform
-ac_add_options --host=%{_host}}
+ac_add_options --target="%{_target_platform}"
+ac_add_options --host="%{_host}"
 ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 mk_add_options MOZILLA_OFFICIAL=1
