@@ -258,7 +258,7 @@ Source100:      firefox.rpmlintrc
 # http://www.rosenauer.org/hg/mozilla/raw-file/tip/firefox-kde.patch
 Patch11:	firefox-85.0-kde.patch
 # http://www.rosenauer.org/hg/mozilla/raw-file/tip/mozilla-kde.patch
-Patch12:	mozilla-84.0-kde.patch
+Patch12:	mozilla-85.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
