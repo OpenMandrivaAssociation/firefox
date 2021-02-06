@@ -1,7 +1,4 @@
-# Problem with clang+LTO as of 3.8.0-0.260001.1:
-# Compile failure with
-# Assertion `!N->isTemporary() && "Expected all forward declarations to be resolved"' failed.
-%define _disable_lto 1
+
 #
 # WARNING, READ FIRST:
 #
@@ -29,6 +26,8 @@
 # Use Qt instead of GTK -- long term goal, but as of 48.0.1,
 # doesn't even compile yet
 %bcond_with qt
+
+%bcond_without bundled_cbindgen
 
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
@@ -225,7 +224,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	85.0.1
-Release:	1
+Release:	2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -242,7 +241,6 @@ Source9:	kde.js
 Source10:	firefox-searchengines-yandex.xml
 Source12:	firefox-omv-default-prefs.js
 Source13:	firefox-l10n-template.in
-Source20:	http://ftp.gnu.org/gnu/autoconf/autoconf-2.13.tar.gz
 Source22:	cbindgen-vendor.tar.xz
 Source21:	distribution.ini
 Source100:      firefox.rpmlintrc
@@ -257,11 +255,13 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-84.0-kde.patch
+# http://www.rosenauer.org/hg/mozilla/raw-file/tip/firefox-kde.patch
+Patch11:	firefox-85.0-kde.patch
+# http://www.rosenauer.org/hg/mozilla/raw-file/tip/mozilla-kde.patch
 Patch12:	mozilla-84.0-kde.patch
 
-Patch14:        build-aarch64-skia.patch
-Patch15:        build-arm-libopus.patch
+Patch14:	build-aarch64-skia.patch
+Patch15:	build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 
@@ -293,6 +293,7 @@ BuildRequires:	pkgconfig(QtWidgets5)
 BuildRequires:	pkgconfig(gtk+-2.0)
 BuildRequires:	pkgconfig(gtk+-3.0)
 %endif
+BuildRequires:	pkgconfig(icu-i18n)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
@@ -383,19 +384,13 @@ Files and macros mainly for building Firefox extensions.
 }
 
 %prep
-%setup -qn %{name}-%{version} -a 20
-%autopatch -p1
+%autosetup -p1
 
-TOP="$(pwd)"
-cd autoconf-2.13
-./configure --prefix=$TOP/ac213bin
-%make_build
-%make install
-cd ..
+%if %{with bundled_cbindgen}
 
 mkdir -p my_rust_vendor
 cd my_rust_vendor
-tar xf %{SOURCE22}
+%{__tar} xf %{SOURCE2}
 mkdir -p .cargo
 cat > .cargo/config <<EOL
 [source.crates-io]
@@ -404,14 +399,15 @@ replace-with = "vendored-sources"
 [source.vendored-sources]
 directory = "$(pwd)"
 EOL
+
 env CARGO_HOME=.cargo cargo install cbindgen
+export PATH=$(pwd)/.cargo/bin:$PATH
+%endif
 cd -
 
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
-export AUTOCONF=$(pwd)/ac213bin/bin/autoconf
 
-export PATH=$(pwd)/my_rust_vendor/.cargo/bin:$PATH
 export MACH_USE_SYSTEM_PYTHON=1
 
 %ifarch %ix86
@@ -444,24 +440,33 @@ echo -n "%google_default_client_id %google_default_client_secret" > google-oauth
 #sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
 export MOZCONFIG=$(pwd)/mozconfig
 cat << EOF > $MOZCONFIG
+ac_add_options --target=%{_target_platform
+ac_add_options --host=%{_host}}
+ac_add_options --prefix="%{_prefix}"
+ac_add_options --libdir="%{_libdir}"
+mk_add_options MOZILLA_OFFICIAL=1
+mk_add_options BUILD_OFFICIAL=1
+export MOZ_MAKE_FLAGS="%{_smp_mflags}"
+export MOZ_SERVICES_SYNC=1
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
+ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
+ac_add_options --with-system-icu
+ac_add_options --with-mozilla-api-keyfile=../mozilla-api-key
+ac_add_options --with-google-location-service-api-keyfile=../google-api-key
+ac_add_options --with-google-safebrowsing-api-keyfile=../google-api-key
+ac_add_options --enable-release
+ac_add_options --update-channel=%{update_channel}
+ac_add_options --enable-update-channel=%{update_channel}
+ac_add_options --with-distribution-id=org.openmandriva
 %if %{with qt}
 export CFLAGS="$(pkg-config --cflags glib-2.0)"
 export CXXFLAGS="$(pkg-config --cflags glib-2.0)"
 %endif
-mk_add_options MOZILLA_OFFICIAL=1
-mk_add_options BUILD_OFFICIAL=1
-mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
-mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
-ac_add_options --host=%{_host}
 %if %{with qt}
 ac_add_options --enable-default-toolkit=cairo-qt
 ac_add_options --with-qtdir=%{_libdir}/qt5
 %else
-ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 %endif
-ac_add_options --target=%{_target_platform}
-ac_add_options --prefix="%{_prefix}"
-ac_add_options --libdir="%{_libdir}"
 %ifarch %{ix86}
 ac_add_options --enable-linker=bfd
 ac_add_options --disable-optimize
@@ -476,12 +481,13 @@ ac_add_options --enable-necko-wifi
 ac_add_options --enable-av1
 %endif
 ac_add_options --with-system-libevent
-#ac_add_options --with-system-icu
+ac_add_options --without-system-icu
 ac_add_options --with-system-libvpx
 ac_add_options --enable-system-pixman
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
+ac_add_options --disable-debug-symbols
 ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-jpeg
@@ -489,15 +495,14 @@ ac_add_options --with-system-png
 ac_add_options --enable-jemalloc
 ac_add_options --enable-replace-malloc
 #ac_add_options --with-system-ply
-ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --disable-crashreporter
-ac_add_options --enable-update-channel=%{update_channel}
 #ac_add_options --enable-gstreamer=1.0
 #ac_add_options --enable-media-plugins
 #ac_add_options --enable-dash
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
+ac_add_options --allow-addon-sideload
 %ifarch %arm
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
@@ -505,8 +510,6 @@ ac_add_options --disable-webrtc
 %ifnarch %mips
 ac_add_options --with-valgrind
 %endif
-#ac_add_options --with-google-api-keyfile=../google-api-key
-ac_add_options --enable-release
 %ifarch %{x86_64} aarch64
 #ac_add_options --enable-rust-simd
 %endif
@@ -515,10 +518,17 @@ ac_add_options --disable-elf-hack
 %endif
 %if %mdvver > 4000000
 %ifnarch %ix86
+export LLVM_PROFDATA="llvm-profdata"
+export AR="llvm-ar"
+export NM="llvm-nm"
+export RANLIB="llvm-ranlib"
 # (tpg) use LLD if build with LLVM/clang
 ac_add_options --enable-linker=lld
+ac_add_options MOZ_PGO=1"
+ac_add_options --enable-lto
 %endif
 %endif
+
 EOF
 
 # Show the config just for debugging
@@ -531,7 +541,7 @@ mkdir -p obj/ipc/chromium
 cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 %endif
 
-export LDFLAGS="%{ldflags}"
+export LDFLAGS="%{build_ldflags}"
 
 ./mach build
 
@@ -545,7 +555,7 @@ cp -rf obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 mkdir -p  %{buildroot}%{_bindir}
 ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
 cd %{buildroot}%{_bindir}
-	ln -sf firefox mozilla-firefox
+    ln -sf firefox mozilla-firefox
 cd ..
 mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/preferences/
 install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/kde.js

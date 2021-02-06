@@ -1,6 +1,8 @@
 pref("browser.EULA.override", true);
 pref("browser.shell.checkDefaultBrowser", false);
+pref("browser.startup.homepage", "about:home");
 pref("browser.startup.homepage", "file:///usr/share/doc/HTML/index.html");
+pref("browser.newtabpage.pinned", '[{"url":"https://www.openmandriva.org/","title":"OpenMandriva"}]');
 pref("browser.backspace_action", 2);
 pref("browser.display.use_system_colors", true);
 pref("browser.download.folderList", 1);
@@ -13,9 +15,22 @@ pref("dom.ipc.plugins.enabled.nswrapper*", false);
 pref("network.manage-offline-status", true);
 pref("media.gstreamer.enabled", true);
 pref("media.webaudio.enabled", true);
-
 pref("browser.startup.homepage_override.mstone", "ignore");
 pref("intl.locale.requested", "");
 pref("extensions.autoDisableScopes", 0);
 pref("extensions.shownSelectionUI", true);
-
+pref("general.smoothScroll", true);
+pref("toolkit.storage.synchronous", 0);
+pref("toolkit.networkmanager.disable", false);
+pref("offline.autoDetect", true);
+pref("ui.SpellCheckerUnderlineStyle", 1);
+pref("geo.wifi.uri", "https://location.services.mozilla.com/v1/geolocate?key=%MOZILLA_API_KEY%");
+pref("plugins.notifyMissingFlash", false);
+pref("browser.display.use_system_colors", false);
+pref("layers.use-image-offscreen-surfaces", false);
+pref("network.negotiate-auth.trusted-uris", "https://");
+pref("browser.showQuitWarning", true);
+pref("spellchecker.dictionary_path","/usr/share/myspell");
+pref("app.shield.optoutstudies.enabled", true);
+pref("browser.discovery.enabled", true;
+pref("datareporting.healthreport.uploadEnabled", true);
