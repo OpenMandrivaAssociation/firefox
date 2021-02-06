@@ -274,18 +274,15 @@ BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
 BuildRequires:	zip
-BuildRequires:	bzip2-devel
-BuildRequires:	jpeg-devel
+BuildRequires:	pkgconfig(bzip2)
+BuildRequires:	pkgconfig(libjpeg)
 BuildRequires:	libiw-devel
-%if %mdvver > 3000000
-#BuildRequires:	icu-devel >= 1:67.1
-%endif
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
-BuildRequires:  pkgconfig(libdrm)
+BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 %if %{with qt}
 BuildRequires:	qmake5
@@ -310,9 +307,7 @@ BuildRequires:	pkgconfig(nss) >= 3.60
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
-%if %mdvver > 3000000
 BuildRequires:	pkgconfig(sqlite3) >= 3.24.0
-%endif
 BuildRequires:	pkgconfig(theoradec)
 BuildRequires:	pkgconfig(vorbis)
 BuildRequires:	pkgconfig(vpx)
@@ -394,7 +389,7 @@ Files and macros mainly for building Firefox extensions.
 TOP="$(pwd)"
 cd autoconf-2.13
 ./configure --prefix=$TOP/ac213bin
-%make
+%make_build
 %make install
 cd ..
 
@@ -410,7 +405,6 @@ replace-with = "vendored-sources"
 directory = "$(pwd)"
 EOL
 env CARGO_HOME=.cargo cargo install cbindgen
-
 cd -
 
 %build
@@ -442,7 +436,7 @@ export CC=gcc
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
-%setup_compile_flags
+%set_build_flags
 
 echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
@@ -481,13 +475,9 @@ ac_add_options --enable-necko-wifi
 %ifarch %{ix86} %{x86_64}
 ac_add_options --enable-av1
 %endif
-%if %mdvver > 3000000
 ac_add_options --with-system-libevent
 #ac_add_options --with-system-icu
-%endif
-%if %mdvver <= 3000000
 ac_add_options --with-system-libvpx
-%endif
 ac_add_options --enable-system-pixman
 ac_add_options --disable-updater
 ac_add_options --disable-tests
@@ -554,9 +544,9 @@ cp -rf obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 
 mkdir -p  %{buildroot}%{_bindir}
 ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
-pushd %{buildroot}%{_bindir}
+cd %{buildroot}%{_bindir}
 	ln -sf firefox mozilla-firefox
-popd
+cd ..
 mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/preferences/
 install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/kde.js
 
