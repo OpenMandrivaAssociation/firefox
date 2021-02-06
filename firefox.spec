@@ -524,7 +524,7 @@ export NM="llvm-nm"
 export RANLIB="llvm-ranlib"
 # (tpg) use LLD if build with LLVM/clang
 ac_add_options --enable-linker=lld
-ac_add_options MOZ_PGO=1"
+ac_add_options MOZ_PGO=1
 ac_add_options --enable-lto
 %endif
 %endif
