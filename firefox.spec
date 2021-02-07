@@ -14,6 +14,7 @@
 %define google_api_key AIzaSyAraWnKIFrlXznuwvd3gI-gqTozL-H-8MU
 %define google_default_client_id 1089316189405-m0ropn3qa4p1phesfvi2urs7qps1d79o.apps.googleusercontent.com
 %define google_default_client_secret RDdr-pHq2gStY4uw0m-zxXeo
+%define mozilla_api_key 9008bb7e-1e22-4038-94fe-047dd48ccc0b
 
 %define firefox_appid \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 %define firefox_langdir %{_datadir}/mozilla/extensions/%{firefox_appid}
@@ -388,6 +389,7 @@ Files and macros mainly for building Firefox extensions.
 
 echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
+echo -n "%mozilla_api_key" > mozilla-api-key
 
 #sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
 export MOZCONFIG=$(pwd)/mozconfig
@@ -403,9 +405,9 @@ export MOZ_SERVICES_SYNC=1
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options --with-system-icu
-ac_add_options --with-mozilla-api-keyfile=../mozilla-api-key
-ac_add_options --with-google-location-service-api-keyfile=../google-api-key
-ac_add_options --with-google-safebrowsing-api-keyfile=../google-api-key
+ac_add_options --with-mozilla-api-keyfile=$(pwd)/mozilla-api-key
+ac_add_options --with-google-location-service-api-keyfile=$(pwd)/google-api-key
+ac_add_options --with-google-safebrowsing-api-keyfile=$(pwd)/google-api-key
 ac_add_options --enable-release
 ac_add_options --update-channel=%{update_channel}
 ac_add_options --enable-update-channel=%{update_channel}
@@ -538,12 +540,21 @@ mkdir -p obj/ipc/chromium
 cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 %endif
 
+export MOZ_SERVICES_SYNC="1"
+# (tpg) use system python
 export MACH_USE_SYSTEM_PYTHON=1
+# (tpg) do not create new user profiles on each upgrade, use exsting one
+export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS="%{build_ldflags}"
 
 ./mach build
 
 %install
+# Make sure locale works for langpacks
+cat > %{_builddir}/obj/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+pref("general.useragent.locale", "chrome://global/locale/intl.properties");
+EOF
+
 make -C obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
 # Copy files to buildroot
@@ -572,10 +583,11 @@ mkdir -p %{buildroot}/%{mozillalibdir}/icons
 cp %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
 for i in 16 22 24 32 48 256; do
 # (cg) Not all icon sizes are installed with make install, so just redo it here.
-install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
-mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
-ln -sf %{mozillalibdir}/browser/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
+    install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
+    mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
+    ln -sf %{mozillalibdir}/browser/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
 done
+
 mkdir -p %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default48.png %{buildroot}%{_liconsdir}/%{name}.png
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default32.png %{buildroot}%{_iconsdir}/%{name}.png
@@ -594,6 +606,7 @@ cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome/userCh
 }
 EOF
 
+# Default firefox config
 %{__cp} %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/defaults/preferences
 
 # use the system myspell dictionaries
