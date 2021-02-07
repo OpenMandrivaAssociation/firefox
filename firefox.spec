@@ -386,54 +386,6 @@ Files and macros mainly for building Firefox extensions.
 %prep
 %autosetup -p1
 
-%if %{with bundled_cbindgen}
-
-mkdir -p my_rust_vendor
-cd my_rust_vendor
-%{__tar} xf %{SOURCE22}
-mkdir -p .cargo
-cat > .cargo/config <<EOL
-[source.crates-io]
-replace-with = "vendored-sources"
-
-[source.vendored-sources]
-directory = "$(pwd)"
-EOL
-
-env CARGO_HOME=.cargo cargo install cbindgen
-export PATH=$(pwd)/.cargo/bin:$PATH
-%endif
-cd -
-
-%build
-%global optflags %{optflags} -g0 -fno-exceptions
-
-export MACH_USE_SYSTEM_PYTHON=1
-
-%ifarch %ix86
-%global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
-%global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
-# still requires gcc
-export CXX=g++
-export CC=gcc
-# avoid oom with rust
-export RUSTFLAGS="-Cdebuginfo=0"
-%else
-%global optflags %{optflags} -Qunused-arguments
-%endif
-
-%if %{with qt}
-# Headers in FF-Qt are weird and change visibility
-# of symbols at random. clang errors out on that, so
-# force gcc for now
-export CXX=g++
-export CC=gcc
-%endif
-
-#(tpg) do not use serverbuild or serverbuild_hardened macros
-# because compile will fail of missing -fPIC  :)
-%set_build_flags
-
 echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
 
@@ -531,8 +483,53 @@ ac_add_options --enable-lto
 
 EOF
 
+%build
+%global optflags %{optflags} -g0 -fno-exceptions
+
+%ifarch %ix86
+%global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
+%global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
+# still requires gcc
+export CXX=g++
+export CC=gcc
+# avoid oom with rust
+export RUSTFLAGS="-Cdebuginfo=0"
+%else
+%global optflags %{optflags} -Qunused-arguments
+%endif
+
+%if %{with qt}
+# Headers in FF-Qt are weird and change visibility
+# of symbols at random. clang errors out on that, so
+# force gcc for now
+export CXX=g++
+export CC=gcc
+%endif
+
+#(tpg) do not use serverbuild or serverbuild_hardened macros
+# because compile will fail of missing -fPIC  :)
+%set_build_flags
+
 # Show the config just for debugging
 cat $MOZCONFIG
+
+%if %{with bundled_cbindgen}
+mkdir -p my_rust_vendor
+cd my_rust_vendor
+%{__tar} xf %{SOURCE22}
+mkdir -p .cargo
+cat > .cargo/config <<EOL
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "$(pwd)"
+EOL
+
+env CARGO_HOME=.cargo cargo install cbindgen
+export PATH=$(pwd)/.cargo/bin:$PATH
+%endif
+cd -
 
 %if %{with qt}
 # FIXME workaround for a bug in the Qt frontend makefiles - they look for
@@ -541,6 +538,7 @@ mkdir -p obj/ipc/chromium
 cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
 %endif
 
+export MACH_USE_SYSTEM_PYTHON=1
 export LDFLAGS="%{build_ldflags}"
 
 ./mach build
