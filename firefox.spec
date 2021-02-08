@@ -30,6 +30,8 @@
 
 %bcond_without bundled_cbindgen
 
+%bcond_without pgo
+
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
@@ -330,6 +332,9 @@ BuildRequires:	rust >= 1.47.0
 BuildRequires:	cargo >= 1.47.0
 BuildRequires:	nodejs >= 10.19
 BuildRequires:	pkgconfig(jemalloc)
+%if %{with pgo}
+BuildRequires:	x11-server-xvfb
+%endif
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -470,18 +475,16 @@ ac_add_options --with-valgrind
 %ifnarch aarch64
 ac_add_options --disable-elf-hack
 %endif
-%if %mdvver > 4000000
-%ifnarch %ix86
 export LLVM_PROFDATA="llvm-profdata"
 export AR="llvm-ar"
 export NM="llvm-nm"
 export RANLIB="llvm-ranlib"
 # (tpg) use LLD if build with LLVM/clang
 ac_add_options --enable-linker=lld
+%if %{with pgo}
 ac_add_options MOZ_PGO=1
+%endif
 ac_add_options --enable-lto
-%endif
-%endif
 
 EOF
 
@@ -547,7 +550,11 @@ export MACH_USE_SYSTEM_PYTHON=1
 export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS="%{build_ldflags}"
 
+%if %{with pgo}
+GDK_BACKEND=x11 xvfb-run ./mach build  2>&1 | cat -
+%else
 ./mach build
+%endif
 
 %install
 # Make sure locale works for langpacks
