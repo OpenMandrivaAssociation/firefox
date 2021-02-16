@@ -30,7 +30,7 @@
 
 %bcond_without bundled_cbindgen
 
-%bcond_without pgo
+%bcond_with pgo
 
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
@@ -558,7 +558,7 @@ GDK_BACKEND=x11 xvfb-run ./mach build  2>&1 | cat -
 
 %install
 # Make sure locale works for langpacks
-cat > %{_builddir}/obj/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+%{__cat} > objdir/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 EOF
 
