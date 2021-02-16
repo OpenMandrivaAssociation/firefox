@@ -24,10 +24,6 @@
 # libxul.so is provided by libxulrunnner2.0.
 %global __requires_exclude libxul.so
 
-# Use Qt instead of GTK -- long term goal, but as of 48.0.1,
-# doesn't even compile yet
-%bcond_with qt
-
 %bcond_without bundled_cbindgen
 
 %bcond_with pgo
@@ -287,15 +283,8 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-%if %{with qt}
-BuildRequires:	qmake5
-BuildRequires:	pkgconfig(QtCore5)
-BuildRequires:	pkgconfig(QtGui5)
-BuildRequires:	pkgconfig(QtWidgets5)
-%else
 BuildRequires:	pkgconfig(gtk+-2.0)
 BuildRequires:	pkgconfig(gtk+-3.0)
-%endif
 BuildRequires:	pkgconfig(icu-i18n)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
@@ -396,7 +385,6 @@ echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
 echo -n "%mozilla_api_key" > mozilla-api-key
 
-#sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
 export MOZCONFIG=$(pwd)/mozconfig
 cat << EOF > $MOZCONFIG
 ac_add_options --target="%{_target_platform}"
@@ -417,20 +405,11 @@ ac_add_options --enable-release
 ac_add_options --update-channel=%{update_channel}
 ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --with-distribution-id=org.openmandriva
-%if %{with qt}
-export CFLAGS="$(pkg-config --cflags glib-2.0)"
-export CXXFLAGS="$(pkg-config --cflags glib-2.0)"
-%endif
-%if %{with qt}
-ac_add_options --enable-default-toolkit=cairo-qt
-ac_add_options --with-qtdir=%{_libdir}/qt5
-%else
-%endif
 %ifarch %{ix86}
 ac_add_options --enable-linker=bfd
 ac_add_options --disable-optimize
 %else
-ac_add_options --enable-optimize="-O2"
+ac_add_options --enable-optimize="-O3"
 %endif
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
@@ -484,7 +463,7 @@ ac_add_options --enable-linker=lld
 %if %{with pgo}
 ac_add_options MOZ_PGO=1
 %endif
-ac_add_options --enable-lto
+ac_add_options --disable-lto
 
 EOF
 
@@ -501,14 +480,6 @@ export CC=gcc
 export RUSTFLAGS="-Cdebuginfo=0"
 %else
 %global optflags %{optflags} -Qunused-arguments
-%endif
-
-%if %{with qt}
-# Headers in FF-Qt are weird and change visibility
-# of symbols at random. clang errors out on that, so
-# force gcc for now
-export CXX=g++
-export CC=gcc
 %endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
@@ -536,16 +507,10 @@ export PATH=$(pwd)/.cargo/bin:$PATH
 %endif
 cd -
 
-%if %{with qt}
-# FIXME workaround for a bug in the Qt frontend makefiles - they look for
-# source files in the object directory, so let's just put them there for now.
-mkdir -p obj/ipc/chromium
-cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
-%endif
-
 export MOZ_SERVICES_SYNC="1"
 # (tpg) use system python
 export MACH_USE_SYSTEM_PYTHON=1
+export MACH_NO_WRITE_TIMES=1
 # (tpg) do not create new user profiles on each upgrade, use exsting one
 export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS="%{build_ldflags}"
