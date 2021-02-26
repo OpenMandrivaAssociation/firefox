@@ -224,7 +224,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	85.0.1
+Version:	86.0
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -303,7 +303,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.26.0
-BuildRequires:	pkgconfig(nss) >= 3.60
+BuildRequires:	pkgconfig(nss) >= 3.61
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -544,9 +544,11 @@ cp -rf obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 
 mkdir -p  %{buildroot}%{_bindir}
 ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
-cd %{buildroot}%{_bindir}
+
+pushd %{buildroot}%{_bindir}
 	ln -sf firefox mozilla-firefox
-cd ..
+popd
+
 mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/preferences/
 install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/kde.js
 
