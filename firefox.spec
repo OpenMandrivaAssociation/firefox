@@ -257,8 +257,8 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-84.0-kde.patch
-Patch12:	mozilla-84.0-kde.patch
+Patch11:	firefox-87.0-kde.patch
+Patch12:	mozilla-87.0-kde.patch
 
 Patch14:        build-aarch64-skia.patch
 Patch15:        build-arm-libopus.patch
