@@ -1,7 +1,4 @@
-# Problem with clang+LTO as of 3.8.0-0.260001.1:
-# Compile failure with
-# Assertion `!N->isTemporary() && "Expected all forward declarations to be resolved"' failed.
-%define _disable_lto 1
+
 #
 # WARNING, READ FIRST:
 #
@@ -17,6 +14,7 @@
 %define google_api_key AIzaSyAraWnKIFrlXznuwvd3gI-gqTozL-H-8MU
 %define google_default_client_id 1089316189405-m0ropn3qa4p1phesfvi2urs7qps1d79o.apps.googleusercontent.com
 %define google_default_client_secret RDdr-pHq2gStY4uw0m-zxXeo
+%define mozilla_api_key 9008bb7e-1e22-4038-94fe-047dd48ccc0b
 
 %define firefox_appid \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 %define firefox_langdir %{_datadir}/mozilla/extensions/%{firefox_appid}
@@ -26,9 +24,9 @@
 # libxul.so is provided by libxulrunnner2.0.
 %global __requires_exclude libxul.so
 
-# Use Qt instead of GTK -- long term goal, but as of 48.0.1,
-# doesn't even compile yet
-%bcond_with qt
+%bcond_without bundled_cbindgen
+
+%bcond_with pgo
 
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
@@ -242,7 +240,6 @@ Source9:	kde.js
 Source10:	firefox-searchengines-yandex.xml
 Source12:	firefox-omv-default-prefs.js
 Source13:	firefox-l10n-template.in
-Source20:	http://ftp.gnu.org/gnu/autoconf/autoconf-2.13.tar.gz
 Source22:	cbindgen-vendor.tar.xz
 Source21:	distribution.ini
 Source100:      firefox.rpmlintrc
@@ -260,8 +257,13 @@ Source100:      firefox.rpmlintrc
 #Patch11:	firefox-87.0-kde.patch
 #Patch12:	mozilla-87.0-kde.patch
 
-Patch14:        build-aarch64-skia.patch
-Patch15:        build-arm-libopus.patch
+# http://www.rosenauer.org/hg/mozilla/raw-file/tip/firefox-kde.patch
+#Patch11:	firefox-85.0-kde.patch
+# http://www.rosenauer.org/hg/mozilla/raw-file/tip/mozilla-kde.patch
+#Patch12:	mozilla-85.0-kde.patch
+
+Patch14:	build-aarch64-skia.patch
+Patch15:	build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 
@@ -284,15 +286,9 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
-%if %{with qt}
-BuildRequires:	qmake5
-BuildRequires:	pkgconfig(QtCore5)
-BuildRequires:	pkgconfig(QtGui5)
-BuildRequires:	pkgconfig(QtWidgets5)
-%else
 BuildRequires:	pkgconfig(gtk+-2.0)
 BuildRequires:	pkgconfig(gtk+-3.0)
-%endif
+BuildRequires:	pkgconfig(icu-i18n)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
@@ -328,6 +324,9 @@ BuildRequires:	rust >= 1.47.0
 BuildRequires:	cargo >= 1.47.0
 BuildRequires:	nodejs >= 10.19
 BuildRequires:	pkgconfig(jemalloc)
+%if %{with pgo}
+BuildRequires:	x11-server-xvfb
+%endif
 Requires:	indexhtml
 # fixes bug #42096
 Requires:	mailcap
@@ -383,36 +382,96 @@ Files and macros mainly for building Firefox extensions.
 }
 
 %prep
-%setup -qn %{name}-%{version} -a 20
-%autopatch -p1
+%autosetup -p1
 
-TOP="$(pwd)"
-cd autoconf-2.13
-./configure --prefix=$TOP/ac213bin
-%make_build
-%make install
-cd ..
+echo -n "%google_api_key" > google-api-key
+echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
+echo -n "%mozilla_api_key" > mozilla-api-key
 
-mkdir -p my_rust_vendor
-cd my_rust_vendor
-tar xf %{SOURCE22}
-mkdir -p .cargo
-cat > .cargo/config <<EOL
-[source.crates-io]
-replace-with = "vendored-sources"
+export MOZCONFIG=$(pwd)/mozconfig
+cat << EOF > $MOZCONFIG
+ac_add_options --target="%{_target_platform}"
+ac_add_options --host="%{_host}"
+ac_add_options --prefix="%{_prefix}"
+ac_add_options --libdir="%{_libdir}"
+mk_add_options MOZILLA_OFFICIAL=1
+mk_add_options BUILD_OFFICIAL=1
+export MOZ_MAKE_FLAGS="%{_smp_mflags}"
+export MOZ_SERVICES_SYNC=1
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
+ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
+ac_add_options --with-system-icu
+ac_add_options --with-mozilla-api-keyfile=$(pwd)/mozilla-api-key
+ac_add_options --with-google-location-service-api-keyfile=$(pwd)/google-api-key
+ac_add_options --with-google-safebrowsing-api-keyfile=$(pwd)/google-api-key
+ac_add_options --enable-release
+ac_add_options --update-channel=%{update_channel}
+ac_add_options --enable-update-channel=%{update_channel}
+ac_add_options --with-distribution-id=org.openmandriva
+%ifarch %{ix86}
+ac_add_options --enable-linker=bfd
+ac_add_options --disable-optimize
+%else
+ac_add_options --enable-optimize="-O3"
+%endif
+ac_add_options --with-system-nspr
+ac_add_options --with-system-nss
+ac_add_options --with-system-zlib
+ac_add_options --enable-necko-wifi
+%ifarch %{ix86} %{x86_64}
+ac_add_options --enable-av1
+%endif
+ac_add_options --with-system-libevent
+ac_add_options --without-system-icu
+ac_add_options --with-system-libvpx
+ac_add_options --enable-system-pixman
+ac_add_options --disable-updater
+ac_add_options --disable-tests
+ac_add_options --disable-debug
+ac_add_options --disable-debug-symbols
+ac_add_options --enable-official-branding
+ac_add_options --enable-libproxy
+ac_add_options --with-system-jpeg
+ac_add_options --with-system-png
+ac_add_options --enable-jemalloc
+ac_add_options --enable-replace-malloc
+#ac_add_options --with-system-ply
+ac_add_options --disable-crashreporter
+#ac_add_options --enable-gstreamer=1.0
+#ac_add_options --enable-media-plugins
+#ac_add_options --enable-dash
+ac_add_options --enable-pulseaudio
+ac_add_options --enable-webrtc
+ac_add_options --enable-system-ffi
+ac_add_options --allow-addon-sideload
+%ifarch %arm
+ac_add_options --enable-skia
+ac_add_options --disable-webrtc
+%endif
+%ifnarch %mips
+ac_add_options --with-valgrind
+%endif
+%ifarch %{x86_64} aarch64
+#ac_add_options --enable-rust-simd
+%endif
+%ifnarch aarch64
+ac_add_options --disable-elf-hack
+%endif
+export LLVM_PROFDATA="llvm-profdata"
+export AR="llvm-ar"
+export NM="llvm-nm"
+export RANLIB="llvm-ranlib"
+# (tpg) use LLD if build with LLVM/clang
+ac_add_options --enable-linker=lld
+%if %{with pgo}
+ac_add_options MOZ_PGO=1
+%endif
+ac_add_options --disable-lto
 
-[source.vendored-sources]
-directory = "$(pwd)"
-EOL
-env CARGO_HOME=.cargo cargo install cbindgen
-cd -
+EOF
 
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
-export AUTOCONF=$(pwd)/ac213bin/bin/autoconf
-
-export PATH=$(pwd)/my_rust_vendor/.cargo/bin:$PATH
-export MACH_USE_SYSTEM_PYTHON=1
 
 %ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
@@ -426,116 +485,51 @@ export RUSTFLAGS="-Cdebuginfo=0"
 %global optflags %{optflags} -Qunused-arguments
 %endif
 
-%if %{with qt}
-# Headers in FF-Qt are weird and change visibility
-# of symbols at random. clang errors out on that, so
-# force gcc for now
-export CXX=g++
-export CC=gcc
-%endif
-
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
 %set_build_flags
 
-echo -n "%google_api_key" > google-api-key
-echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
-
-#sed -i -e 's,\$QTDIR/include,%_includedir/qt5,g' configure.in configure
-export MOZCONFIG=$(pwd)/mozconfig
-cat << EOF > $MOZCONFIG
-%if %{with qt}
-export CFLAGS="$(pkg-config --cflags glib-2.0)"
-export CXXFLAGS="$(pkg-config --cflags glib-2.0)"
-%endif
-mk_add_options MOZILLA_OFFICIAL=1
-mk_add_options BUILD_OFFICIAL=1
-mk_add_options MOZ_MAKE_FLAGS="%{_smp_mflags}"
-mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
-ac_add_options --host=%{_host}
-%if %{with qt}
-ac_add_options --enable-default-toolkit=cairo-qt
-ac_add_options --with-qtdir=%{_libdir}/qt5
-%else
-ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-%endif
-ac_add_options --target=%{_target_platform}
-ac_add_options --prefix="%{_prefix}"
-ac_add_options --libdir="%{_libdir}"
-%ifarch %{ix86}
-ac_add_options --enable-linker=bfd
-ac_add_options --disable-optimize
-%else
-ac_add_options --enable-optimize="-O2"
-%endif
-ac_add_options --with-system-nspr
-ac_add_options --with-system-nss
-ac_add_options --with-system-zlib
-ac_add_options --enable-necko-wifi
-%ifarch %{ix86} %{x86_64}
-ac_add_options --enable-av1
-%endif
-ac_add_options --with-system-libevent
-#ac_add_options --with-system-icu
-ac_add_options --with-system-libvpx
-ac_add_options --enable-system-pixman
-ac_add_options --disable-updater
-ac_add_options --disable-tests
-ac_add_options --disable-debug
-ac_add_options --enable-official-branding
-ac_add_options --enable-libproxy
-ac_add_options --with-system-jpeg
-ac_add_options --with-system-png
-ac_add_options --enable-jemalloc
-ac_add_options --enable-replace-malloc
-#ac_add_options --with-system-ply
-ac_add_options --with-distribution-id=org.openmandriva
-ac_add_options --disable-crashreporter
-ac_add_options --enable-update-channel=%{update_channel}
-#ac_add_options --enable-gstreamer=1.0
-#ac_add_options --enable-media-plugins
-#ac_add_options --enable-dash
-ac_add_options --enable-pulseaudio
-ac_add_options --enable-webrtc
-ac_add_options --enable-system-ffi
-%ifarch %arm
-ac_add_options --enable-skia
-ac_add_options --disable-webrtc
-%endif
-%ifnarch %mips
-ac_add_options --with-valgrind
-%endif
-#ac_add_options --with-google-api-keyfile=../google-api-key
-ac_add_options --enable-release
-%ifarch %{x86_64} aarch64
-#ac_add_options --enable-rust-simd
-%endif
-%ifnarch aarch64
-ac_add_options --disable-elf-hack
-%endif
-%if %mdvver > 4000000
-%ifnarch %ix86
-# (tpg) use LLD if build with LLVM/clang
-ac_add_options --enable-linker=lld
-%endif
-%endif
-EOF
-
 # Show the config just for debugging
 cat $MOZCONFIG
 
-%if %{with qt}
-# FIXME workaround for a bug in the Qt frontend makefiles - they look for
-# source files in the object directory, so let's just put them there for now.
-mkdir -p obj/ipc/chromium
-cp ipc/chromium/src/base/message_pump_qt.* obj/ipc/chromium/
+%if %{with bundled_cbindgen}
+mkdir -p my_rust_vendor
+cd my_rust_vendor
+%{__tar} xf %{SOURCE22}
+mkdir -p .cargo
+cat > .cargo/config <<EOL
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "$(pwd)"
+EOL
+
+env CARGO_HOME=.cargo cargo install cbindgen
+export PATH=$(pwd)/.cargo/bin:$PATH
+%endif
+cd -
+
+export MOZ_SERVICES_SYNC="1"
+# (tpg) use system python
+export MACH_USE_SYSTEM_PYTHON=1
+export MACH_NO_WRITE_TIMES=1
+# (tpg) do not create new user profiles on each upgrade, use exsting one
+export MOZ_LEGACY_PROFILES="1"
+export LDFLAGS="%{build_ldflags}"
+
+%if %{with pgo}
+GDK_BACKEND=x11 xvfb-run ./mach build  2>&1 | cat -
+%else
+./mach build
 %endif
 
-export LDFLAGS="%{ldflags}"
-
-./mach build
-
 %install
+# Make sure locale works for langpacks
+%{__cat} > objdir/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+pref("general.useragent.locale", "chrome://global/locale/intl.properties");
+EOF
+
 make -C obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
 # Copy files to buildroot
@@ -545,9 +539,9 @@ cp -rf obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 mkdir -p  %{buildroot}%{_bindir}
 ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
 
-pushd %{buildroot}%{_bindir}
-	ln -sf firefox mozilla-firefox
-popd
+cd %{buildroot}%{_bindir}
+    ln -sf firefox mozilla-firefox
+cd ..
 
 mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/preferences/
 install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/kde.js
@@ -566,10 +560,11 @@ mkdir -p %{buildroot}/%{mozillalibdir}/icons
 cp %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
 for i in 16 22 24 32 48 256; do
 # (cg) Not all icon sizes are installed with make install, so just redo it here.
-install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
-mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
-ln -sf %{mozillalibdir}/browser/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
+    install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
+    mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
+    ln -sf %{mozillalibdir}/browser/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
 done
+
 mkdir -p %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default48.png %{buildroot}%{_liconsdir}/%{name}.png
 ln -sf %{mozillalibdir}/browser/chrome/icons/default/default32.png %{buildroot}%{_iconsdir}/%{name}.png
@@ -588,6 +583,7 @@ cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome/userCh
 }
 EOF
 
+# Default firefox config
 %{__cp} %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/defaults/preferences
 
 # use the system myspell dictionaries
