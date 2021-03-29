@@ -24,7 +24,7 @@
 # libxul.so is provided by libxulrunnner2.0.
 %global __requires_exclude libxul.so
 
-%bcond_without bundled_cbindgen
+%bcond_with bundled_cbindgen
 
 %bcond_with pgo
 
@@ -490,6 +490,7 @@ export RUSTFLAGS="-Cdebuginfo=0"
 %set_build_flags
 
 # Show the config just for debugging
+export MOZCONFIG=$(pwd)/mozconfig
 cat $MOZCONFIG
 
 %if %{with bundled_cbindgen}
@@ -507,8 +508,8 @@ EOL
 
 env CARGO_HOME=.cargo cargo install cbindgen
 export PATH=$(pwd)/.cargo/bin:$PATH
-%endif
 cd -
+%endif
 
 export MOZ_SERVICES_SYNC="1"
 # (tpg) use system python
