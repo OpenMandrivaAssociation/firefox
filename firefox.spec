@@ -24,6 +24,10 @@
 # libxul.so is provided by libxulrunnner2.0.
 %global __requires_exclude libxul.so
 
+# The totally messed up build system insists on *.o files being ELF
+# (and not LLVM bytecode)
+%define _disable_lto 1
+
 %bcond_with bundled_cbindgen
 
 %bcond_with pgo
@@ -527,7 +531,7 @@ GDK_BACKEND=x11 xvfb-run ./mach build  2>&1 | cat -
 
 %install
 # Make sure locale works for langpacks
-%{__cat} > objdir/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+%{__cat} > obj/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 EOF
 
@@ -542,7 +546,7 @@ ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
 
 cd %{buildroot}%{_bindir}
     ln -sf firefox mozilla-firefox
-cd ..
+cd -
 
 mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/preferences/
 install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/kde.js
