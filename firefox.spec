@@ -28,8 +28,6 @@
 # (and not LLVM bytecode)
 %define _disable_lto 1
 
-%bcond_with bundled_cbindgen
-
 %bcond_with pgo
 
 # this seems fragile, so require the exact version or later (#58754)
@@ -244,7 +242,6 @@ Source9:	kde.js
 Source10:	firefox-searchengines-yandex.xml
 Source12:	firefox-omv-default-prefs.js
 Source13:	firefox-l10n-template.in
-Source22:	cbindgen-vendor.tar.xz
 Source21:	distribution.ini
 Source100:      firefox.rpmlintrc
 # l10n sources
@@ -315,6 +312,7 @@ BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
+BuildRequires:	cbindgen
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
 BuildRequires:	llvm-devel
@@ -496,24 +494,6 @@ export RUSTFLAGS="-Cdebuginfo=0"
 # Show the config just for debugging
 export MOZCONFIG=$(pwd)/mozconfig
 cat $MOZCONFIG
-
-%if %{with bundled_cbindgen}
-mkdir -p my_rust_vendor
-cd my_rust_vendor
-%{__tar} xf %{SOURCE22}
-mkdir -p .cargo
-cat > .cargo/config <<EOL
-[source.crates-io]
-replace-with = "vendored-sources"
-
-[source.vendored-sources]
-directory = "$(pwd)"
-EOL
-
-env CARGO_HOME=.cargo cargo install cbindgen
-export PATH=$(pwd)/.cargo/bin:$PATH
-cd -
-%endif
 
 export MOZ_SERVICES_SYNC="1"
 # (tpg) use system python
