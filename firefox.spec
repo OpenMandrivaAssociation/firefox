@@ -1,5 +1,5 @@
-%define debug_package %{nil}
-
+# Current OMV debug implementation is a crap IMO (angry.p)
+%define _empty_manifest_terminate_build 0
 #
 # WARNING, READ FIRST:
 #
