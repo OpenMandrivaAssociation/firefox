@@ -1,4 +1,5 @@
-
+# Current OMV debug implementation is a crap IMO (angry.p)
+%define _empty_manifest_terminate_build 0
 #
 # WARNING, READ FIRST:
 #
@@ -36,9 +37,6 @@
 %define nspr_version %(pkg-config --modversion nspr &>/dev/null && pkg-config --modversion nspr 2>/dev/null |sed -e 's!\.0!!' || echo 0)
 
 %define update_channel release
-
-%define _enable_debug_packages %{nil}
-%define debug_package %{nil}
 
 %define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-x86_64/xpi/
 
@@ -224,7 +222,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	88.0
+Version:	88.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
