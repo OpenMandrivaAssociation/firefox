@@ -222,7 +222,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	91.0
+Version:	91.0.1
 Release:	1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -265,6 +265,7 @@ Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
+Patch45:	firefox-glibc-dynstack.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
