@@ -265,6 +265,7 @@ Patch15:	build-arm-libopus.patch
 Patch17:	firefox-91-buildfixes.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
+Patch45:	firefox-glibc-dynstack.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
