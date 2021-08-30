@@ -495,9 +495,9 @@ export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS="%{build_ldflags} -L%{_libdir}"
 
 %if %{with pgo}
-GDK_BACKEND=x11 xvfb-run ./mach build  2>&1 | cat -
+GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
 %else
-./mach build
+./mach build -v
 %endif
 
 %install
