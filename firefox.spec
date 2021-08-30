@@ -313,6 +313,7 @@ BuildRequires:	cbindgen >= 0.19.0
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
 BuildRequires:	llvm-devel
+BuildRequires:	stdc++-static-devel
 %ifnarch %mips
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
@@ -491,8 +492,7 @@ export MACH_USE_SYSTEM_PYTHON=1
 export MACH_NO_WRITE_TIMES=1
 # (tpg) do not create new user profiles on each upgrade, use exsting one
 export MOZ_LEGACY_PROFILES="1"
-# (cb) needs libdir adding as lld doesnt seem to search it
-export LDFLAGS="%{build_ldflags} -L%{_libdir}"
+export LDFLAGS="%{build_ldflags}"
 
 %if %{with pgo}
 GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
