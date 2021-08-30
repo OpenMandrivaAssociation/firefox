@@ -285,7 +285,6 @@ BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
-BuildRequires:	pkgconfig(gstreamer-plugins-base-1.0)
 BuildRequires:	pkgconfig(gtk+-3.0)
 BuildRequires:	pkgconfig(icu-i18n)
 BuildRequires:	pkgconfig(hunspell)
@@ -435,11 +434,7 @@ ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
 ac_add_options --enable-jemalloc
 ac_add_options --enable-replace-malloc
-#ac_add_options --with-system-ply
 ac_add_options --disable-crashreporter
-#ac_add_options --enable-gstreamer=1.0
-#ac_add_options --enable-media-plugins
-#ac_add_options --enable-dash
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
@@ -450,9 +445,6 @@ ac_add_options --disable-webrtc
 %endif
 %ifnarch %mips
 ac_add_options --with-valgrind
-%endif
-%ifarch %{x86_64} aarch64
-#ac_add_options --enable-rust-simd
 %endif
 %ifnarch aarch64
 ac_add_options --disable-elf-hack
