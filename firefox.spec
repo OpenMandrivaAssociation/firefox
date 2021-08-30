@@ -312,6 +312,7 @@ BuildRequires:	cbindgen >= 0.19.0
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
 BuildRequires:	llvm-devel
+BuildRequires:	stdc++-static-devel
 %ifnarch %mips
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
