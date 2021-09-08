@@ -218,7 +218,7 @@
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang $(echo $lang | cut -d _ -f 1) "; done)}
 
-%define beta b4
+#define beta b4
 
 Summary:	Next generation web browser
 Name:		firefox
@@ -295,8 +295,8 @@ BuildRequires:	pkgconfig(libpng) >= 1.6.34
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.26.0
-BuildRequires:	pkgconfig(nss) >= 3.64
+BuildRequires:	pkgconfig(nspr) >= 4.32.0
+BuildRequires:	pkgconfig(nss) >= 3.69
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
