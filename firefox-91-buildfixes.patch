@@ -1,0 +1,21 @@
+diff -up firefox-91.0/security/sandbox/linux/launch/SandboxLaunch.cpp.omv~ firefox-91.0/security/sandbox/linux/launch/SandboxLaunch.cpp
+--- firefox-91.0/security/sandbox/linux/launch/SandboxLaunch.cpp.omv~	2021-08-17 22:34:09.599506604 +0200
++++ firefox-91.0/security/sandbox/linux/launch/SandboxLaunch.cpp	2021-08-17 22:34:24.493563307 +0200
+@@ -17,6 +17,8 @@
+ 
+ #include <utility>
+ 
++#include "../../../../mfbt/ArrayUtils.h"
++
+ #include "LinuxCapabilities.h"
+ #include "LinuxSched.h"
+ #include "SandboxChrootProto.h"
+@@ -516,7 +518,7 @@ MOZ_NEVER_INLINE MOZ_ASAN_BLACKLIST stat
+ #ifdef __hppa__
+   void* stackPtr = miniStack;
+ #else
+-  void* stackPtr = ArrayEnd(miniStack);
++  void* stackPtr = ArrayEnd<uint8_t>(miniStack);
+ #endif
+   return clone(CloneCallee, stackPtr, aFlags, aCtx);
+ }

@@ -1,5 +1,6 @@
 # Current OMV debug implementation is a crap IMO (angry.p)
 %define _empty_manifest_terminate_build 0
+
 #
 # WARNING, READ FIRST:
 #
@@ -38,7 +39,7 @@
 
 %define update_channel release
 
-%define xpidir http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}/linux-x86_64/xpi/
+%define xpidir https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}%{?beta:%{beta}}/linux-x86_64/xpi/
 
 # Supported l10n language lists
 %define langlist af ar ast bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
@@ -217,21 +218,19 @@
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang $(echo $lang | cut -d _ -f 1) "; done)}
 
+#define beta b4
+
 Summary:	Next generation web browser
 Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	91.0.2
-Release:	1
+Version:	92.0
+Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
-%if 0%{?prel}
-Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}%{prel}.source.tar.xz
-%else
-Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}/source/%{name}-%{version}.source.tar.xz
-%endif
+Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
 Source6:	firefox-searchengines-exalead.xml
@@ -263,9 +262,9 @@ Source100:      firefox.rpmlintrc
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
+Patch17:	firefox-91-buildfixes.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
-Patch45:	firefox-glibc-dynstack.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -296,8 +295,8 @@ BuildRequires:	pkgconfig(libpng) >= 1.6.34
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
-BuildRequires:	pkgconfig(nspr) >= 4.26.0
-BuildRequires:	pkgconfig(nss) >= 3.64
+BuildRequires:	pkgconfig(nspr) >= 4.32.0
+BuildRequires:	pkgconfig(nss) >= 3.69
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -334,11 +333,6 @@ Requires:	xdg-utils
 Suggests:	%{_lib}canberra0
 Suggests:	%{_lib}cups2
 
-%if 0%{?prel}
-Provides:	%{name} = %{epoch}:%{version}-0.%{prel}
-%else
-Provides:	%{name} = %{epoch}:%{version}
-%endif
 Provides:	mozilla-firefox = %{epoch}:%{version}-%{release}
 Provides:	webclient
 
@@ -383,6 +377,12 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %autosetup -p1
+
+# We trust our toolchain. More than we trust hardcodes copied from
+# whatever someone found on a prehistoric brokenbuntu box.
+for i in security/sandbox/chromium/sandbox/linux/system_headers/*_linux_syscalls.h; do
+	echo '#include <asm/unistd.h>' >$i
+done
 
 echo -n "%google_api_key" > google-api-key
 echo -n "%google_default_client_id %google_default_client_secret" > google-oauth-api-key
@@ -475,7 +475,7 @@ export CC=gcc
 # avoid oom with rust
 export RUSTFLAGS="-Cdebuginfo=0"
 %else
-%global optflags %{optflags} -Qunused-arguments
+%global optflags %{optflags} -Qunused-arguments -g0 -fno-lto
 %endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
@@ -589,7 +589,7 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 # Macros from %{name} package
 %%firefox_major              %{version}
 %%firefox_epoch              %{epoch}
-%%firefox_version            %{version}%{?prel:-0.%{prel}}
+%%firefox_version            %{version}%{?beta:-0.%{beta}}
 %%firefox_mozillapath        %{mozillalibdir}
 %%firefox_pluginsdir         %{pluginsdir}
 %%firefox_appid              \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
