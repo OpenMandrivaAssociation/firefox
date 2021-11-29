@@ -225,7 +225,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	94.0.1
+Version:	94.0.2
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -252,17 +252,11 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-#Patch11:	firefox-87.0-kde.patch
-#Patch12:	mozilla-87.0-kde.patch
-
-# http://www.rosenauer.org/hg/mozilla/raw-file/tip/firefox-kde.patch
-#Patch11:	firefox-85.0-kde.patch
-# http://www.rosenauer.org/hg/mozilla/raw-file/tip/mozilla-kde.patch
-#Patch12:	mozilla-85.0-kde.patch
+Patch11:	firefox-93.0-kde.patch
+Patch12:	mozilla-93.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
-Patch17:	firefox-91-buildfixes.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 
@@ -287,7 +281,6 @@ BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gtk+-3.0)
 BuildRequires:	pkgconfig(icu-i18n)
 BuildRequires:	pkgconfig(hunspell)
-BuildRequires:	pkgconfig(libevent)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
 BuildRequires:	pkgconfig(libnotify)
@@ -421,7 +414,7 @@ ac_add_options --enable-necko-wifi
 %ifarch %{ix86} %{x86_64}
 ac_add_options --enable-av1
 %endif
-ac_add_options --with-system-libevent
+ac_add_options --without-system-libevent
 ac_add_options --without-system-icu
 ac_add_options --with-system-libvpx
 ac_add_options --enable-system-pixman
