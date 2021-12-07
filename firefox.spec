@@ -225,7 +225,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	94.0.2
+Version:	95.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -253,7 +253,7 @@ Source100:      firefox.rpmlintrc
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
 Patch11:	firefox-93.0-kde.patch
-Patch12:	mozilla-93.0-kde.patch
+Patch12:	mozilla-94.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
@@ -289,7 +289,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.70
+BuildRequires:	pkgconfig(nss) >= 3.72
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -433,6 +433,7 @@ ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
 ac_add_options --allow-addon-sideload
+ac_add_options --without-wasm-sandboxed-libraries
 %ifarch %arm
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
