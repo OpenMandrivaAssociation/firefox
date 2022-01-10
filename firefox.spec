@@ -225,7 +225,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	95.0
+Version:	96.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -265,6 +265,11 @@ BuildRequires:	makedepend
 BuildRequires:	pkgconfig(python3)
 BuildRequires:	python3
 BuildRequires:	python-distribute
+BuildRequires:	python3dist(aiohttp)
+BuildRequires:	python3dist(attrs)
+BuildRequires:	python3dist(pip)
+BuildRequires:	python3dist(argparse)
+BuildRequires:	python3dist(traceback2)
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
@@ -487,6 +492,11 @@ export MACH_NO_WRITE_TIMES=1
 # (tpg) do not create new user profiles on each upgrade, use exsting one
 export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS="%{build_ldflags}"
+
+# FF seems to always sees its own in-tree stuff before system versions.
+# Remove obsolete bits and pieces that don't actually work with system
+# bits it does try to use...
+rm -rf third_party/python/{aiohttp,attrs,pip}
 
 %if %{with pgo}
 GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
