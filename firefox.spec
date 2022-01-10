@@ -267,9 +267,27 @@ BuildRequires:	python3
 BuildRequires:	python-distribute
 BuildRequires:	python3dist(aiohttp)
 BuildRequires:	python3dist(attrs)
-BuildRequires:	python3dist(pip)
 BuildRequires:	python3dist(argparse)
 BuildRequires:	python3dist(traceback2)
+BuildRequires:	python3dist(certifi)
+BuildRequires:	python3dist(chardet)
+BuildRequires:	python3dist(colorama)
+BuildRequires:	python3dist(distro)
+BuildRequires:	python3dist(idna)
+BuildRequires:	python3dist(jsonschema)
+BuildRequires:	python3dist(multidict)
+BuildRequires:	python3dist(packaging)
+BuildRequires:	python3dist(pip)
+BuildRequires:	python3dist(ply)
+BuildRequires:	python3dist(pyparsing)
+BuildRequires:	python3dist(pyrsistent)
+BuildRequires:	python3dist(requests)
+BuildRequires:	python3dist(setuptools)
+BuildRequires:	python3dist(six)
+BuildRequires:	python3dist(urllib3)
+BuildRequires:	python3dist(wheel)
+BuildRequires:	python3dist(yarl)
+BuildRequires:	python3dist(zipp)
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
@@ -496,7 +514,7 @@ export LDFLAGS="%{build_ldflags}"
 # FF seems to always sees its own in-tree stuff before system versions.
 # Remove obsolete bits and pieces that don't actually work with system
 # bits it does try to use...
-rm -rf third_party/python/{aiohttp,attrs,pip}
+rm -rf third_party/python/{aiohttp,attrs,certifi,chardet,colorama,distro,idna,jsonschema,multidict,packaging,pip,pip_tools,ply,pyparsing,pyrsistent,requests,setuptools,six,urllib3,wheel,yarl,zipp}
 
 %if %{with pgo}
 GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
