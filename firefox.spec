@@ -514,7 +514,7 @@ export LDFLAGS="%{build_ldflags}"
 # FF seems to always sees its own in-tree stuff before system versions.
 # Remove obsolete bits and pieces that don't actually work with system
 # bits it does try to use...
-rm -rf third_party/python/{aiohttp,attrs,colorama,distro,idna,jsonschema,multidict,packaging,pip,pip_tools,ply,pyparsing,pyrsistent,setuptools,wheel,yarl,zipp}
+rm -rf third_party/python/{aiohttp,attrs,colorama,distro,jsonschema,multidict,packaging,pip,pip_tools,ply,pyparsing,pyrsistent,setuptools,wheel,yarl,zipp}
 
 %if %{with pgo}
 GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
