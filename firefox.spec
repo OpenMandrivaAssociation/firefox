@@ -288,6 +288,7 @@ BuildRequires:	python3dist(urllib3)
 BuildRequires:	python3dist(wheel)
 BuildRequires:	python3dist(yarl)
 BuildRequires:	python3dist(zipp)
+BuildRequires:	python-pkg-resources
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
