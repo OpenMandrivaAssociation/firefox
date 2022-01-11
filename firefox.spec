@@ -505,17 +505,19 @@ export MOZCONFIG=$(pwd)/mozconfig
 cat $MOZCONFIG
 
 export MOZ_SERVICES_SYNC="1"
-# (tpg) use system python
-export MACH_USE_SYSTEM_PYTHON=1
 export MACH_NO_WRITE_TIMES=1
 # (tpg) do not create new user profiles on each upgrade, use exsting one
 export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS="%{build_ldflags}"
 
+# FIXME We should enable system python, but need to sort out dependencies
+# Current status: builds locally on developer boxes, but fails inside abf
+# (tpg) use system python
+#export MACH_USE_SYSTEM_PYTHON=1
 # FF seems to always sees its own in-tree stuff before system versions.
 # Remove obsolete bits and pieces that don't actually work with system
 # bits it does try to use...
-rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+#rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
 
 %if %{with pgo}
 GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
