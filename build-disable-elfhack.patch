@@ -9,4 +9,4 @@ diff -up firefox-84.0/toolkit/moz.configure.disable-elfhack firefox-84.0/toolkit
 +        set_config("USE_ELF_HACK", depends_if("--enable-elf-hack")(lambda _: False))
  
  
- @depends(check_build_environment)
+ @depends(build_environment)
