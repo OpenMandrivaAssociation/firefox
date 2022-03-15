@@ -259,6 +259,7 @@ Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
+Patch50:	firefox-98.0-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
