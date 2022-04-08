@@ -225,8 +225,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	98.0
-Release:	%{?beta:0.%{beta}.}2
+Version:	99.0
+Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -260,7 +260,6 @@ Patch15:	build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 Patch50:	firefox-98.0-python-3.11.patch
-Patch51:	revert-crossbeam-crates-upgrade.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -509,7 +508,7 @@ export MOZ_SERVICES_SYNC="1"
 export MACH_NO_WRITE_TIMES=1
 # (tpg) do not create new user profiles on each upgrade, use exsting one
 export MOZ_LEGACY_PROFILES="1"
-export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory""
+export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
 # FIXME We should enable system python, but need to sort out dependencies
