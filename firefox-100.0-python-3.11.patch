@@ -97,3 +97,14 @@ diff -up firefox-98.0/python/mozbuild/mozpack/files.py.omv~ firefox-98.0/python/
              pp.processFile(input=input, output=dest, depfile=deps_out)
  
          dest.close()
+--- firefox-100.0/xpcom/idl-parser/xpidl/xpidl.py.orig	2022-05-04 09:57:16.420455099 +0100
++++ firefox-100.0/xpcom/idl-parser/xpidl/xpidl.py	2022-05-04 09:57:40.993653305 +0100
+@@ -1572,7 +1572,7 @@
+     t_ignore = " \t"
+ 
+     def t_multilinecomment(self, t):
+-        r"/\*(?s).*?\*/"
++        r"(?s)/\*.*?\*/"
+         t.lexer.lineno += t.value.count("\n")
+         if t.value.startswith("/**"):
+             self._doccomments.append(t.value)
