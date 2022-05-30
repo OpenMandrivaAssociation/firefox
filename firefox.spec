@@ -225,7 +225,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	97.0
+Version:	100.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -259,17 +259,18 @@ Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
+Patch50:	firefox-100.0-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
-BuildRequires:	pkgconfig(python3)
-BuildRequires:	python3
+BuildRequires:	pkgconfig(python)
 BuildRequires:	python-distribute
 BuildRequires:	python3dist(aiohttp)
 BuildRequires:	python3dist(attrs)
 BuildRequires:	python3dist(argparse)
 BuildRequires:	python3dist(traceback2)
 BuildRequires:	python3dist(certifi)
+BuildRequires:	python3dist(cffi)
 BuildRequires:	python3dist(chardet)
 BuildRequires:	python3dist(colorama)
 BuildRequires:	python3dist(distro)
@@ -313,7 +314,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.72
+BuildRequires:	pkgconfig(nss) >= 3.75
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -356,7 +357,7 @@ Provides:	webclient
 Obsoletes:	firefox-ext-weave-sync
 Obsoletes:	firefox-beta < 11
 # (tpg) needed for bookmarks
-Requires(post):	desktop-common-data
+Requires(post):	distro-release-desktop
 # (tpg) fix bug https://issues.openmandriva.org/show_bug.cgi?id=1525
 Requires:	gtk3-modules
 
@@ -376,12 +377,12 @@ Firefox also includes  features like 'tabbed browsing' (opening several web
 sites as sections within the same window) and methods for controlling pop-up
 windows, cookies and downloaded files.
 
-%package	devel
+%package devel
 Summary:	Development files for %{name}
 Group:		Development/Other
 Obsoletes:	firefox-beta-devel < 11
 
-%description	devel
+%description devel
 Files and macros mainly for building Firefox extensions.
 
 # Expand all languages packages.
@@ -398,7 +399,7 @@ Files and macros mainly for building Firefox extensions.
 # We trust our toolchain. More than we trust hardcodes copied from
 # whatever someone found on a prehistoric brokenbuntu box.
 for i in security/sandbox/chromium/sandbox/linux/system_headers/*_linux_syscalls.h; do
-	echo '#include <asm/unistd.h>' >$i
+    echo '#include <asm/unistd.h>' >$i
 done
 
 echo -n "%google_api_key" > google-api-key
@@ -406,6 +407,7 @@ echo -n "%google_default_client_id %google_default_client_secret" > google-oauth
 echo -n "%mozilla_api_key" > mozilla-api-key
 
 export MOZCONFIG=$(pwd)/mozconfig
+
 cat << EOF > $MOZCONFIG
 ac_add_options --target="%{_target_platform}"
 ac_add_options --host="%{_host}"
@@ -439,7 +441,6 @@ ac_add_options --enable-necko-wifi
 ac_add_options --enable-av1
 %endif
 ac_add_options --without-system-libevent
-ac_add_options --without-system-icu
 ac_add_options --with-system-libvpx
 ac_add_options --enable-system-pixman
 ac_add_options --disable-updater
@@ -456,18 +457,18 @@ ac_add_options --disable-crashreporter
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
 ac_add_options --enable-system-ffi
+ac_add_options --with-unsigned-addon-scopes=app,system
 ac_add_options --allow-addon-sideload
 ac_add_options --without-wasm-sandboxed-libraries
-%ifarch %arm
+%ifarch aarch64
+ac_add_options --enable-rust-simd
+%endif
+%ifarch %{arm}
 ac_add_options --enable-skia
 ac_add_options --disable-webrtc
-%endif
-%ifnarch %mips
-ac_add_options --with-valgrind
-%endif
-%ifnarch aarch64
 ac_add_options --disable-elf-hack
 %endif
+ac_add_options --with-valgrind
 export LLVM_PROFDATA="llvm-profdata"
 export AR="llvm-ar"
 export NM="llvm-nm"
@@ -490,8 +491,6 @@ EOF
 # still requires gcc
 export CXX=g++
 export CC=gcc
-# avoid oom with rust
-export RUSTFLAGS="-Cdebuginfo=0"
 %else
 %global optflags %{optflags} -Qunused-arguments -g0 -fno-lto
 %endif
@@ -504,11 +503,13 @@ export RUSTFLAGS="-Cdebuginfo=0"
 export MOZCONFIG=$(pwd)/mozconfig
 cat $MOZCONFIG
 
+export MOZ_NOSPAM=1
 export MOZ_SERVICES_SYNC="1"
 export MACH_NO_WRITE_TIMES=1
 # (tpg) do not create new user profiles on each upgrade, use exsting one
 export MOZ_LEGACY_PROFILES="1"
-export LDFLAGS="%{build_ldflags}"
+export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
+export RUSTFLAGS="-Cdebuginfo=0"
 
 # FIXME We should enable system python, but need to sort out dependencies
 # Current status: builds locally on developer boxes, but fails inside abf
@@ -585,7 +586,7 @@ cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome/userCh
 EOF
 
 # Default firefox config
-%{__cp} %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/defaults/preferences
+install -Dvm644 %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/vendor.js
 
 # use the system myspell dictionaries
 rm -fr %{buildroot}%{mozillalibdir}/dictionaries
@@ -605,7 +606,6 @@ cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common
 # Correct distro values on search engines
 sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
 sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/exalead.xml
-
 
 ## (crazy) why the appid? not used since 57.0 or so
 ## also what is the magic of that _extdir ? does not make any sense..
