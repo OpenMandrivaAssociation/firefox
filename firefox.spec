@@ -225,7 +225,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	100.0
+Version:	101.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -252,8 +252,8 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-93.0-kde.patch
-Patch12:	mozilla-94.0-kde.patch
+#Patch11:	firefox-99.0-kde.patch
+#Patch12:	mozilla-99.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
@@ -337,8 +337,8 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
-BuildRequires:	rust >= 1.53.0
-BuildRequires:	cargo >= 1.53.0
+BuildRequires:	rust >= 1.59.0
+BuildRequires:	cargo >= 1.59.0
 BuildRequires:	nodejs >= 10.19
 BuildRequires:	pkgconfig(jemalloc)
 %if %{with pgo}
