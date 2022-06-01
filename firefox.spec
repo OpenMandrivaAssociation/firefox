@@ -36,6 +36,10 @@
 
 %bcond_with pgo
 
+# enable use system python modules
+# currently broken
+%bcond_with system_python
+
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
@@ -271,7 +275,8 @@ Patch50:	firefox-100.0-python-3.11.patch
 BuildRequires:	doxygen
 BuildRequires:	makedepend
 BuildRequires:	pkgconfig(python)
-BuildRequires:	python-distribute
+BuildRequires:  python(abi) < 3.11
+%if %{with system_python}
 BuildRequires:	python3dist(aiohttp)
 BuildRequires:	python3dist(attrs)
 BuildRequires:	python3dist(argparse)
@@ -296,7 +301,7 @@ BuildRequires:	python3dist(urllib3)
 BuildRequires:	python3dist(wheel)
 BuildRequires:	python3dist(yarl)
 BuildRequires:	python3dist(zipp)
-BuildRequires:	python-pkg-resources
+%endif
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
@@ -538,14 +543,16 @@ export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
+%if %{with system_python}
 # FIXME We should enable system python, but need to sort out dependencies
 # Current status: builds locally on developer boxes, but fails inside abf
 # (tpg) use system python
-#export MACH_USE_SYSTEM_PYTHON=1
+export MACH_USE_SYSTEM_PYTHON=1
 # FF seems to always sees its own in-tree stuff before system versions.
 # Remove obsolete bits and pieces that don't actually work with system
 # bits it does try to use...
-#rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+%endif
 
 %if %{with pgo}
 GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
