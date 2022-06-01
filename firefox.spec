@@ -274,8 +274,11 @@ Patch50:	firefox-100.0-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
+%if %omvver <= 4050000
 BuildRequires:	pkgconfig(python)
-BuildRequires:  python(abi) < 3.11
+%else
+BuildRequires:	pkgconfig(python-3.9)
+%endif
 %if %{with system_python}
 BuildRequires:	python3dist(aiohttp)
 BuildRequires:	python3dist(attrs)
@@ -421,6 +424,10 @@ echo -n "%google_default_client_id %google_default_client_secret" > google-oauth
 echo -n "%mozilla_api_key" > mozilla-api-key
 
 export MOZCONFIG=$(pwd)/mozconfig
+
+%if %omvver > 4050000
+export PYTHON3=python3.9
+%endif
 
 cat << EOF > $MOZCONFIG
 ac_add_options --target="%{_target_platform}"
