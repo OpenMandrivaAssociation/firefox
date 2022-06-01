@@ -30,6 +30,10 @@
 # (and not LLVM bytecode)
 %define _disable_lto 1
 
+# use bundled cbindgen
+# currently enabled as updating all rust deps would take eons
+%global use_bundled_cbindgen  1
+
 %bcond_with pgo
 
 # this seems fragile, so require the exact version or later (#58754)
@@ -225,12 +229,15 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	100.0
+Version:	101.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
+%if 0%{?use_bundled_cbindgen}
+Source2:	cbindgen-vendor.tar.xz
+%endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
 Source6:	firefox-searchengines-exalead.xml
@@ -252,8 +259,8 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-93.0-kde.patch
-Patch12:	mozilla-94.0-kde.patch
+#Patch11:	firefox-99.0-kde.patch
+#Patch12:	mozilla-99.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
@@ -304,7 +311,7 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gtk+-3.0)
-BuildRequires:	pkgconfig(icu-i18n)
+BuildRequires:	pkgconfig(icu-i18n) >= 71.1
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
@@ -314,7 +321,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.75
+BuildRequires:	pkgconfig(nss) >= 3.78
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -326,7 +333,9 @@ BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
-BuildRequires:	cbindgen >= 0.19.0
+%if !0%{?use_bundled_cbindgen}
+BuildRequires:	cbindgen >= 0.23.0
+%endif
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
 BuildRequires:	llvm-devel
@@ -337,8 +346,8 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
-BuildRequires:	rust >= 1.53.0
-BuildRequires:	cargo >= 1.53.0
+BuildRequires:	rust >= 1.59.0
+BuildRequires:	cargo >= 1.59.0
 BuildRequires:	nodejs >= 10.19
 BuildRequires:	pkgconfig(jemalloc)
 %if %{with pgo}
@@ -498,6 +507,24 @@ export CC=gcc
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
 %set_build_flags
+
+%if 0%{?use_bundled_cbindgen}
+mkdir -p my_rust_vendor
+cd my_rust_vendor
+%{__tar} xf %{SOURCE2}
+mkdir -p .cargo
+cat > .cargo/config <<EOL
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "`pwd`"
+EOL
+
+env CARGO_HOME=.cargo cargo install cbindgen
+export PATH=`pwd`/.cargo/bin:$PATH
+cd -
+%endif
 
 # Show the config just for debugging
 export MOZCONFIG=$(pwd)/mozconfig
