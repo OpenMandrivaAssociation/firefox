@@ -8,6 +8,7 @@ sources:
   br.xpi: f6448365d7106819acc474c7a10be1271fc46728
   bs.xpi: 1534aaa5712d20b7ec44c1024a135f021ecee562
   ca.xpi: 3a4858dac04ba63025406c90c21cae36bb07d5f9
+  cbindgen-vendor.tar.xz: e5b896e6edab51fa5bb92c7ca4b7304cd7ac7cdf
   cs.xpi: a9fc317e8fc49b1311f6b430762d626e19a5b517
   cy.xpi: 80efeffa0b8fb28645349e755244bbad51d9978d
   da.xpi: e954e45c6cbf5f9cb91185a38c60ce9e4679c247
