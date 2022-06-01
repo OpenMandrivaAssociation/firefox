@@ -425,10 +425,6 @@ echo -n "%mozilla_api_key" > mozilla-api-key
 
 export MOZCONFIG=$(pwd)/mozconfig
 
-%if %omvver > 4050000
-export PYTHON3=python3.9
-%endif
-
 cat << EOF > $MOZCONFIG
 ac_add_options --target="%{_target_platform}"
 ac_add_options --host="%{_host}"
@@ -438,6 +434,9 @@ mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 export MOZ_MAKE_FLAGS="%{_smp_mflags}"
 export MOZ_SERVICES_SYNC=1
+%if %omvver > 4050000
+export PYTHON3=python3.9
+%endif
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options --with-system-icu
