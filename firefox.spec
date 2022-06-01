@@ -36,6 +36,12 @@
 
 %bcond_with pgo
 
+%if %omvver > 4050000
+%define build_py python3.9
+%else
+%define build_py python3
+%endif
+
 # enable use system python modules
 # currently broken
 %bcond_with system_python
@@ -434,9 +440,7 @@ mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 export MOZ_MAKE_FLAGS="%{_smp_mflags}"
 export MOZ_SERVICES_SYNC=1
-%if %omvver > 4050000
-export PYTHON3=python3.9
-%endif
+export PYTHON3=%build_py
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options --with-system-icu
@@ -561,9 +565,9 @@ rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,p
 %endif
 
 %if %{with pgo}
-GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
+GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
 %else
-./mach build -v
+%build_py ./mach build -v
 %endif
 
 %install
