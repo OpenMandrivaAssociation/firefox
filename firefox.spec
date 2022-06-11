@@ -280,6 +280,7 @@ Patch50:	firefox-100.0-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
+BuildRequires:	glibc-static-devel
 %if %omvver <= 4050000
 BuildRequires:	pkgconfig(python)
 %else
