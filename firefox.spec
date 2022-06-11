@@ -317,7 +317,6 @@ BuildRequires:	wget
 BuildRequires:	zip
 BuildRequires:	pkgconfig(bzip2)
 BuildRequires:	pkgconfig(libjpeg)
-BuildRequires:	libiw-devel
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(dbus-glib-1)
