@@ -36,6 +36,16 @@
 
 %bcond_with pgo
 
+%if %omvver > 4050000
+%define build_py python3.9
+%else
+%define build_py python3
+%endif
+
+# enable use system python modules
+# currently broken
+%bcond_with system_python
+
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
@@ -229,7 +239,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	101.0
+Version:	101.0.1
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -270,8 +280,13 @@ Patch50:	firefox-100.0-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
+BuildRequires:	glibc-static-devel
+%if %omvver <= 4050000
 BuildRequires:	pkgconfig(python)
-BuildRequires:	python-distribute
+%else
+BuildRequires:	pkgconfig(python-3.9)
+%endif
+%if %{with system_python}
 BuildRequires:	python3dist(aiohttp)
 BuildRequires:	python3dist(attrs)
 BuildRequires:	python3dist(argparse)
@@ -296,14 +311,13 @@ BuildRequires:	python3dist(urllib3)
 BuildRequires:	python3dist(wheel)
 BuildRequires:	python3dist(yarl)
 BuildRequires:	python3dist(zipp)
-BuildRequires:	python-pkg-resources
+%endif
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
 BuildRequires:	zip
 BuildRequires:	pkgconfig(bzip2)
 BuildRequires:	pkgconfig(libjpeg)
-BuildRequires:	libiw-devel
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(dbus-glib-1)
@@ -426,6 +440,7 @@ mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 export MOZ_MAKE_FLAGS="%{_smp_mflags}"
 export MOZ_SERVICES_SYNC=1
+export PYTHON3=%build_py
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options --with-system-icu
@@ -538,19 +553,21 @@ export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
+%if %{with system_python}
 # FIXME We should enable system python, but need to sort out dependencies
 # Current status: builds locally on developer boxes, but fails inside abf
 # (tpg) use system python
-#export MACH_USE_SYSTEM_PYTHON=1
+export MACH_USE_SYSTEM_PYTHON=1
 # FF seems to always sees its own in-tree stuff before system versions.
 # Remove obsolete bits and pieces that don't actually work with system
 # bits it does try to use...
-#rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+%endif
 
 %if %{with pgo}
-GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
+GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
 %else
-./mach build -v
+%build_py ./mach build -v
 %endif
 
 %install
