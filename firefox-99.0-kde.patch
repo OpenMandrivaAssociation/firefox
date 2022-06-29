@@ -260,11 +260,11 @@ new file mode 100644
 +NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsKDEShellService, Init)
 +
 +NS_IMETHODIMP
-+nsUnixShellServiceConstructor(nsISupports *aOuter, REFNSIID aIID, void **aResult)
++nsUnixShellServiceConstructor(REFNSIID aIID, void **aResult)
 +{
 +    if( nsKDEUtils::kdeSupport())
-+        return nsKDEShellServiceConstructor( aOuter, aIID, aResult );
-+    return nsGNOMEShellServiceConstructor( aOuter, aIID, aResult );
++        return nsKDEShellServiceConstructor( aIID, aResult );
++    return nsGNOMEShellServiceConstructor( aIID, aResult );
 +}
 diff --git a/browser/components/shell/nsUnixShellService.h b/browser/components/shell/nsUnixShellService.h
 new file mode 100644
@@ -283,6 +283,6 @@ new file mode 100644
 +#include "nsIGNOMEShellService.h"
 +
 +NS_IMETHODIMP
-+nsUnixShellServiceConstructor(nsISupports *aOuter, REFNSIID aIID, void **aResult);
++nsUnixShellServiceConstructor(REFNSIID aIID, void **aResult);
 +
 +#endif // nsunixshellservice_h____

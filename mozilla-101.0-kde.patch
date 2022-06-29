@@ -256,14 +256,14 @@ diff --git a/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp b/toolkit/sy
 --- a/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp
 +++ b/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp
 @@ -13,16 +13,17 @@
- #include "nsPrintfCString.h"
- #include "nsNetCID.h"
+ #include "prnetdb.h"
+ #include "prenv.h"
+ #include "nsInterfaceHashtable.h"
+ #include "nsHashtablesFwd.h"
+ #include "nsHashKeys.h"
  #include "nsNetUtil.h"
  #include "nsISupportsPrimitives.h"
  #include "nsIGSettingsService.h"
- #include "nsInterfaceHashtable.h"
- #include "mozilla/Attributes.h"
- #include "nsIURI.h"
 +#include "nsKDEUtils.h"
  
  using namespace mozilla;
@@ -786,25 +786,6 @@ diff --git a/uriloader/exthandler/HandlerServiceParent.cpp b/uriloader/exthandle
  
  /*
   * Check if a handler exists for the provided protocol. Check the datastore
-@@ -328,17 +328,17 @@ mozilla::ipc::IPCResult HandlerServicePa
-   nsCOMPtr<nsIExternalProtocolService> protoSvc =
-       do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID, &rv);
-   if (NS_WARN_IF(NS_FAILED(rv))) {
-     *aHandlerExists = false;
-     return IPC_OK();
-   }
-   rv = protoSvc->ExternalProtocolHandlerExists(aProtocolScheme.get(),
-                                                aHandlerExists);
--
-+##
-   if (NS_WARN_IF(NS_FAILED(rv))) {
-     *aHandlerExists = false;
-   }
- #else
-   MOZ_RELEASE_ASSERT(false, "No implementation on this platform.");
-   *aHandlerExists = false;
- #endif
-   return IPC_OK();
 diff --git a/uriloader/exthandler/moz.build b/uriloader/exthandler/moz.build
 --- a/uriloader/exthandler/moz.build
 +++ b/uriloader/exthandler/moz.build
