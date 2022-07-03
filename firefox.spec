@@ -30,7 +30,21 @@
 # (and not LLVM bytecode)
 %define _disable_lto 1
 
+# use bundled cbindgen
+# currently enabled as updating all rust deps would take eons
+%global use_bundled_cbindgen  1
+
 %bcond_with pgo
+
+%if %omvver > 4050000
+%define build_py python3.9
+%else
+%define build_py python3
+%endif
+
+# enable use system python modules
+# currently broken
+%bcond_with system_python
 
 # this seems fragile, so require the exact version or later (#58754)
 %define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
@@ -225,12 +239,15 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	100.0
+Version:	102.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
 Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
+%if 0%{?use_bundled_cbindgen}
+Source2:	cbindgen-vendor.tar.xz
+%endif
 Source4:	%{name}.desktop
 Source5:	firefox-searchengines-jamendo.xml
 Source6:	firefox-searchengines-exalead.xml
@@ -252,8 +269,8 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-93.0-kde.patch
-Patch12:	mozilla-94.0-kde.patch
+Patch11:	firefox-99.0-kde.patch
+Patch12:	mozilla-101.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
@@ -263,8 +280,13 @@ Patch50:	firefox-100.0-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
+BuildRequires:	glibc-static-devel
+%if %omvver <= 4050000
 BuildRequires:	pkgconfig(python)
-BuildRequires:	python-distribute
+%else
+BuildRequires:	pkgconfig(python-3.9)
+%endif
+%if %{with system_python}
 BuildRequires:	python3dist(aiohttp)
 BuildRequires:	python3dist(attrs)
 BuildRequires:	python3dist(argparse)
@@ -289,14 +311,13 @@ BuildRequires:	python3dist(urllib3)
 BuildRequires:	python3dist(wheel)
 BuildRequires:	python3dist(yarl)
 BuildRequires:	python3dist(zipp)
-BuildRequires:	python-pkg-resources
+%endif
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
 BuildRequires:	zip
 BuildRequires:	pkgconfig(bzip2)
 BuildRequires:	pkgconfig(libjpeg)
-BuildRequires:	libiw-devel
 BuildRequires:	pkgconfig(harfbuzz)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(dbus-glib-1)
@@ -304,7 +325,7 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gtk+-3.0)
-BuildRequires:	pkgconfig(icu-i18n)
+BuildRequires:	pkgconfig(icu-i18n) >= 71.1
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
@@ -314,7 +335,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.75
+BuildRequires:	pkgconfig(nss) >= 3.79
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -326,7 +347,9 @@ BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
-BuildRequires:	cbindgen >= 0.19.0
+%if !0%{?use_bundled_cbindgen}
+BuildRequires:	cbindgen >= 0.23.0
+%endif
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
 BuildRequires:	llvm-devel
@@ -337,8 +360,8 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
-BuildRequires:	rust >= 1.53.0
-BuildRequires:	cargo >= 1.53.0
+BuildRequires:	rust >= 1.59.0
+BuildRequires:	cargo >= 1.59.0
 BuildRequires:	nodejs >= 10.19
 BuildRequires:	pkgconfig(jemalloc)
 %if %{with pgo}
@@ -417,6 +440,7 @@ mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 export MOZ_MAKE_FLAGS="%{_smp_mflags}"
 export MOZ_SERVICES_SYNC=1
+export PYTHON3=%build_py
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options --with-system-icu
@@ -499,6 +523,24 @@ export CC=gcc
 # because compile will fail of missing -fPIC  :)
 %set_build_flags
 
+%if 0%{?use_bundled_cbindgen}
+mkdir -p my_rust_vendor
+cd my_rust_vendor
+%{__tar} xf %{SOURCE2}
+mkdir -p .cargo
+cat > .cargo/config <<EOL
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "`pwd`"
+EOL
+
+env CARGO_HOME=.cargo cargo install cbindgen
+export PATH=`pwd`/.cargo/bin:$PATH
+cd -
+%endif
+
 # Show the config just for debugging
 export MOZCONFIG=$(pwd)/mozconfig
 cat $MOZCONFIG
@@ -511,19 +553,21 @@ export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
+%if %{with system_python}
 # FIXME We should enable system python, but need to sort out dependencies
 # Current status: builds locally on developer boxes, but fails inside abf
 # (tpg) use system python
-#export MACH_USE_SYSTEM_PYTHON=1
+export MACH_USE_SYSTEM_PYTHON=1
 # FF seems to always sees its own in-tree stuff before system versions.
 # Remove obsolete bits and pieces that don't actually work with system
 # bits it does try to use...
-#rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+%endif
 
 %if %{with pgo}
-GDK_BACKEND=x11 xvfb-run ./mach build -v  2>&1 | cat -
+GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
 %else
-./mach build -v
+%build_py ./mach build -v
 %endif
 
 %install
