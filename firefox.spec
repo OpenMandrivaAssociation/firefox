@@ -239,7 +239,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	102.0
+Version:	103.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -269,14 +269,13 @@ Source100:      firefox.rpmlintrc
 }
 
 # Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-99.0-kde.patch
-Patch12:	mozilla-101.0-kde.patch
+Patch11:	firefox-102.0-kde.patch
+Patch12:	mozilla-102.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
-Patch50:	firefox-100.0-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -348,7 +347,7 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 %if !0%{?use_bundled_cbindgen}
-BuildRequires:	cbindgen >= 0.23.0
+BuildRequires:	cbindgen >= 0.24.3
 %endif
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
