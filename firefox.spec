@@ -37,7 +37,7 @@
 %bcond_with pgo
 
 %if %omvver > 4050000
-%define build_py python3.9
+%define build_py python3
 %else
 %define build_py python3
 %endif
@@ -240,7 +240,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	103.0
-Release:	%{?beta:0.%{beta}.}2
+Release:	%{?beta:0.%{beta}.}3
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -274,17 +274,15 @@ Patch12:	mozilla-102.0-kde.patch
 
 Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
+Patch16:	firefox-103.0-glibc-2.36.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
+Patch45:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-python-3.11.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
 BuildRequires:	glibc-static-devel
-%if %omvver <= 4050000
-BuildRequires:	pkgconfig(python)
-%else
-BuildRequires:	pkgconfig(python-3.9)
-%endif
+BuildRequires:	pkgconfig(python3)
 %if %{with system_python}
 BuildRequires:	python3dist(aiohttp)
 BuildRequires:	python3dist(attrs)
