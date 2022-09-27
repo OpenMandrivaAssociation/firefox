@@ -769,16 +769,16 @@ diff --git a/uriloader/exthandler/HandlerServiceParent.cpp b/uriloader/exthandle
  
  namespace {
 @@ -299,17 +299,17 @@ mozilla::ipc::IPCResult HandlerServicePa
- mozilla::ipc::IPCResult HandlerServiceParent::RecvExistsForProtocolOS(
-     const nsCString& aProtocolScheme, bool* aHandlerExists) {
+     const nsACString& aProtocolScheme, bool* aHandlerExists) {
    if (aProtocolScheme.Length() > MAX_SCHEME_LENGTH) {
      *aHandlerExists = false;
      return IPC_OK();
    }
  #ifdef MOZ_WIDGET_GTK
    // Check the GNOME registry for a protocol handler
--  *aHandlerExists = nsGNOMERegistry::HandlerExists(aProtocolScheme.get());
-+  *aHandlerExists = nsCommonRegistry::HandlerExists(aProtocolScheme.get());
+   *aHandlerExists =
+-      nsGNOMERegistry::HandlerExists(PromiseFlatCString(aProtocolScheme).get());
++      nsCommonRegistry::HandlerExists(PromiseFlatCString(aProtocolScheme).get());
  #else
    *aHandlerExists = false;
  #endif
