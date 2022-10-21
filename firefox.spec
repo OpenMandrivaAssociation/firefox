@@ -239,8 +239,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	105.0.3
-Release:	%{?beta:0.%{beta}.1}3
+Version:	106.0.1
+Release:	%{?beta:0.%{beta}.1}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -278,6 +278,8 @@ Patch16:	firefox-103.0-glibc-2.36.patch
 
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 Patch45:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-python-3.11.patch
+
+Patch50:    https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-enable-vaapi.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -580,7 +582,18 @@ mkdir -p %{buildroot}%{mozillalibdir}
 cp -rf obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 
 mkdir -p  %{buildroot}%{_bindir}
-ln -sf %{mozillalibdir}/firefox %{buildroot}%{_bindir}/firefox
+
+cat > %{buildroot}%{_bindir}/firefox <<'EOF'
+#!/bin/sh
+if [ "${XDG_SESSION_TYPE:-}" = wayland ]; then
+export MOZ_ENABLE_WAYLAND=1
+	exec %{mozillalibdir}/firefox "$@"
+else
+export MOZ_DISABLE_WAYLAND=1
+	exec %{mozillalibdir}/firefox "$@"
+fi
+EOF
+chmod +x %{buildroot}%{_bindir}/firefox
 
 cd %{buildroot}%{_bindir}
     ln -sf firefox mozilla-firefox
