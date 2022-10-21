@@ -239,7 +239,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	105.0.3
+Version:	106.0.1
 Release:	%{?beta:0.%{beta}.1}3
 License:	MPLv1+
 Group:		Networking/WWW
