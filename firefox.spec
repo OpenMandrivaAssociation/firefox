@@ -279,7 +279,10 @@ Patch16:	firefox-103.0-glibc-2.36.patch
 Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
 Patch45:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-python-3.11.patch
 
-Patch50:    https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-enable-vaapi.patch
+Patch50:    	https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-enable-vaapi.patch
+
+# Fix for compilation on aarch64: /builddir/build/BUILD/firefox-106.0.2/media/ffvpx/libavutil/cpu.c:46:10: fatal error: 'sys/sysctl.h' file not found
+Patch51:	https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-aarch64-sysctl.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -551,6 +554,9 @@ export MACH_NO_WRITE_TIMES=1
 export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
+
+# Needed to keep old profile working
+export MOZ_LEGACY_PROFILES="1"
 
 %if %{with system_python}
 # FIXME We should enable system python, but need to sort out dependencies
