@@ -1284,7 +1284,7 @@ diff --git a/widget/gtk/nsFilePicker.cpp b/widget/gtk/nsFilePicker.cpp
  #include "nsIFileURL.h"
  #include "nsIGIOService.h"
 @@ -22,16 +23,18 @@
- #include "nsMemory.h"
+ #include "nsArrayEnumerator.h"
  #include "nsEnumeratorUtils.h"
  #include "nsNetUtil.h"
  #include "nsReadableUtils.h"

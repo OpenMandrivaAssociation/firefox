@@ -53,7 +53,7 @@
 
 %define update_channel release
 
-%define xpidir https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/%{version}%{?beta:%{beta}}/linux-x86_64/xpi/
+%define xpidir https://ftp.mozilla.org/pub/firefox/releases/%{version}%{?beta:%{beta}}/linux-x86_64/xpi/
 
 # Supported l10n language lists
 %define langlist af ar ast bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
@@ -239,7 +239,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	106.0.5
+Version:	107.0
 Release:	%{?beta:0.%{beta}.1}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -262,7 +262,7 @@ Source100:      firefox.rpmlintrc
 %{expand:%(\
         i=500; \
         for lang in %langlist; do\
-                echo "%%{expand:Source$i: %{xpidir}/%%{language_$lang}.xpi}";\
+                echo "%%{expand:Source$i: %{xpidir}%%{language_$lang}.xpi}";\
                 i=$[i+1];\
         done\
         )
@@ -280,9 +280,6 @@ Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-e
 Patch45:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-python-3.11.patch
 
 Patch50:    	https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-enable-vaapi.patch
-
-# Fix for compilation on aarch64: /builddir/build/BUILD/firefox-106.0.2/media/ffvpx/libavutil/cpu.c:46:10: fatal error: 'sys/sysctl.h' file not found
-Patch51:	https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-aarch64-sysctl.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
