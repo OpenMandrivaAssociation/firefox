@@ -276,9 +276,6 @@ Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
 Patch16:	firefox-103.0-glibc-2.36.patch
 
-Patch44:	https://src.fedoraproject.org/rpms/firefox/raw/master/f/build-disable-elfhack.patch
-Patch45:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-python-3.11.patch
-
 Patch50:    	https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-enable-vaapi.patch
 
 BuildRequires:	doxygen
@@ -334,7 +331,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.81
+BuildRequires:	pkgconfig(nss) >= 3.85
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
