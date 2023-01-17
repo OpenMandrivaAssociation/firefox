@@ -14,8 +14,8 @@ diff --git a/modules/libpref/Preferences.cpp b/modules/libpref/Preferences.cpp
 --- a/modules/libpref/Preferences.cpp
 +++ b/modules/libpref/Preferences.cpp
 @@ -89,16 +89,17 @@
- #include "PLDHashTable.h"
  #include "plstr.h"
+ #include "prdtoa.h"
  #include "prlink.h"
  #include "xpcpublic.h"
  #include "js/RootingAPI.h"

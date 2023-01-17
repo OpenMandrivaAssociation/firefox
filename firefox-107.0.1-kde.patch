@@ -59,7 +59,7 @@ diff --git a/browser/components/preferences/main.js b/browser/components/prefere
 +          process.run(false, args, args.length);
 +        }
        } catch (ex) {
-         Cu.reportError(ex);
+         console.error(ex);
          return;
        }
  
