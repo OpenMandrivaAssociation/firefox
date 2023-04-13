@@ -1132,10 +1132,10 @@ diff --git a/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp b/uriloader/exthandler
 +      if( nsKDEUtils::command( command ))
 +        return NS_OK;
 +    }
-+    if (!mDefaultApplication)
++    if (!GetDefaultApplication())
 +      return NS_ERROR_FILE_NOT_FOUND;
 +
-+    return LaunchWithIProcess(mDefaultApplication, nativePath);
++    return LaunchWithIProcess(GetDefaultApplication(), nativePath);
 +  }
 +
    nsCOMPtr<nsIGIOService> giovfs = do_GetService(NS_GIOSERVICE_CONTRACTID);
