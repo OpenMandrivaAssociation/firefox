@@ -239,8 +239,8 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	112.0
-Release:	%{?beta:0.%{beta}.1}2
+Version:	112.0.1
+Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -272,11 +272,26 @@ Source100:      firefox.rpmlintrc
 Patch11:	firefox-107.0.1-kde.patch
 Patch12:	mozilla-107.0.1-kde.patch
 
-Patch14:	build-aarch64-skia.patch
 Patch15:	build-arm-libopus.patch
 Patch16:	firefox-103.0-glibc-2.36.patch
+Patch17:	firefox-112.0.1-no-static-libstdc++.patch
 
-Patch50:    	https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/firefox-enable-vaapi.patch
+Patch50:    	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-enable-vaapi.patch
+Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-fix-for-GCC-12.patch
+Patch52:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-aarch64-skia.patch
+Patch55:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/D173814.diff
+Patch57:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-112.0-commasplit.patch
+Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13-build.patch
+Patch60:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/libwebrtc-pipewire-capturer-import-dmabuf-directly-into-desktop-frame.patch
+Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
+Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
+Patch63:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1663844.patch
+#Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
+Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
+Patch66:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1670333.patch
+Patch67:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1775202.patch
+Patch68:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1826583.patch
+Patch69:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1827429.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -480,7 +495,7 @@ ac_add_options --enable-system-ffi
 ac_add_options --with-unsigned-addon-scopes=app,system
 ac_add_options --allow-addon-sideload
 ac_add_options --without-wasm-sandboxed-libraries
-%ifarch aarch64
+%ifarch %{aarch64}
 ac_add_options --enable-rust-simd
 %endif
 %ifarch %{arm}
@@ -505,7 +520,7 @@ EOF
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
 
-%ifarch %ix86
+%ifarch %ix86 %x86_64
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
 %global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
 # still requires gcc

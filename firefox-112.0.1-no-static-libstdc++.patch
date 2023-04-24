@@ -1,0 +1,44 @@
+diff -up firefox-112.0.1/memory/replace/logalloc/replay/moz.build.omv~ firefox-112.0.1/memory/replace/logalloc/replay/moz.build
+--- firefox-112.0.1/memory/replace/logalloc/replay/moz.build.omv~	2023-04-24 23:42:13.903890709 +0200
++++ firefox-112.0.1/memory/replace/logalloc/replay/moz.build	2023-04-24 23:42:21.526954354 +0200
+@@ -21,9 +21,6 @@ if CONFIG["OS_TARGET"] == "WINNT":
+         "/mozglue/misc/ProcessType.cpp",
+     ]
+ 
+-if CONFIG["OS_TARGET"] == "Linux":
+-    LDFLAGS += ["-static-libstdc++"]
+-
+ if CONFIG["OS_TARGET"] == "Darwin":
+     # Work around "warning: 'aligned_alloc' is only available on macOS 10.15 or newer"
+     # when building with MACOSX_DEPLOYMENT_TARGET < 10.15 with >= 10.15 SDK.
+diff -up firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt.omv~ firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt
+--- firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt.omv~	2023-04-24 23:42:52.833216472 +0200
++++ firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt	2023-04-24 23:43:14.731400505 +0200
+@@ -200,7 +200,7 @@ if(JPEGXL_STATIC)
+   if (NOT MSVC AND NOT APPLE)
+     set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+     set(CMAKE_EXE_LINKER_FLAGS
+-        "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
++        "${CMAKE_EXE_LINKER_FLAGS}")
+   endif()
+ endif()  # JPEGXL_STATIC
+ 
+diff -up firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn.omv~ firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn
+--- firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn.omv~	2023-04-24 23:42:33.599055289 +0200
++++ firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn	2023-04-24 23:42:45.376153928 +0200
+@@ -14,15 +14,6 @@ config("static_config") {
+       # http://b/26390825
+       "-Wl,--exclude-libs=libffmpeg.a",
+     ]
+-
+-    if (!is_android) {
+-      ldflags += [
+-        # We want to statically link libstdc++/libgcc on Linux.
+-        # (On Android, libstdc++ and libgcc aren't used.)
+-        "-static-libstdc++",
+-        "-static-libgcc",
+-      ]
+-    }
+   }
+ }
+ 

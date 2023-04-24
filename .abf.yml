@@ -23,7 +23,6 @@ sources:
   eu.xpi: a87a0ef506a667ae596d0d2c55f182ae882f327a
   fa.xpi: a4aed2e3ebf2b033906bd0c2b41741b2cb88f482
   fi.xpi: c825af5d1357c6e1819929299fc962b443839e16
-  firefox-112.0.source.tar.xz: 8d43beb44f835732326cae25d2c893f19507aa33
   fr.xpi: 383c2229eeb40ec9adf6f77d807a15eaab8bcdff
   fy-NL.xpi: b100607aff928cffc2b630d574385bbb6d2d56dc
   ga-IE.xpi: 55ce7fb4d0a0896fcf77eee4b66a6d143a8fd85c
@@ -70,3 +69,4 @@ sources:
   vi.xpi: 8d8e37eaa51cb01fa6f4eaa872985c1d2586fa2a
   zh-CN.xpi: db7cf1f5fbb41e26e47555cff8f720f43c2463ac
   zh-TW.xpi: b39c66bc333b471655fe85575face6b8a27ed714
+  firefox-112.0.1.source.tar.xz: d82a186f4d8b50ac9c83d810abcd03bb2856231a
