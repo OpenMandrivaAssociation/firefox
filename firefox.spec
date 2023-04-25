@@ -240,7 +240,7 @@ Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	112.0.2
-Release:	%{?beta:0.%{beta}.}1
+Release:	%{?beta:0.%{beta}.}2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -546,11 +546,11 @@ cat > .cargo/config <<EOL
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "`pwd`"
+directory = "$(pwd)"
 EOL
 
 env CARGO_HOME=.cargo cargo install cbindgen
-export PATH=`pwd`/.cargo/bin:$PATH
+export PATH=$(pwd)/.cargo/bin:$PATH
 cd -
 %endif
 
@@ -559,15 +559,16 @@ export MOZCONFIG=$(pwd)/mozconfig
 cat $MOZCONFIG
 
 export MOZ_NOSPAM=1
-export MOZ_SERVICES_SYNC="1"
+export MOZ_SERVICES_SYNC=1
 export MACH_NO_WRITE_TIMES=1
-# (tpg) do not create new user profiles on each upgrade, use exsting one
-export MOZ_LEGACY_PROFILES="1"
 export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
-# Needed to keep old profile working
-export MOZ_LEGACY_PROFILES="1"
+# (tpg) do not create new user profiles on each upgrade, use exsting one
+export MOZ_LEGACY_PROFILES=1
+
+# (tpg) re-use already existing user profile
+export MOZ_ALLOW_DOWNGRADE=1
 
 %if %{with system_python}
 # FIXME We should enable system python, but need to sort out dependencies
