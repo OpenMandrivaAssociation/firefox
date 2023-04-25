@@ -515,12 +515,16 @@ ac_add_options MOZ_PGO=1
 %endif
 ac_add_options --disable-lto
 
+# We don't care about binary compatibility
+# with prehistoric libstdc++ versions. No need
+# to bloat things
+unset MOZ_STDCXX_COMPAT
 EOF
 
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
 
-%ifarch %ix86 %x86_64
+%ifarch %ix86
 %global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
 %global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
 # still requires gcc
