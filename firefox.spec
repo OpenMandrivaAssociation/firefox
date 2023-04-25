@@ -290,8 +290,6 @@ Patch63:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-166384
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
 Patch66:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1670333.patch
 Patch67:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1775202.patch
-Patch68:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1826583.patch
-Patch69:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1827429.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
