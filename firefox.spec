@@ -32,7 +32,7 @@
 
 # use bundled cbindgen
 # currently enabled as updating all rust deps would take eons
-%global use_bundled_cbindgen  1
+%global use_bundled_cbindgen  0
 
 %bcond_with pgo
 
