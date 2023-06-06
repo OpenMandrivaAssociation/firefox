@@ -85,9 +85,9 @@ diff -up firefox-113.0/toolkit/components/downloads/moz.build.2~ firefox-113.0/t
 +
  with Files("**"):
      BUG_COMPONENT = ("Toolkit", "Downloads API")
-diff -up firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.jsm.2~ firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.jsm
---- firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.jsm.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.jsm	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs.2~ firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs
+--- firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs.2~	2023-05-05 00:09:25.000000000 +0200
++++ firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs	2023-05-09 15:54:23.807998023 +0200
 @@ -1255,26 +1255,56 @@ nsUnknownContentTypeDialog.prototype = {
          this.chosenApp = params.handlerApp;
        }

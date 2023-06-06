@@ -239,7 +239,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	113.0
+Version:	114.0
 Release:	%{?beta:0.%{beta}.}2
 License:	MPLv1+
 Group:		Networking/WWW
@@ -278,14 +278,13 @@ Patch17:	firefox-112.0.1-no-static-libstdc++.patch
 
 Patch50:    	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-enable-vaapi.patch
 Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-fix-for-GCC-12.patch
-Patch52:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-aarch64-skia.patch
+#Patch52:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-aarch64-skia.patch
 Patch57:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-112.0-commasplit.patch
 Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13-build.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
-Patch67:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1775202.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
