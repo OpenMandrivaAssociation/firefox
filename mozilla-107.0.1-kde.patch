@@ -1244,7 +1244,7 @@ diff -up firefox-113.0/widget/gtk/nsFilePicker.cpp.2~ firefox-113.0/widget/gtk/n
 +  if (file) {
 +    nsCOMPtr<nsIFile> dir;
 +    file->GetParent(getter_AddRefs(dir));
-+    nsCOMPtr<nsIFile> localDir(do_QueryInterface(dir));
++    nsCOMPtr<nsIFile> localDir(dir);
 +    if (localDir) {
 +      localDir.swap(mPrevDisplayDirectory);
 +    }
