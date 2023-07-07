@@ -47,7 +47,6 @@
 %bcond_with system_python
 
 # this seems fragile, so require the exact version or later (#58754)
-%define sqlite3_version %(pkg-config --modversion sqlite3 &>/dev/null && pkg-config --modversion sqlite3 2>/dev/null || echo 0)
 %define nss_version %(pkg-config --modversion nss &>/dev/null && pkg-config --modversion nss 2>/dev/null || echo 0)
 %define nspr_version %(pkg-config --modversion nspr &>/dev/null && pkg-config --modversion nspr 2>/dev/null |sed -e 's!\.0!!' || echo 0)
 
@@ -343,7 +342,6 @@ BuildRequires:	pkgconfig(nss) >= 3.90
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
-BuildRequires:	pkgconfig(sqlite3) >= 3.24.0
 BuildRequires:	pkgconfig(theoradec)
 BuildRequires:	pkgconfig(vorbis)
 BuildRequires:	pkgconfig(vpx)
