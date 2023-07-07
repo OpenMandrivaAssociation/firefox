@@ -329,7 +329,7 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gtk+-3.0)
-BuildRequires:	pkgconfig(icu-i18n) >= 71.1
+BuildRequires:	pkgconfig(icu-i18n) >= 73.1
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
@@ -339,7 +339,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.87
+BuildRequires:	pkgconfig(nss) >= 3.90
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -364,9 +364,9 @@ BuildRequires:	pkgconfig(valgrind)
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
-BuildRequires:	rust >= 1.59.0
-BuildRequires:	cargo >= 1.59.0
-BuildRequires:	nodejs >= 10.19
+BuildRequires:	rust >= 1.66.0
+BuildRequires:	cargo >= 1.66.0
+BuildRequires:	nodejs >= 12.22.12
 BuildRequires:	pkgconfig(jemalloc)
 %if %{with pgo}
 BuildRequires:	x11-server-xvfb
