@@ -1,21 +1,7 @@
-diff -up firefox-113.0/modules/libpref/moz.build.2~ firefox-113.0/modules/libpref/moz.build
---- firefox-113.0/modules/libpref/moz.build.2~	2023-05-05 00:09:17.000000000 +0200
-+++ firefox-113.0/modules/libpref/moz.build	2023-05-09 15:54:23.806998016 +0200
-@@ -127,6 +127,10 @@ UNIFIED_SOURCES += [
-     "SharedPrefMap.cpp",
- ]
- 
-+LOCAL_INCLUDES += [
-+    '/toolkit/xre'
-+]
-+
- gen_all_tuple = tuple(gen_h + gen_cpp + gen_rs)
- 
- GeneratedFile(
-diff -up firefox-113.0/modules/libpref/Preferences.cpp.2~ firefox-113.0/modules/libpref/Preferences.cpp
---- firefox-113.0/modules/libpref/Preferences.cpp.2~	2023-05-05 00:09:17.000000000 +0200
-+++ firefox-113.0/modules/libpref/Preferences.cpp	2023-05-09 15:54:23.806998016 +0200
-@@ -96,6 +96,7 @@
+diff -up firefox-116.0/modules/libpref/Preferences.cpp.2~ firefox-116.0/modules/libpref/Preferences.cpp
+--- firefox-116.0/modules/libpref/Preferences.cpp.2~	2023-07-27 20:36:09.000000000 +0200
++++ firefox-116.0/modules/libpref/Preferences.cpp	2023-08-01 10:19:34.789552372 +0200
+@@ -95,6 +95,7 @@
  #ifdef MOZ_BACKGROUNDTASKS
  #  include "mozilla/BackgroundTasks.h"
  #endif
@@ -23,7 +9,7 @@ diff -up firefox-113.0/modules/libpref/Preferences.cpp.2~ firefox-113.0/modules/
  
  #ifdef DEBUG
  #  include <map>
-@@ -4912,6 +4913,17 @@ nsresult Preferences::InitInitialObjects
+@@ -4906,6 +4907,17 @@ nsresult Preferences::InitInitialObjects
  #endif
    };
  
@@ -41,7 +27,7 @@ diff -up firefox-113.0/modules/libpref/Preferences.cpp.2~ firefox-113.0/modules/
    rv = pref_LoadPrefsInDir(defaultPrefDir, specialFiles,
                             ArrayLength(specialFiles));
    if (NS_FAILED(rv)) {
-@@ -4986,7 +4998,7 @@ nsresult Preferences::InitInitialObjects
+@@ -4980,7 +4992,7 @@ nsresult Preferences::InitInitialObjects
        }
  
        // Do we care if a file provided by this process fails to load?
@@ -50,9 +36,23 @@ diff -up firefox-113.0/modules/libpref/Preferences.cpp.2~ firefox-113.0/modules/
      }
    }
  
-diff -up firefox-113.0/python/mozbuild/mozpack/chrome/flags.py.2~ firefox-113.0/python/mozbuild/mozpack/chrome/flags.py
---- firefox-113.0/python/mozbuild/mozpack/chrome/flags.py.2~	2023-05-05 00:09:17.000000000 +0200
-+++ firefox-113.0/python/mozbuild/mozpack/chrome/flags.py	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/modules/libpref/moz.build.2~ firefox-116.0/modules/libpref/moz.build
+--- firefox-116.0/modules/libpref/moz.build.2~	2023-07-27 20:36:09.000000000 +0200
++++ firefox-116.0/modules/libpref/moz.build	2023-08-01 10:19:34.789552372 +0200
+@@ -126,6 +126,10 @@ UNIFIED_SOURCES += [
+     "SharedPrefMap.cpp",
+ ]
+ 
++LOCAL_INCLUDES += [
++    '/toolkit/xre'
++]
++
+ gen_all_tuple = tuple(gen_h + gen_cpp + gen_rs)
+ 
+ GeneratedFile(
+diff -up firefox-116.0/python/mozbuild/mozpack/chrome/flags.py.2~ firefox-116.0/python/mozbuild/mozpack/chrome/flags.py
+--- firefox-116.0/python/mozbuild/mozpack/chrome/flags.py.2~	2023-07-27 20:36:09.000000000 +0200
++++ firefox-116.0/python/mozbuild/mozpack/chrome/flags.py	2023-08-01 10:19:34.789552372 +0200
 @@ -234,6 +234,7 @@ class Flags(OrderedDict):
          "tablet": Flag,
          "process": StringFlag,
@@ -61,9 +61,9 @@ diff -up firefox-113.0/python/mozbuild/mozpack/chrome/flags.py.2~ firefox-113.0/
      }
      RE = re.compile(r"([!<>=]+)")
  
-diff -up firefox-113.0/python/mozbuild/mozpack/chrome/manifest.py.2~ firefox-113.0/python/mozbuild/mozpack/chrome/manifest.py
---- firefox-113.0/python/mozbuild/mozpack/chrome/manifest.py.2~	2023-05-05 00:09:17.000000000 +0200
-+++ firefox-113.0/python/mozbuild/mozpack/chrome/manifest.py	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/python/mozbuild/mozpack/chrome/manifest.py.2~ firefox-116.0/python/mozbuild/mozpack/chrome/manifest.py
+--- firefox-116.0/python/mozbuild/mozpack/chrome/manifest.py.2~	2023-07-27 20:36:09.000000000 +0200
++++ firefox-116.0/python/mozbuild/mozpack/chrome/manifest.py	2023-08-01 10:19:34.789552372 +0200
 @@ -43,6 +43,7 @@ class ManifestEntry(object):
          "process",
          "contentaccessible",
@@ -72,9 +72,9 @@ diff -up firefox-113.0/python/mozbuild/mozpack/chrome/manifest.py.2~ firefox-113
      ]
  
      def __init__(self, base, *flags):
-diff -up firefox-113.0/toolkit/components/downloads/moz.build.2~ firefox-113.0/toolkit/components/downloads/moz.build
---- firefox-113.0/toolkit/components/downloads/moz.build.2~	2023-05-05 00:09:24.000000000 +0200
-+++ firefox-113.0/toolkit/components/downloads/moz.build	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/toolkit/components/downloads/moz.build.2~ firefox-116.0/toolkit/components/downloads/moz.build
+--- firefox-116.0/toolkit/components/downloads/moz.build.2~	2023-07-27 20:36:17.000000000 +0200
++++ firefox-116.0/toolkit/components/downloads/moz.build	2023-08-01 10:19:34.789552372 +0200
 @@ -51,5 +51,9 @@ if CONFIG["MOZ_PLACES"]:
  
  FINAL_LIBRARY = "xul"
@@ -85,10 +85,10 @@ diff -up firefox-113.0/toolkit/components/downloads/moz.build.2~ firefox-113.0/t
 +
  with Files("**"):
      BUG_COMPONENT = ("Toolkit", "Downloads API")
-diff -up firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs.2~ firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs
---- firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs	2023-05-09 15:54:23.807998023 +0200
-@@ -1255,26 +1255,56 @@ nsUnknownContentTypeDialog.prototype = {
+diff -up firefox-116.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs.2~ firefox-116.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs
+--- firefox-116.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs	2023-08-01 10:19:34.790552382 +0200
+@@ -1246,26 +1246,56 @@ nsUnknownContentTypeDialog.prototype = {
          this.chosenApp = params.handlerApp;
        }
      } else if ("@mozilla.org/applicationchooser;1" in Cc) {
@@ -165,9 +165,9 @@ diff -up firefox-113.0/toolkit/mozapps/downloads/HelperAppDlg.sys.mjs.2~ firefox
      } else {
        var nsIFilePicker = Ci.nsIFilePicker;
        var fp = Cc["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
-diff -up firefox-113.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp.2~ firefox-113.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp
---- firefox-113.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp.2~ firefox-116.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp
+--- firefox-116.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -16,6 +16,8 @@
  #include "nsISupportsPrimitives.h"
  #include "nsIGSettingsService.h"
@@ -229,9 +229,9 @@ diff -up firefox-113.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp.2~
  NS_IMPL_COMPONENT_FACTORY(nsUnixSystemProxySettings) {
    auto result = MakeRefPtr<nsUnixSystemProxySettings>();
    result->Init();
-diff -up firefox-113.0/toolkit/xre/moz.build.2~ firefox-113.0/toolkit/xre/moz.build
---- firefox-113.0/toolkit/xre/moz.build.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/toolkit/xre/moz.build	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/toolkit/xre/moz.build.2~ firefox-116.0/toolkit/xre/moz.build
+--- firefox-116.0/toolkit/xre/moz.build.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/toolkit/xre/moz.build	2023-08-01 10:19:34.790552382 +0200
 @@ -96,7 +96,9 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "ui
          "UIKitDirProvider.mm",
      ]
@@ -242,9 +242,9 @@ diff -up firefox-113.0/toolkit/xre/moz.build.2~ firefox-113.0/toolkit/xre/moz.bu
          "nsNativeAppSupportUnix.cpp",
      ]
      CXXFLAGS += CONFIG["MOZ_X11_SM_CFLAGS"]
-diff -up firefox-113.0/toolkit/xre/nsKDEUtils.cpp.2~ firefox-113.0/toolkit/xre/nsKDEUtils.cpp
---- firefox-113.0/toolkit/xre/nsKDEUtils.cpp.2~	2023-05-09 15:54:23.807998023 +0200
-+++ firefox-113.0/toolkit/xre/nsKDEUtils.cpp	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/toolkit/xre/nsKDEUtils.cpp.2~ firefox-116.0/toolkit/xre/nsKDEUtils.cpp
+--- firefox-116.0/toolkit/xre/nsKDEUtils.cpp.2~	2023-08-01 10:19:34.790552382 +0200
++++ firefox-116.0/toolkit/xre/nsKDEUtils.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -0,0 +1,321 @@
 +/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -567,9 +567,9 @@ diff -up firefox-113.0/toolkit/xre/nsKDEUtils.cpp.2~ firefox-113.0/toolkit/xre/n
 +    fputs( "\\E\n", commandFile ); // done as \E, so it cannot happen in normal data
 +    fflush( commandFile );
 +    }
-diff -up firefox-113.0/toolkit/xre/nsKDEUtils.h.2~ firefox-113.0/toolkit/xre/nsKDEUtils.h
---- firefox-113.0/toolkit/xre/nsKDEUtils.h.2~	2023-05-09 15:54:23.807998023 +0200
-+++ firefox-113.0/toolkit/xre/nsKDEUtils.h	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/toolkit/xre/nsKDEUtils.h.2~ firefox-116.0/toolkit/xre/nsKDEUtils.h
+--- firefox-116.0/toolkit/xre/nsKDEUtils.h.2~	2023-08-01 10:19:34.790552382 +0200
++++ firefox-116.0/toolkit/xre/nsKDEUtils.h	2023-08-01 10:19:34.790552382 +0200
 @@ -0,0 +1,48 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -619,9 +619,9 @@ diff -up firefox-113.0/toolkit/xre/nsKDEUtils.h.2~ firefox-113.0/toolkit/xre/nsK
 +    };
 +
 +#endif // nsKDEUtils
-diff -up firefox-113.0/uriloader/exthandler/HandlerServiceParent.cpp.2~ firefox-113.0/uriloader/exthandler/HandlerServiceParent.cpp
---- firefox-113.0/uriloader/exthandler/HandlerServiceParent.cpp.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/uriloader/exthandler/HandlerServiceParent.cpp	2023-05-09 15:55:37.238544949 +0200
+diff -up firefox-116.0/uriloader/exthandler/HandlerServiceParent.cpp.2~ firefox-116.0/uriloader/exthandler/HandlerServiceParent.cpp
+--- firefox-116.0/uriloader/exthandler/HandlerServiceParent.cpp.2~	2023-07-27 20:36:17.000000000 +0200
++++ firefox-116.0/uriloader/exthandler/HandlerServiceParent.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -18,7 +18,7 @@
  #include "nsComponentManagerUtils.h"
  #include "nsServiceManagerUtils.h"
@@ -640,9 +640,9 @@ diff -up firefox-113.0/uriloader/exthandler/HandlerServiceParent.cpp.2~ firefox-
  #else
    *aHandlerExists = false;
  #endif
-diff -up firefox-113.0/uriloader/exthandler/moz.build.2~ firefox-113.0/uriloader/exthandler/moz.build
---- firefox-113.0/uriloader/exthandler/moz.build.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/uriloader/exthandler/moz.build	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/uriloader/exthandler/moz.build.2~ firefox-116.0/uriloader/exthandler/moz.build
+--- firefox-116.0/uriloader/exthandler/moz.build.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/uriloader/exthandler/moz.build	2023-08-01 10:19:34.790552382 +0200
 @@ -86,7 +86,9 @@ else:
  
  if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
@@ -661,9 +661,9 @@ diff -up firefox-113.0/uriloader/exthandler/moz.build.2~ firefox-113.0/uriloader
  ]
  
  if CONFIG["MOZ_ENABLE_DBUS"]:
-diff -up firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.cpp.2~ firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.cpp
---- firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.cpp.2~	2023-05-09 15:54:23.807998023 +0200
-+++ firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.cpp	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.cpp.2~ firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.cpp
+--- firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.cpp.2~	2023-08-01 10:19:34.790552382 +0200
++++ firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -0,0 +1,53 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -718,9 +718,9 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.cpp.2~ firefox
 +        return nsKDERegistry::GetFromType( aMIMEType );
 +    return nsGNOMERegistry::GetFromType( aMIMEType );
 +}
-diff -up firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.h.2~ firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.h
---- firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.h.2~	2023-05-09 15:54:23.807998023 +0200
-+++ firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.h	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.h.2~ firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.h
+--- firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.h.2~	2023-08-01 10:19:34.790552382 +0200
++++ firefox-116.0/uriloader/exthandler/unix/nsCommonRegistry.h	2023-08-01 10:19:34.790552382 +0200
 @@ -0,0 +1,28 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -750,9 +750,9 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsCommonRegistry.h.2~ firefox-1
 +};
 +
 +#endif
-diff -up firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.cpp.2~ firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.cpp
---- firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.cpp.2~	2023-05-09 15:54:23.807998023 +0200
-+++ firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.cpp	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.cpp.2~ firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.cpp
+--- firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.cpp.2~	2023-08-01 10:19:34.790552382 +0200
++++ firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -0,0 +1,87 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -841,9 +841,9 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.cpp.2~ firefox-11
 +        }
 +    return nullptr;
 +}
-diff -up firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.h.2~ firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.h
---- firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.h.2~	2023-05-09 15:54:23.807998023 +0200
-+++ firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.h	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.h.2~ firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.h
+--- firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.h.2~	2023-08-01 10:19:34.790552382 +0200
++++ firefox-116.0/uriloader/exthandler/unix/nsKDERegistry.h	2023-08-01 10:19:34.790552382 +0200
 @@ -0,0 +1,34 @@
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -879,9 +879,9 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsKDERegistry.h.2~ firefox-113.
 +};
 +
 +#endif //nsKDERegistry_h__
-diff -up firefox-113.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp.2~ firefox-113.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp
---- firefox-113.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp.2~ firefox-116.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp
+--- firefox-116.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp.2~	2023-07-27 20:36:17.000000000 +0200
++++ firefox-116.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -5,16 +5,19 @@
   * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
  
@@ -947,9 +947,9 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsMIMEInfoUnix.cpp.2~ firefox-1
    nsCOMPtr<nsIGIOService> giovfs = do_GetService(NS_GIOSERVICE_CONTRACTID);
    if (!giovfs) {
      return NS_ERROR_FAILURE;
-diff -up firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~ firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp
---- firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~ firefox-116.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp
+--- firefox-116.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -10,7 +10,7 @@
  #include "nsOSHelperAppService.h"
  #include "nsMIMEInfoUnix.h"
@@ -959,7 +959,7 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~ fir
  #  ifdef MOZ_BUILD_APP_IS_BROWSER
  #    include "nsIToolkitShellService.h"
  #    include "nsIGNOMEShellService.h"
-@@ -1107,7 +1107,7 @@ nsresult nsOSHelperAppService::OSProtoco
+@@ -1106,7 +1106,7 @@ nsresult nsOSHelperAppService::OSProtoco
    if (!XRE_IsContentProcess()) {
  #ifdef MOZ_WIDGET_GTK
      // Check the GNOME registry for a protocol handler
@@ -968,7 +968,7 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~ fir
  #else
      *aHandlerExists = false;
  #endif
-@@ -1127,7 +1127,7 @@ nsresult nsOSHelperAppService::OSProtoco
+@@ -1126,7 +1126,7 @@ nsresult nsOSHelperAppService::OSProtoco
  NS_IMETHODIMP nsOSHelperAppService::GetApplicationDescription(
      const nsACString& aScheme, nsAString& _retval) {
  #ifdef MOZ_WIDGET_GTK
@@ -977,7 +977,7 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~ fir
    return _retval.IsEmpty() ? NS_ERROR_NOT_AVAILABLE : NS_OK;
  #else
    return NS_ERROR_NOT_AVAILABLE;
-@@ -1232,7 +1232,7 @@ already_AddRefed<nsMIMEInfoBase> nsOSHel
+@@ -1231,7 +1231,7 @@ already_AddRefed<nsMIMEInfoBase> nsOSHel
  #ifdef MOZ_WIDGET_GTK
      LOG("Looking in GNOME registry\n");
      RefPtr<nsMIMEInfoBase> gnomeInfo =
@@ -986,7 +986,7 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~ fir
      if (gnomeInfo) {
        LOG("Got MIMEInfo from GNOME registry\n");
        return gnomeInfo.forget();
-@@ -1347,7 +1347,7 @@ already_AddRefed<nsMIMEInfoBase> nsOSHel
+@@ -1344,7 +1344,7 @@ already_AddRefed<nsMIMEInfoBase> nsOSHel
  
  #ifdef MOZ_WIDGET_GTK
    if (handler.IsEmpty()) {
@@ -995,20 +995,20 @@ diff -up firefox-113.0/uriloader/exthandler/unix/nsOSHelperAppService.cpp.2~ fir
      if (gnomeInfo) {
        LOG("Got MIMEInfo from GNOME registry without extensions; setting them "
            "to %s\n",
-diff -up firefox-113.0/widget/gtk/moz.build.2~ firefox-113.0/widget/gtk/moz.build
---- firefox-113.0/widget/gtk/moz.build.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/widget/gtk/moz.build	2023-05-09 15:54:23.807998023 +0200
-@@ -147,6 +147,7 @@ LOCAL_INCLUDES += [
+diff -up firefox-116.0/widget/gtk/moz.build.2~ firefox-116.0/widget/gtk/moz.build
+--- firefox-116.0/widget/gtk/moz.build.2~	2023-08-01 10:19:34.790552382 +0200
++++ firefox-116.0/widget/gtk/moz.build	2023-08-01 10:28:32.816721551 +0200
+@@ -151,6 +151,7 @@ LOCAL_INCLUDES += [
      "/layout/xul",
      "/other-licenses/atk-1.0",
      "/third_party/cups/include",
 +    "/toolkit/xre",
      "/widget",
      "/widget/headless",
- ]
-diff -up firefox-113.0/widget/gtk/nsFilePicker.cpp.2~ firefox-113.0/widget/gtk/nsFilePicker.cpp
---- firefox-113.0/widget/gtk/nsFilePicker.cpp.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/widget/gtk/nsFilePicker.cpp	2023-05-09 15:54:23.807998023 +0200
+     "/widget/x11",
+diff -up firefox-116.0/widget/gtk/nsFilePicker.cpp.2~ firefox-116.0/widget/gtk/nsFilePicker.cpp
+--- firefox-116.0/widget/gtk/nsFilePicker.cpp.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/widget/gtk/nsFilePicker.cpp	2023-08-01 10:19:34.790552382 +0200
 @@ -5,6 +5,7 @@
  
  #include <dlfcn.h>
@@ -1302,9 +1302,9 @@ diff -up firefox-113.0/widget/gtk/nsFilePicker.cpp.2~ firefox-113.0/widget/gtk/n
  // All below functions available as of GTK 3.20+
  void* nsFilePicker::GtkFileChooserNew(const gchar* title, GtkWindow* parent,
                                        GtkFileChooserAction action,
-diff -up firefox-113.0/widget/gtk/nsFilePicker.h.2~ firefox-113.0/widget/gtk/nsFilePicker.h
---- firefox-113.0/widget/gtk/nsFilePicker.h.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/widget/gtk/nsFilePicker.h	2023-05-09 15:54:23.807998023 +0200
+diff -up firefox-116.0/widget/gtk/nsFilePicker.h.2~ firefox-116.0/widget/gtk/nsFilePicker.h
+--- firefox-116.0/widget/gtk/nsFilePicker.h.2~	2023-07-27 20:36:17.000000000 +0200
++++ firefox-116.0/widget/gtk/nsFilePicker.h	2023-08-01 10:19:34.790552382 +0200
 @@ -74,6 +74,12 @@ class nsFilePicker : public nsBaseFilePi
   private:
    static nsIFile* mPrevDisplayDirectory;
@@ -1318,9 +1318,9 @@ diff -up firefox-113.0/widget/gtk/nsFilePicker.h.2~ firefox-113.0/widget/gtk/nsF
    void* GtkFileChooserNew(const gchar* title, GtkWindow* parent,
                            GtkFileChooserAction action,
                            const gchar* accept_label);
-diff -up firefox-113.0/xpcom/components/ManifestParser.cpp.2~ firefox-113.0/xpcom/components/ManifestParser.cpp
---- firefox-113.0/xpcom/components/ManifestParser.cpp.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/xpcom/components/ManifestParser.cpp	2023-05-09 15:54:23.808998031 +0200
+diff -up firefox-116.0/xpcom/components/ManifestParser.cpp.2~ firefox-116.0/xpcom/components/ManifestParser.cpp
+--- firefox-116.0/xpcom/components/ManifestParser.cpp.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/xpcom/components/ManifestParser.cpp	2023-08-01 10:19:34.791552392 +0200
 @@ -43,6 +43,7 @@
  #include "nsIScriptError.h"
  #include "nsIXULAppInfo.h"
@@ -1396,9 +1396,9 @@ diff -up firefox-113.0/xpcom/components/ManifestParser.cpp.2~ firefox-113.0/xpco
  #ifdef MOZ_WIDGET_ANDROID
          stTablet == eBad ||
  #endif
-diff -up firefox-113.0/xpcom/components/moz.build.2~ firefox-113.0/xpcom/components/moz.build
---- firefox-113.0/xpcom/components/moz.build.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/xpcom/components/moz.build	2023-05-09 15:54:23.808998031 +0200
+diff -up firefox-116.0/xpcom/components/moz.build.2~ firefox-116.0/xpcom/components/moz.build
+--- firefox-116.0/xpcom/components/moz.build.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/xpcom/components/moz.build	2023-08-01 10:19:34.791552392 +0200
 @@ -71,6 +71,7 @@ LOCAL_INCLUDES += [
      "/js/xpconnect/loader",
      "/layout/build",
@@ -1407,9 +1407,9 @@ diff -up firefox-113.0/xpcom/components/moz.build.2~ firefox-113.0/xpcom/compone
  ]
  
  if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
-diff -up firefox-113.0/xpcom/io/nsLocalFileUnix.cpp.2~ firefox-113.0/xpcom/io/nsLocalFileUnix.cpp
---- firefox-113.0/xpcom/io/nsLocalFileUnix.cpp.2~	2023-05-05 00:09:25.000000000 +0200
-+++ firefox-113.0/xpcom/io/nsLocalFileUnix.cpp	2023-05-09 15:54:23.808998031 +0200
+diff -up firefox-116.0/xpcom/io/nsLocalFileUnix.cpp.2~ firefox-116.0/xpcom/io/nsLocalFileUnix.cpp
+--- firefox-116.0/xpcom/io/nsLocalFileUnix.cpp.2~	2023-07-27 20:36:18.000000000 +0200
++++ firefox-116.0/xpcom/io/nsLocalFileUnix.cpp	2023-08-01 10:19:34.791552392 +0200
 @@ -51,6 +51,7 @@
  
  #ifdef MOZ_WIDGET_GTK

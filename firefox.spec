@@ -32,9 +32,9 @@
 
 # use bundled cbindgen
 # currently enabled as updating all rust deps would take eons
-%global use_bundled_cbindgen  1
+#global use_bundled_cbindgen  1
 
-%bcond_with pgo
+%bcond_without pgo
 
 %if %omvver > 4050000
 %define build_py python3
@@ -238,7 +238,7 @@ Name:		firefox
 Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	115.0.2
+Version:	116.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
