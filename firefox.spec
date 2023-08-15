@@ -284,6 +284,7 @@ Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-119677
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
+Patch66:	ffmpeg.git-effadce6c756247ea8bae32dc13bb3e6f464f0eb.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
