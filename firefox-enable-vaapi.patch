@@ -2,8 +2,8 @@ diff -up firefox-113.0/widget/gtk/GfxInfo.cpp.6~ firefox-113.0/widget/gtk/GfxInf
 --- firefox-113.0/widget/gtk/GfxInfo.cpp.6~	2023-05-09 15:56:03.091736331 +0200
 +++ firefox-113.0/widget/gtk/GfxInfo.cpp	2023-05-09 15:56:47.355062687 +0200
 @@ -818,14 +818,6 @@ const nsTArray<GfxDriverInfo>& GfxInfo::
-         nsIGfxInfo::FEATURE_BLOCKED_DEVICE, DRIVER_COMPARISON_IGNORED,
-         V(0, 0, 0, 0), "FEATURE_HARDWARE_VIDEO_DECODING_NO_R600", "");
+         nsIGfxInfo::FEATURE_BLOCKED_DEVICE, DRIVER_LESS_THAN, V(23, 1, 1, 0),
+         "FEATURE_HARDWARE_VIDEO_DECODING_AMD_DISABLE", "Mesa 23.1.1.0");
  
 -    // Disable on Release/late Beta on AMD
 -#if !defined(EARLY_BETA_OR_EARLIER)
