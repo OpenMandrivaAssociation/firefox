@@ -377,7 +377,7 @@ Requires:	xdg-utils
 Suggests:	%{_lib}canberra0
 Suggests:	%{_lib}cups2
 
-Provides:	mozilla-firefox = %{epoch}:%{version}-%{release}
+Provides:	mozilla-firefox = %{EVRD}
 Provides:	webclient
 
 Obsoletes:	firefox-ext-weave-sync
@@ -682,7 +682,6 @@ mkdir -p %{buildroot}%{_sys_macros_dir}
 cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 # Macros from %{name} package
 %%firefox_major              %{version}
-%%firefox_epoch              %{epoch}
 %%firefox_version            %{version}%{?beta:-0.%{beta}}
 %%firefox_mozillapath        %{mozillalibdir}
 %%firefox_pluginsdir         %{pluginsdir}
