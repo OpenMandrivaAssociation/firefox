@@ -235,11 +235,10 @@
 
 Summary:	Next generation web browser
 Name:		firefox
-Epoch:		0
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	117.0
-Release:	%{?beta:0.%{beta}.}1
+Release:	%{?beta:0.%{beta}.}2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -562,9 +561,6 @@ export MACH_NO_WRITE_TIMES=1
 export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
-# (tpg) do not create new user profiles on each upgrade, use exsting one
-export MOZ_LEGACY_PROFILES=1
-
 # (tpg) re-use already existing user profile
 export MOZ_ALLOW_DOWNGRADE=1
 
@@ -601,11 +597,14 @@ mkdir -p  %{buildroot}%{_bindir}
 
 cat > %{buildroot}%{_bindir}/firefox <<'EOF'
 #!/bin/sh
+# (tpg) do not create new user profiles on each upgrade, use exsting one
+export MOZ_LEGACY_PROFILES=1
+
 if [ "${XDG_SESSION_TYPE:-}" = wayland ]; then
-export MOZ_ENABLE_WAYLAND=1
+	export MOZ_ENABLE_WAYLAND=1
 	exec %{mozillalibdir}/firefox "$@"
 else
-export MOZ_DISABLE_WAYLAND=1
+	export MOZ_DISABLE_WAYLAND=1
 	exec %{mozillalibdir}/firefox "$@"
 fi
 EOF
