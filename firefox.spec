@@ -284,7 +284,6 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
 Patch66:	ffmpeg.git-effadce6c756247ea8bae32dc13bb3e6f464f0eb.patch
-Patch67:	pkgconf-2.0.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -421,9 +420,6 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %autosetup -p1
-
-# because of pkgconf patch
-sed -i 's/\("files":{\)[^}]*/\1/' third_party/rust/pkg-config/.cargo-checksum.json
 
 # We trust our toolchain. More than we trust hardcodes copied from
 # whatever someone found on a prehistoric brokenbuntu box.
