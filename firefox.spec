@@ -237,7 +237,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	117.0.1
+Version:	118.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -283,7 +283,6 @@ Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-119677
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
-Patch66:	ffmpeg.git-effadce6c756247ea8bae32dc13bb3e6f464f0eb.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -336,8 +335,6 @@ BuildRequires:	pkgconfig(libnotify)
 BuildRequires:	pkgconfig(libpng) >= 1.6.34
 BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
-# Workaround for missing libssh in packages build with Rust on znver
-BuildRequires:  pkgconfig(libssh2)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
 BuildRequires:	pkgconfig(nss) >= 3.91
