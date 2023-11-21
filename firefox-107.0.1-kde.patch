@@ -1,7 +1,7 @@
-diff -up firefox-111.0/browser/components/preferences/main.js.1~ firefox-111.0/browser/components/preferences/main.js
---- firefox-111.0/browser/components/preferences/main.js.1~	2023-03-10 01:01:02.000000000 +0100
-+++ firefox-111.0/browser/components/preferences/main.js	2023-03-13 22:04:44.877132062 +0100
-@@ -301,6 +301,13 @@ var gMainPane = {
+diff -up firefox-120.0/browser/components/preferences/main.js.1~ firefox-120.0/browser/components/preferences/main.js
+--- firefox-120.0/browser/components/preferences/main.js.1~	2023-11-16 18:42:51.000000000 +0100
++++ firefox-120.0/browser/components/preferences/main.js	2023-11-21 15:44:12.871506541 +0100
+@@ -296,6 +296,13 @@ var gMainPane = {
        }, backoffTimes[this._backoffIndex]);
      }
  
@@ -15,10 +15,10 @@ diff -up firefox-111.0/browser/components/preferences/main.js.1~ firefox-111.0/b
      this.initBrowserContainers();
      this.buildContentProcessCountMenuList();
  
-@@ -1303,6 +1310,17 @@ var gMainPane = {
+@@ -1749,6 +1756,17 @@ var gMainPane = {
        }
        try {
-         shellSvc.setDefaultBrowser(true, false);
+         shellSvc.setDefaultBrowser(false);
 +        if (kde_session == 1) {
 +          var shellObj = Components.classes["@mozilla.org/file/local;1"]
 +            .createInstance(Components.interfaces.nsILocalFile);
@@ -33,9 +33,9 @@ diff -up firefox-111.0/browser/components/preferences/main.js.1~ firefox-111.0/b
        } catch (ex) {
          console.error(ex);
          return;
-diff -up firefox-111.0/browser/components/shell/moz.build.1~ firefox-111.0/browser/components/shell/moz.build
---- firefox-111.0/browser/components/shell/moz.build.1~	2023-03-10 01:01:02.000000000 +0100
-+++ firefox-111.0/browser/components/shell/moz.build	2023-03-13 22:02:54.952405761 +0100
+diff -up firefox-120.0/browser/components/shell/moz.build.1~ firefox-120.0/browser/components/shell/moz.build
+--- firefox-120.0/browser/components/shell/moz.build.1~	2023-11-16 18:42:51.000000000 +0100
++++ firefox-120.0/browser/components/shell/moz.build	2023-11-21 15:33:02.983291804 +0100
 @@ -36,6 +36,8 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gt
  
      SOURCES += [
@@ -45,10 +45,10 @@ diff -up firefox-111.0/browser/components/shell/moz.build.1~ firefox-111.0/brows
      ]
      if CONFIG["MOZ_ENABLE_DBUS"]:
          SOURCES += [
-diff -up firefox-111.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox-111.0/browser/components/shell/nsKDEShellService.cpp
---- firefox-111.0/browser/components/shell/nsKDEShellService.cpp.1~	2023-03-13 22:02:54.952405761 +0100
-+++ firefox-111.0/browser/components/shell/nsKDEShellService.cpp	2023-03-13 22:02:54.952405761 +0100
-@@ -0,0 +1,109 @@
+diff -up firefox-120.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox-120.0/browser/components/shell/nsKDEShellService.cpp
+--- firefox-120.0/browser/components/shell/nsKDEShellService.cpp.1~	2023-11-21 15:33:02.983291804 +0100
++++ firefox-120.0/browser/components/shell/nsKDEShellService.cpp	2023-11-21 15:33:02.983291804 +0100
+@@ -0,0 +1,108 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -104,8 +104,7 @@ diff -up firefox-111.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox
 +}
 +
 +NS_IMETHODIMP
-+nsKDEShellService::SetDefaultBrowser(bool aClaimAllTypes,
-+                                     bool aForAllUsers)
++nsKDEShellService::SetDefaultBrowser(bool aClaimAllTypes)
 +{
 +    nsCOMPtr<nsIMutableArray> command = do_CreateInstance( NS_ARRAY_CONTRACTID );
 +    if (!command)
@@ -119,7 +118,7 @@ diff -up firefox-111.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox
 +    cmdstr->SetData("SETDEFAULTBROWSER"_ns);
 +    command->AppendElement( cmdstr );
 +
-+    paramstr->SetData( aClaimAllTypes ? "ALLTYPES"_ns : "NORMAL"_ns );
++    paramstr->SetData("NORMAL"_ns);
 +    command->AppendElement( paramstr );
 +
 +    return nsKDEUtils::command( command ) ? NS_OK : NS_ERROR_FAILURE;
@@ -158,9 +157,9 @@ diff -up firefox-111.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox
 +    return NS_ERROR_NOT_IMPLEMENTED;
 +}
 +
-diff -up firefox-111.0/browser/components/shell/nsKDEShellService.h.1~ firefox-111.0/browser/components/shell/nsKDEShellService.h
---- firefox-111.0/browser/components/shell/nsKDEShellService.h.1~	2023-03-13 22:02:54.952405761 +0100
-+++ firefox-111.0/browser/components/shell/nsKDEShellService.h	2023-03-13 22:02:54.952405761 +0100
+diff -up firefox-120.0/browser/components/shell/nsKDEShellService.h.1~ firefox-120.0/browser/components/shell/nsKDEShellService.h
+--- firefox-120.0/browser/components/shell/nsKDEShellService.h.1~	2023-11-21 15:33:02.983291804 +0100
++++ firefox-120.0/browser/components/shell/nsKDEShellService.h	2023-11-21 15:33:02.983291804 +0100
 @@ -0,0 +1,32 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -194,9 +193,9 @@ diff -up firefox-111.0/browser/components/shell/nsKDEShellService.h.1~ firefox-1
 +};
 +
 +#endif // nskdeshellservice_h____
-diff -up firefox-111.0/browser/components/shell/nsUnixShellService.cpp.1~ firefox-111.0/browser/components/shell/nsUnixShellService.cpp
---- firefox-111.0/browser/components/shell/nsUnixShellService.cpp.1~	2023-03-13 22:02:54.953405768 +0100
-+++ firefox-111.0/browser/components/shell/nsUnixShellService.cpp	2023-03-13 22:02:54.952405761 +0100
+diff -up firefox-120.0/browser/components/shell/nsUnixShellService.cpp.1~ firefox-120.0/browser/components/shell/nsUnixShellService.cpp
+--- firefox-120.0/browser/components/shell/nsUnixShellService.cpp.1~	2023-11-21 15:33:02.983291804 +0100
++++ firefox-120.0/browser/components/shell/nsUnixShellService.cpp	2023-11-21 15:33:02.983291804 +0100
 @@ -0,0 +1,22 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -220,9 +219,9 @@ diff -up firefox-111.0/browser/components/shell/nsUnixShellService.cpp.1~ firefo
 +        return nsKDEShellServiceConstructor( aIID, aResult );
 +    return nsGNOMEShellServiceConstructor( aIID, aResult );
 +}
-diff -up firefox-111.0/browser/components/shell/nsUnixShellService.h.1~ firefox-111.0/browser/components/shell/nsUnixShellService.h
---- firefox-111.0/browser/components/shell/nsUnixShellService.h.1~	2023-03-13 22:02:54.953405768 +0100
-+++ firefox-111.0/browser/components/shell/nsUnixShellService.h	2023-03-13 22:02:54.953405768 +0100
+diff -up firefox-120.0/browser/components/shell/nsUnixShellService.h.1~ firefox-120.0/browser/components/shell/nsUnixShellService.h
+--- firefox-120.0/browser/components/shell/nsUnixShellService.h.1~	2023-11-21 15:33:02.984291815 +0100
++++ firefox-120.0/browser/components/shell/nsUnixShellService.h	2023-11-21 15:33:02.983291804 +0100
 @@ -0,0 +1,15 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
