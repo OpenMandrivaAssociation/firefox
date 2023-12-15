@@ -283,6 +283,7 @@ Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-119677
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
+Patch66:	firefox-115.4.0-icu-74.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -327,7 +328,7 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gtk+-3.0)
-BuildRequires:	pkgconfig(icu-i18n) >= 73.1
+BuildRequires:	pkgconfig(icu-i18n) >= 74.1
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
