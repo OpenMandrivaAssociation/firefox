@@ -579,7 +579,7 @@ GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
 
 %install
 # Make sure locale works for langpacks
-%{__cat} > obj/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+cat > objdir/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 EOF
 
