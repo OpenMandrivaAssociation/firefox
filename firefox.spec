@@ -283,7 +283,7 @@ Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-119677
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
-Patch66:	firefox-115.4.0-icu-74.patch
+#Patch66:	firefox-115.4.0-icu-74.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
