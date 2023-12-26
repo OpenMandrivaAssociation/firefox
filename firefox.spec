@@ -328,7 +328,7 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gtk+-3.0)
-BuildRequires:	pkgconfig(icu-i18n) >= 74.1
+BuildRequires:	pkgconfig(icu-i18n) >= 72.1
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
