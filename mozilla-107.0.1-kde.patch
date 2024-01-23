@@ -996,12 +996,12 @@ diff -up firefox-116.0/widget/gtk/nsFilePicker.cpp.2~ firefox-116.0/widget/gtk/n
    nsAutoCString filter, name;
 @@ -352,6 +357,29 @@ nsFilePicker::Open(nsIFilePickerShownCal
    // Can't show two dialogs concurrently with the same filepicker
-   if (mRunning) return NS_ERROR_NOT_AVAILABLE;
+   if (mFileChooser) return NS_ERROR_NOT_AVAILABLE;
  
 +  // KDE file picker is not handled via callback
 +  if( nsKDEUtils::kdeSupport()) {
 +    mCallback = aCallback;
-+    mRunning = true;
++    mFileChooser = aCallback;
 +    NS_ADDREF_THIS();
 +    g_idle_add([](gpointer data) -> gboolean {
 +      nsFilePicker* queuedPicker = (nsFilePicker*) data;
@@ -1013,7 +1013,7 @@ diff -up firefox-116.0/widget/gtk/nsFilePicker.cpp.2~ firefox-116.0/widget/gtk/n
 +      } else {
 +        queuedPicker->mResult = result;
 +      }
-+      queuedPicker->mRunning = false;
++      queuedPicker->mFileChooser = nullptr;
 +      NS_RELEASE(queuedPicker);
 +      return G_SOURCE_REMOVE;
 +    }, this);
