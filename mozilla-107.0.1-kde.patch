@@ -995,8 +995,8 @@ diff -up firefox-116.0/widget/gtk/nsFilePicker.cpp.2~ firefox-116.0/widget/gtk/n
  
    nsAutoCString filter, name;
 @@ -352,6 +357,29 @@ nsFilePicker::Open(nsIFilePickerShownCal
-   // Can't show two dialogs concurrently with the same filepicker
-   if (mFileChooser) return NS_ERROR_NOT_AVAILABLE;
+     return NS_OK;
+   }
  
 +  // KDE file picker is not handled via callback
 +  if( nsKDEUtils::kdeSupport()) {
@@ -1357,7 +1357,7 @@ diff -up firefox-116.0/xpcom/components/moz.build.2~ firefox-116.0/xpcom/compone
 --- firefox-116.0/xpcom/components/moz.build.2~	2023-07-27 20:36:18.000000000 +0200
 +++ firefox-116.0/xpcom/components/moz.build	2023-08-01 10:19:34.791552392 +0200
 @@ -71,6 +71,7 @@ LOCAL_INCLUDES += [
-     "/js/xpconnect/loader",
+     "/js/xpconnect/src",
      "/layout/build",
      "/modules/libjar",
 +    "/toolkit/xre",

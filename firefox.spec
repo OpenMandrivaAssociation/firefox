@@ -237,7 +237,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	123.0.1
+Version:	124.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -573,7 +573,7 @@ rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,p
 %endif
 
 %if %{with pgo}
-GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
+GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat - || exit 1
 %else
 %build_py ./mach build -v
 %endif
