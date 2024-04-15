@@ -188,9 +188,9 @@ diff -up firefox-116.0/toolkit/system/unixproxy/nsUnixSystemProxySettings.cpp.2~
 +}
 +
 +
- NS_IMPL_COMPONENT_FACTORY(nsUnixSystemProxySettings) {
-   auto result = MakeRefPtr<nsUnixSystemProxySettings>();
-   result->Init();
+ NS_IMETHODIMP
+ nsUnixSystemProxySettings::GetSystemWPADSetting(bool* aSystemWPADSetting) {
+   *aSystemWPADSetting = false;
 diff -up firefox-116.0/toolkit/xre/moz.build.2~ firefox-116.0/toolkit/xre/moz.build
 --- firefox-116.0/toolkit/xre/moz.build.2~	2023-07-27 20:36:18.000000000 +0200
 +++ firefox-116.0/toolkit/xre/moz.build	2023-08-01 10:19:34.790552382 +0200

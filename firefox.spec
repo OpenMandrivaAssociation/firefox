@@ -237,7 +237,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	124.0.2
+Version:	125.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
