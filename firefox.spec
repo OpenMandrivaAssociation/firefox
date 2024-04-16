@@ -34,7 +34,12 @@
 # currently enabled as updating all rust deps would take eons
 #global use_bundled_cbindgen  1
 
+# pgo seems to cause segfault on znver1
+%ifarch znver1
+%bcond_with pgo
+%else
 %bcond_without pgo
+%endif
 
 %if %omvver > 4050000
 %define build_py python3
@@ -454,17 +459,12 @@ ac_add_options --enable-release
 ac_add_options --update-channel=%{update_channel}
 ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --with-distribution-id=org.openmandriva
-%ifarch %{ix86}
-ac_add_options --enable-linker=bfd
-ac_add_options --disable-optimize
-%else
 ac_add_options --enable-optimize="-O3"
-%endif
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --enable-necko-wifi
-%ifarch %{ix86} %{x86_64}
+%ifarch %{x86_64}
 ac_add_options --enable-av1
 %endif
 ac_add_options --without-system-libevent
@@ -516,16 +516,8 @@ EOF
 %build
 %global optflags %{optflags} -g0 -fno-exceptions
 
-%ifarch %ix86
-%global optflags %{optflags} -g0 -fno-exceptions -Wno-format-security
-%global ldflags %{ldflags} -Wl,--no-keep-memory -Wl,--reduce-memory-overheads
-# still requires gcc
-export CXX=g++
-export CC=gcc
-%else
 %global optflags %{optflags} -Wno-error=c++11-narrowing-const-reference 
 %global optflags %{optflags} -Qunused-arguments -g0 -fno-lto
-%endif
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
 # because compile will fail of missing -fPIC  :)
