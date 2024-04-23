@@ -34,6 +34,8 @@
 # currently enabled as updating all rust deps would take eons
 #global use_bundled_cbindgen  1
 
+%bcond_with valgrind
+
 # pgo seems to cause segfault on znver1
 %ifarch znver1
 %bcond_with pgo
@@ -363,8 +365,10 @@ BuildRequires:	clang-devel
 BuildRequires:	llvm-devel
 BuildRequires:	stdc++-static-devel
 %ifnarch %mips
+%if %{with valgrind}
 BuildRequires:	valgrind
 BuildRequires:	pkgconfig(valgrind)
+%endif
 BuildRequires:	yasm >= 1.0.1
 BuildRequires:	nasm
 %endif
@@ -495,7 +499,9 @@ ac_add_options --enable-skia
 ac_add_options --disable-webrtc
 ac_add_options --disable-elf-hack
 %endif
+%if %{with valgrind}
 ac_add_options --with-valgrind
+%endif
 export LLVM_PROFDATA="llvm-profdata"
 export AR="llvm-ar"
 export NM="llvm-nm"
