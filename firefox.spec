@@ -245,7 +245,7 @@ Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	125.0.2
-Release:	%{?beta:0.%{beta}.}1
+Release:	%{?beta:0.%{beta}.}2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -292,6 +292,13 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
 Patch66:	firefox-115.4.0-icu-74.patch
 Patch67:	mozilla-1890593.patch
+
+# Upstream with FFMPEG7 support
+Patch100: 9ca936580fb8.patch
+Patch101: f0be91bf67da.patch
+Patch102: fe050f00b35a.patch
+Patch103: cef76365b011.patch
+
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
