@@ -238,14 +238,14 @@
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang $(echo $lang | cut -d _ -f 1) "; done)}
 
-#define beta b4
+%define beta b6
 
 Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	125.0.2
-Release:	%{?beta:0.%{beta}.}2
+Version:	126.0
+Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -291,13 +291,8 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
 Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
 Patch66:	firefox-115.4.0-icu-74.patch
-Patch67:	mozilla-1890593.patch
 
-# Upstream with FFMPEG7 support
-Patch100: 9ca936580fb8.patch
-Patch101: f0be91bf67da.patch
-Patch102: fe050f00b35a.patch
-Patch103: cef76365b011.patch
+#Patch100:	firefox-system-ffmpeg.patch
 
 
 BuildRequires:	doxygen
@@ -437,6 +432,12 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %autosetup -p1
+%if 0
+# NOT YET, needs more work
+# Drop the gazillion of internalized ffmpeg copies,
+# we want system ffmpeg
+rm -rf media/ffvpx/libav{codec,util} dom/media/platforms/ffmpeg/ffmpeg* dom/media/platforms/ffmpeg/libav*
+%endif
 
 # We trust our toolchain. More than we trust hardcodes copied from
 # whatever someone found on a prehistoric brokenbuntu box.
