@@ -295,11 +295,11 @@ Patch66:	firefox-115.4.0-icu-74.patch
 #Patch100:	firefox-system-ffmpeg.patch
 # ffmpeg 7.0 patches as merged into 127a1 from
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1889978
-Patch101:	5970587d9a7a
-Patch102:	5759fe6ed8a5
-Patch103:	05d7a7c92cf2
-Patch104:	d55beebe2605
-Patch105:	fb10bab6cd18
+Patch101:	5970587d9a7a.patch
+Patch102:	5759fe6ed8a5.patch
+Patch103:	05d7a7c92cf2.patch
+Patch104:	d55beebe2605.patch
+Patch105:	fb10bab6cd18.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
