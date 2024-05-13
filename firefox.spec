@@ -238,7 +238,7 @@
 # Locales
 %{expand:%(for lang in %{langlist}; do echo "%%global locale_$lang $(echo $lang | cut -d _ -f 1) "; done)}
 
-%define beta b9
+#define beta b9
 
 Summary:	Next generation web browser
 Name:		firefox
