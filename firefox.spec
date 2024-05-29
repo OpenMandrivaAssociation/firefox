@@ -506,7 +506,8 @@ ac_add_options --with-unsigned-addon-scopes=app,system
 ac_add_options --allow-addon-sideload
 ac_add_options --without-wasm-sandboxed-libraries
 %ifarch %{aarch64}
-ac_add_options --enable-rust-simd
+# doesnt seem to compile
+#ac_add_options --enable-rust-simd
 %endif
 %ifarch %{arm}
 ac_add_options --enable-skia
