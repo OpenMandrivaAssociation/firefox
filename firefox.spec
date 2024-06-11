@@ -244,7 +244,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	126.0.1
+Version:	127.0
 Release:	%{?beta:0.%{beta}.}2
 License:	MPLv1+
 Group:		Networking/WWW
@@ -289,17 +289,9 @@ Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
-Patch65:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1669639.patch
 Patch66:	firefox-115.4.0-icu-74.patch
 
 #Patch100:	firefox-system-ffmpeg.patch
-# ffmpeg 7.0 patches as merged into 127a1 from
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1889978
-Patch101:	5970587d9a7a.patch
-Patch102:	5759fe6ed8a5.patch
-Patch103:	05d7a7c92cf2.patch
-Patch104:	d55beebe2605.patch
-Patch105:	fb10bab6cd18.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend

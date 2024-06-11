@@ -11,18 +11,6 @@ diff -up firefox-112.0.1/memory/replace/logalloc/replay/moz.build.omv~ firefox-1
  if CONFIG["OS_TARGET"] == "Darwin":
      # Work around "warning: 'aligned_alloc' is only available on macOS 10.15 or newer"
      # when building with MACOSX_DEPLOYMENT_TARGET < 10.15 with >= 10.15 SDK.
-diff -up firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt.omv~ firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt
---- firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt.omv~	2023-04-24 23:42:52.833216472 +0200
-+++ firefox-112.0.1/third_party/jpeg-xl/CMakeLists.txt	2023-04-24 23:43:14.731400505 +0200
-@@ -200,7 +200,7 @@ if(JPEGXL_STATIC)
-   if (NOT MSVC AND NOT APPLE)
-     set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
-     set(CMAKE_EXE_LINKER_FLAGS
--        "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
-+        "${CMAKE_EXE_LINKER_FLAGS}")
-   endif()
- endif()  # JPEGXL_STATIC
- 
 diff -up firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn.omv~ firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn
 --- firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn.omv~	2023-04-24 23:42:33.599055289 +0200
 +++ firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn	2023-04-24 23:42:45.376153928 +0200
@@ -41,4 +29,19 @@ diff -up firefox-112.0.1/third_party/libwebrtc/build/config/chromecast/BUILD.gn.
 -    }
    }
  }
+ 
+--- firefox-127.0/third_party/jpeg-xl/CMakeLists.txt.orig	2024-06-11 11:10:25.784367735 +0100
++++ firefox-127.0/third_party/jpeg-xl/CMakeLists.txt	2024-06-11 11:10:39.033930659 +0100
+@@ -211,12 +211,8 @@
+   # Clang developers say that in case to use "static" we have to build stdlib
+   # ourselves; for real use case we don't care about stdlib, as it is "granted",
+   # so just linking all other libraries is fine.
+-  if (NOT MSVC)
+-    string(APPEND CMAKE_EXE_LINKER_FLAGS " -static")
+-  endif()
+   if ((NOT WIN32 AND NOT APPLE) OR CYGWIN OR MINGW)
+     set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+-    string(APPEND CMAKE_EXE_LINKER_FLAGS " -static-libgcc -static-libstdc++")
+   endif()
+ endif()  # JPEGXL_STATIC
  
