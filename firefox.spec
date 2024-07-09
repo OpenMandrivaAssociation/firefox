@@ -244,8 +244,8 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	127.0.2
-Release:	%{?beta:0.%{beta}.}2
+Version:	128.0
+Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		http://www.mozilla.com/firefox/
@@ -283,7 +283,7 @@ Patch17:	firefox-112.0.1-no-static-libstdc++.patch
 
 Patch50:    	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-enable-vaapi.patch
 Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-fix-for-GCC-12.patch
-Patch52:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-aarch64-skia.patch
+#Patch52:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-aarch64-skia.patch
 Patch57:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-112.0-commasplit.patch
 Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13-build.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
