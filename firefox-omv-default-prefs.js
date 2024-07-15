@@ -38,3 +38,4 @@ pref("media.gmp.decoder.enabled", true);
 pref("app.update.auto", false);
 pref("app.update.enabled", false);
 pref("app.update.autoInstallEnabled", false);
+pref("dom.private-attribution.submission.enabled", false);
