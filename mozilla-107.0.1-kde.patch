@@ -1373,9 +1373,9 @@ diff -up firefox-126.0/xpcom/io/nsLocalFileUnix.cpp.2~ firefox-126.0/xpcom/io/ns
  #ifdef MOZ_WIDGET_GTK
  #  include "nsIGIOService.h"
 +#  include "nsKDEUtils.h"
- #endif
- 
- #ifdef MOZ_WIDGET_COCOA
+ #  ifdef MOZ_ENABLE_DBUS
+ #    include "mozilla/widget/AsyncDBus.h"
+ #    include "mozilla/WidgetUtilsGtk.h"
 @@ -2210,10 +2211,19 @@ nsLocalFile::Reveal() {
    }
  
