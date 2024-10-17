@@ -248,7 +248,7 @@ Version:	131.0.3
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
-Url:		http://www.mozilla.com/firefox/
+Url:		https://www.mozilla.com/firefox/
 Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
 %if 0%{?use_bundled_cbindgen}
 Source2:	cbindgen-vendor.tar.xz
