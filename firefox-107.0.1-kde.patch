@@ -1,7 +1,7 @@
-diff -up firefox-120.0/browser/components/preferences/main.js.1~ firefox-120.0/browser/components/preferences/main.js
---- firefox-120.0/browser/components/preferences/main.js.1~	2023-11-16 18:42:51.000000000 +0100
-+++ firefox-120.0/browser/components/preferences/main.js	2023-11-21 15:44:12.871506541 +0100
-@@ -296,6 +296,13 @@ var gMainPane = {
+diff -up firefox-132.0/browser/components/preferences/main.js.1~ firefox-132.0/browser/components/preferences/main.js
+--- firefox-132.0/browser/components/preferences/main.js.1~	2024-10-21 22:51:04.000000000 +0200
++++ firefox-132.0/browser/components/preferences/main.js	2024-10-28 19:49:19.559347372 +0100
+@@ -299,6 +299,13 @@ var gMainPane = {
        }, backoffTimes[this._backoffIndex]);
      }
  
@@ -15,8 +15,8 @@ diff -up firefox-120.0/browser/components/preferences/main.js.1~ firefox-120.0/b
      this.initBrowserContainers();
      this.buildContentProcessCountMenuList();
  
-@@ -1749,6 +1756,17 @@ var gMainPane = {
-
+@@ -1767,6 +1774,17 @@ var gMainPane = {
+ 
        try {
          await shellSvc.setDefaultBrowser(false);
 +        if (kde_session == 1) {
@@ -33,11 +33,11 @@ diff -up firefox-120.0/browser/components/preferences/main.js.1~ firefox-120.0/b
        } catch (ex) {
          console.error(ex);
          return;
-diff -up firefox-120.0/browser/components/shell/moz.build.1~ firefox-120.0/browser/components/shell/moz.build
---- firefox-120.0/browser/components/shell/moz.build.1~	2023-11-16 18:42:51.000000000 +0100
-+++ firefox-120.0/browser/components/shell/moz.build	2023-11-21 15:33:02.983291804 +0100
-@@ -36,6 +36,8 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gt
- 
+diff -up firefox-132.0/browser/components/shell/moz.build.1~ firefox-132.0/browser/components/shell/moz.build
+--- firefox-132.0/browser/components/shell/moz.build.1~	2024-10-28 19:49:19.559347372 +0100
++++ firefox-132.0/browser/components/shell/moz.build	2024-10-28 19:50:49.370316428 +0100
+@@ -42,6 +42,8 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gt
+     ]
      SOURCES += [
          "nsGNOMEShellService.cpp",
 +        "nsKDEShellService.cpp",
@@ -45,9 +45,9 @@ diff -up firefox-120.0/browser/components/shell/moz.build.1~ firefox-120.0/brows
      ]
      if CONFIG["MOZ_ENABLE_DBUS"]:
          SOURCES += [
-diff -up firefox-120.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox-120.0/browser/components/shell/nsKDEShellService.cpp
---- firefox-120.0/browser/components/shell/nsKDEShellService.cpp.1~	2023-11-21 15:33:02.983291804 +0100
-+++ firefox-120.0/browser/components/shell/nsKDEShellService.cpp	2023-11-21 15:33:02.983291804 +0100
+diff -up firefox-132.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox-132.0/browser/components/shell/nsKDEShellService.cpp
+--- firefox-132.0/browser/components/shell/nsKDEShellService.cpp.1~	2024-10-28 19:49:19.559347372 +0100
++++ firefox-132.0/browser/components/shell/nsKDEShellService.cpp	2024-10-28 19:49:19.559347372 +0100
 @@ -0,0 +1,108 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -157,9 +157,9 @@ diff -up firefox-120.0/browser/components/shell/nsKDEShellService.cpp.1~ firefox
 +    return NS_ERROR_NOT_IMPLEMENTED;
 +}
 +
-diff -up firefox-120.0/browser/components/shell/nsKDEShellService.h.1~ firefox-120.0/browser/components/shell/nsKDEShellService.h
---- firefox-120.0/browser/components/shell/nsKDEShellService.h.1~	2023-11-21 15:33:02.983291804 +0100
-+++ firefox-120.0/browser/components/shell/nsKDEShellService.h	2023-11-21 15:33:02.983291804 +0100
+diff -up firefox-132.0/browser/components/shell/nsKDEShellService.h.1~ firefox-132.0/browser/components/shell/nsKDEShellService.h
+--- firefox-132.0/browser/components/shell/nsKDEShellService.h.1~	2024-10-28 19:49:19.559347372 +0100
++++ firefox-132.0/browser/components/shell/nsKDEShellService.h	2024-10-28 19:49:19.559347372 +0100
 @@ -0,0 +1,32 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -193,9 +193,9 @@ diff -up firefox-120.0/browser/components/shell/nsKDEShellService.h.1~ firefox-1
 +};
 +
 +#endif // nskdeshellservice_h____
-diff -up firefox-120.0/browser/components/shell/nsUnixShellService.cpp.1~ firefox-120.0/browser/components/shell/nsUnixShellService.cpp
---- firefox-120.0/browser/components/shell/nsUnixShellService.cpp.1~	2023-11-21 15:33:02.983291804 +0100
-+++ firefox-120.0/browser/components/shell/nsUnixShellService.cpp	2023-11-21 15:33:02.983291804 +0100
+diff -up firefox-132.0/browser/components/shell/nsUnixShellService.cpp.1~ firefox-132.0/browser/components/shell/nsUnixShellService.cpp
+--- firefox-132.0/browser/components/shell/nsUnixShellService.cpp.1~	2024-10-28 19:49:19.559347372 +0100
++++ firefox-132.0/browser/components/shell/nsUnixShellService.cpp	2024-10-28 19:49:19.559347372 +0100
 @@ -0,0 +1,22 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public
@@ -219,9 +219,9 @@ diff -up firefox-120.0/browser/components/shell/nsUnixShellService.cpp.1~ firefo
 +        return nsKDEShellServiceConstructor( aIID, aResult );
 +    return nsGNOMEShellServiceConstructor( aIID, aResult );
 +}
-diff -up firefox-120.0/browser/components/shell/nsUnixShellService.h.1~ firefox-120.0/browser/components/shell/nsUnixShellService.h
---- firefox-120.0/browser/components/shell/nsUnixShellService.h.1~	2023-11-21 15:33:02.984291815 +0100
-+++ firefox-120.0/browser/components/shell/nsUnixShellService.h	2023-11-21 15:33:02.983291804 +0100
+diff -up firefox-132.0/browser/components/shell/nsUnixShellService.h.1~ firefox-132.0/browser/components/shell/nsUnixShellService.h
+--- firefox-132.0/browser/components/shell/nsUnixShellService.h.1~	2024-10-28 19:49:19.559347372 +0100
++++ firefox-132.0/browser/components/shell/nsUnixShellService.h	2024-10-28 19:49:19.559347372 +0100
 @@ -0,0 +1,15 @@
 +/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 +/* This Source Code Form is subject to the terms of the Mozilla Public

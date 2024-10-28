@@ -1,5 +1,5 @@
-# Current OMV debug implementation is a crap IMO (angry.p)
-%define _empty_manifest_terminate_build 0
+# Bloatzilla's build system _sucks_
+%undefine _debugsource_packages
 
 #
 # WARNING, READ FIRST:
@@ -244,7 +244,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	131.0.3
+Version:	132.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
