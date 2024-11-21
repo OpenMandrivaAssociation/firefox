@@ -245,11 +245,11 @@ Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	132.0.2
-Release:	%{?beta:0.%{beta}.}1
+Release:	%{?beta:0.%{beta}.}2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		https://www.mozilla.com/firefox/
-Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
+Source0:	https://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
 %if 0%{?use_bundled_cbindgen}
 Source2:	cbindgen-vendor.tar.xz
 %endif
@@ -294,6 +294,7 @@ Patch66:	firefox-115.4.0-icu-74.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
+BuildRequires:  mold
 BuildRequires:	glibc-static-devel
 BuildRequires:	pkgconfig(python3)
 %if %{with system_python}
@@ -513,7 +514,7 @@ export AR="llvm-ar"
 export NM="llvm-nm"
 export RANLIB="llvm-ranlib"
 # (tpg) use LLD if build with LLVM/clang
-ac_add_options --enable-linker=lld
+ac_add_options --enable-linker=mold
 %if %{with pgo}
 ac_add_options MOZ_PGO=1
 %endif
