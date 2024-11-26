@@ -22,22 +22,3 @@ diff -up firefox-132.0/third_party/jpeg-xl/CMakeLists.txt.5~ firefox-132.0/third
    endif()
  endif()  # JPEGXL_STATIC
  
-diff -up firefox-132.0/third_party/libwebrtc/build/config/chromecast/BUILD.gn.5~ firefox-132.0/third_party/libwebrtc/build/config/chromecast/BUILD.gn
---- firefox-132.0/third_party/libwebrtc/build/config/chromecast/BUILD.gn.5~	2024-10-21 22:51:21.000000000 +0200
-+++ firefox-132.0/third_party/libwebrtc/build/config/chromecast/BUILD.gn	2024-10-28 19:57:59.235049320 +0100
-@@ -14,15 +14,6 @@ config("static_config") {
-       # http://b/26390825
-       "-Wl,--exclude-libs=libffmpeg.a",
-     ]
--
--    if (!is_android) {
--      ldflags += [
--        # We want to statically link libstdc++/libgcc on Linux.
--        # (On Android, libstdc++ and libgcc aren't used.)
--        "-static-libstdc++",
--        "-static-libgcc",
--      ]
--    }
-   }
- }
- 

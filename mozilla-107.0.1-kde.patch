@@ -983,12 +983,13 @@ diff -up firefox-132.0/widget/gtk/nsFilePicker.cpp.2~ firefox-132.0/widget/gtk/n
  #include <sys/types.h>
  #include <sys/stat.h>
  #include <unistd.h>
-@@ -30,6 +31,8 @@
+@@ -30,6 +31,9 @@
  #include "WidgetUtilsGtk.h"
  
  #include "nsFilePicker.h"
 +#include "nsKDEUtils.h"
 +#include "nsURLHelper.h"
++#include "nsXPCOM.h"
  
  #undef LOG
  #ifdef MOZ_LOGGING
@@ -1033,7 +1034,7 @@ diff -up firefox-132.0/widget/gtk/nsFilePicker.cpp.2~ firefox-132.0/widget/gtk/n
    NS_ConvertUTF16toUTF8 title(mTitle);
  
    GtkWindow* parent_widget =
-@@ -702,6 +730,234 @@ void nsFilePicker::Done(void* file_choos
+@@ -702,6 +730,232 @@ void nsFilePicker::Done(void* file_choos
    NS_RELEASE_THIS();
  }
  
@@ -1180,7 +1181,6 @@ diff -up firefox-132.0/widget/gtk/nsFilePicker.cpp.2~ firefox-132.0/widget/gtk/n
 +                {
 +                nsCOMPtr<nsIFile> localfile;
 +                nsresult rv = NS_NewNativeLocalFile( output[ i ],
-+                                      PR_FALSE,
 +                                      getter_AddRefs(localfile));
 +                if (NS_SUCCEEDED(rv))
 +                    mFiles.AppendObject(localfile);
@@ -1196,7 +1196,6 @@ diff -up firefox-132.0/widget/gtk/nsFilePicker.cpp.2~ firefox-132.0/widget/gtk/n
 +                {
 +                nsCOMPtr<nsIFile> localfile;
 +                nsresult rv = NS_NewNativeLocalFile( output[ 0 ],
-+                                   PR_FALSE,
 +                                   getter_AddRefs(localfile));
 +                if (NS_SUCCEEDED(rv))
 +                  rv = net_GetURLSpecFromActualFile(localfile, mFileURL);
