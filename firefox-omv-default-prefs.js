@@ -39,3 +39,4 @@ pref("app.update.auto", false);
 pref("app.update.enabled", false);
 pref("app.update.autoInstallEnabled", false);
 pref("dom.private-attribution.submission.enabled", false);
+pref("widget.use-xdg-desktop-portal.file-picker", 1);
