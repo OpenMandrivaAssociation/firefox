@@ -244,7 +244,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	133.0.3
+Version:	134.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -273,10 +273,6 @@ Source100:      firefox.rpmlintrc
         )
 }
 
-# Patches for kde integration of FF  from http://www.rosenauer.org/hg/mozilla/
-Patch11:	firefox-107.0.1-kde.patch
-Patch12:	mozilla-107.0.1-kde.patch
-
 Patch15:	build-arm-libopus.patch
 Patch16:	firefox-103.0-glibc-2.36.patch
 Patch17:	firefox-112.0.1-no-static-libstdc++.patch
@@ -288,7 +284,7 @@ Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 #Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
-Patch66:	firefox-115.4.0-icu-74.patch
+#Patch66:	firefox-115.4.0-icu-74.patch
 
 #Patch100:	firefox-system-ffmpeg.patch
 
