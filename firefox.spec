@@ -279,14 +279,10 @@ Patch17:	firefox-112.0.1-no-static-libstdc++.patch
 
 Patch50:    	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-enable-vaapi.patch
 Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-fix-for-GCC-12.patch
-#Patch52:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/build-aarch64-skia.patch
 Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13-build.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
-#Patch64:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1667096.patch
-#Patch66:	firefox-115.4.0-icu-74.patch
 
-#Patch100:	firefox-system-ffmpeg.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
