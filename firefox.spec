@@ -326,7 +326,6 @@ BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gtk+-3.0)
-BuildRequires:	pkgconfig(icu-i18n) >= 76.1
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
@@ -451,7 +450,6 @@ export MOZ_SERVICES_SYNC=1
 export PYTHON3=%build_py
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-ac_add_options --with-system-icu
 ac_add_options --with-mozilla-api-keyfile=$(pwd)/mozilla-api-key
 ac_add_options --with-google-location-service-api-keyfile=$(pwd)/google-api-key
 ac_add_options --with-google-safebrowsing-api-keyfile=$(pwd)/google-api-key
