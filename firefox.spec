@@ -438,6 +438,12 @@ echo -n "%mozilla_api_key" > mozilla-api-key
 
 export MOZCONFIG=$(pwd)/mozconfig
 
+if [ $(getconf _NPROCESSORS_ONLN) -le 16 ]; then
+    export SMP_FLAGS="%{_smp_mflags}"
+else
+    export SMP_FLAGS="-j 16"
+fi
+
 cat << EOF > $MOZCONFIG
 ac_add_options --target="%{_target_platform}"
 ac_add_options --host="%{_host}"
@@ -445,7 +451,7 @@ ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
-export MOZ_MAKE_FLAGS="%{_smp_mflags}"
+export MOZ_MAKE_FLAGS="$SMP_FLAGS"
 export MOZ_SERVICES_SYNC=1
 export PYTHON3=%build_py
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
