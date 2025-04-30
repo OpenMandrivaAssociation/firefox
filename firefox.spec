@@ -244,7 +244,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	137.0.2
+Version:	138.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -347,7 +347,7 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 %if !0%{?use_bundled_cbindgen}
-BuildRequires:	cbindgen >= 0.24.3
+BuildRequires:	cbindgen >= 0.28.0
 %endif
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
