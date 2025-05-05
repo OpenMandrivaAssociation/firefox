@@ -43,11 +43,7 @@
 %bcond_without pgo
 %endif
 
-%if %omvver > 4050000
 %define build_py python3
-%else
-%define build_py python3
-%endif
 
 # enable use system python modules
 # currently broken
@@ -313,6 +309,7 @@ BuildRequires:	python3dist(wheel)
 BuildRequires:	python3dist(yarl)
 BuildRequires:	python3dist(zipp)
 %endif
+BuildRequires:	python3dist(pyyaml)
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
