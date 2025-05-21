@@ -245,7 +245,8 @@ Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		https://www.mozilla.com/firefox/
-Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
+Source0:	librewolf-138.0.4-1.source.tar.gz
+#Source0:	http://ftp.mozilla.org/pub/%{name}/releases/%{version}%{?beta:%{beta}}/source/%{name}-%{version}%{?beta:%{beta}}.source.tar.xz
 %if 0%{?use_bundled_cbindgen}
 Source2:	cbindgen-vendor.tar.xz
 %endif
@@ -415,7 +416,7 @@ Files and macros mainly for building Firefox extensions.
 }
 
 %prep
-%autosetup -p1
+%autosetup -n librewolf-138.0.4-1 -p1
 %if 0
 # NOT YET, needs more work
 # Drop the gazillion of internalized ffmpeg copies,
