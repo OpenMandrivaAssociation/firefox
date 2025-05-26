@@ -240,7 +240,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	138.0.4
+Version:	139.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -277,7 +277,6 @@ Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-f
 Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13-build.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
-Patch63:	firefox-mach-D1957628.diff
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
