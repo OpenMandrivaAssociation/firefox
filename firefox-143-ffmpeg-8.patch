@@ -1,0 +1,41 @@
+diff -up firefox-143.0.1/dom/media/platforms/ffmpeg/FFmpegRuntimeLinker.cpp.omv~ firefox-143.0.1/dom/media/platforms/ffmpeg/FFmpegRuntimeLinker.cpp
+--- firefox-143.0.1/dom/media/platforms/ffmpeg/FFmpegRuntimeLinker.cpp.omv~	2025-09-29 01:38:12.137443962 +0200
++++ firefox-143.0.1/dom/media/platforms/ffmpeg/FFmpegRuntimeLinker.cpp	2025-09-29 01:40:06.875084024 +0200
+@@ -48,6 +48,7 @@ static const char* sLibs[] = {
+   "libavcodec.so", // OpenBSD hardly controls the major/minor library version
+                    // of ffmpeg and update it regulary on ABI/API changes
+ #else
++  "libavcodec.so.62",
+   "libavcodec.so.61",
+   "libavcodec.so.60",
+   "libavcodec.so.59",
+@@ -120,6 +121,9 @@ bool FFmpegRuntimeLinker::Init() {
+             case 61:
+               FFmpegDecoderModule<61>::Init(&sLibAV);
+               break;
++            case 62:
++              FFmpegDecoderModule<62>::Init(&sLibAV);
++              break;
+           }
+           return true;
+         case FFmpegLibWrapper::LinkResult::NoProvidedLib:
+@@ -210,6 +214,9 @@ already_AddRefed<PlatformDecoderModule>
+     case 61:
+       module = FFmpegDecoderModule<61>::Create(&sLibAV);
+       break;
++    case 62:
++      module = FFmpegDecoderModule<62>::Create(&sLibAV);
++      break;
+     default:
+       module = nullptr;
+   }
+@@ -248,6 +255,9 @@ already_AddRefed<PlatformEncoderModule>
+     case 61:
+       module = FFmpegEncoderModule<61>::Create(&sLibAV);
+       break;
++    case 62:
++      module = FFmpegEncoderModule<62>::Create(&sLibAV);
++      break;
+     default:
+       module = nullptr;
+   }
