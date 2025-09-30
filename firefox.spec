@@ -241,7 +241,7 @@ Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
 Version:	143.0.3
-Release:	%{?beta:0.%{beta}.}1
+Release:	%{?beta:0.%{beta}.}2
 License:	MPLv1+
 Group:		Networking/WWW
 Url:		https://www.mozilla.com/firefox/
@@ -280,6 +280,7 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 
 Patch70:	https://mozphab-phabhost-cdn.devsvcprod.mozaws.net/file/data/tnvi3x6flrosozndv32a/PHID-FILE-6uynhpat3csj33akmkjj/D264889.1758241485.diff
 Patch71:	firefox-143-ffmpeg-8.patch
+Patch72:	firefox-143-ffmpeg-8-v2.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
