@@ -23,7 +23,6 @@ sources:
   eu.xpi: c8d74e42e4c37bc6d64109aedab210da794771de
   fa.xpi: 135a93447196861befca248b7b65a86aa519567b
   fi.xpi: c74f2948b2ca262d9ac770f328ba84090c0135cc
-  firefox-143.0.1.source.tar.xz: cd21b2eadecf042fb271d6e3363c8a9ab221751e
   fr.xpi: eb4edf9251281ac933bc65a710ed1c86e521ffea
   fy-NL.xpi: 3383fee07a8a9a436fb47d88a49ad68727513bf8
   ga-IE.xpi: e14aec06b5599ea0729daf9aa0bb8c06a8b7e3cc
@@ -70,3 +69,4 @@ sources:
   vi.xpi: 5f92914b2fcec5df50e7a08097c3f2672bb97df0
   zh-CN.xpi: e3c9c89a4e2183ca2a5cf63916d5ef2a47b7333d
   zh-TW.xpi: d6e8d655e7e2f6143d6595c9c84796dad8a259a4
+  firefox-143.0.3.source.tar.xz: a626cf9d4f08293a2a998078e94c235e65acc396
