@@ -1,0 +1,14 @@
+diff -up firefox-143.0.3/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp.omv~ firefox-143.0.3/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp
+--- firefox-143.0.3/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp.omv~	2025-10-02 00:43:30.350953415 +0200
++++ firefox-143.0.3/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp	2025-10-02 00:45:08.205400122 +0200
+@@ -169,7 +169,9 @@ FFmpegLibWrapper::LinkResult FFmpegLibWr
+   AV_FUNC(av_lockmgr_register, AV_FUNC_53 | AV_FUNC_54 | AV_FUNC_55 |
+                                    AV_FUNC_56 | AV_FUNC_57 | AV_FUNC_58)
+   AV_FUNC(avcodec_alloc_context3, AV_FUNC_AVCODEC_ALL)
+-  AV_FUNC(avcodec_close, AV_FUNC_AVCODEC_ALL)
++  AV_FUNC(avcodec_close, AV_FUNC_53 | AV_FUNC_54 | AV_FUNC_55 | AV_FUNC_56 |
++		         AV_FUNC_57 | AV_FUNC_58 | AV_FUNC_59 | AV_FUNC_60 |
++			 AV_FUNC_61)
+   AV_FUNC(avcodec_decode_audio4, AV_FUNC_53 | AV_FUNC_54 | AV_FUNC_55 |
+                                      AV_FUNC_56 | AV_FUNC_57 | AV_FUNC_58)
+   AV_FUNC(avcodec_decode_video2, AV_FUNC_53 | AV_FUNC_54 | AV_FUNC_55 |
