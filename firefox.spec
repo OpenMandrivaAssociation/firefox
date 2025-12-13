@@ -285,6 +285,7 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
+BuildRequires:	make
 BuildRequires:	glibc-static-devel
 BuildRequires:	pkgconfig(python3)
 %if %{with system_python}
