@@ -240,7 +240,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	145.0.2
+Version:	146.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -278,10 +278,10 @@ Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 
-Patch70:	https://mozphab-phabhost-cdn.devsvcprod.mozaws.net/file/data/tnvi3x6flrosozndv32a/PHID-FILE-6uynhpat3csj33akmkjj/D264889.1758241485.diff
-Patch71:	firefox-143-ffmpeg-8.patch
-Patch72:	firefox-143-ffmpeg-8-v2.patch
-Patch73:	firefox-143-ffmpeg-8-part3.patch
+#Patch70:	https://mozphab-phabhost-cdn.devsvcprod.mozaws.net/file/data/tnvi3x6flrosozndv32a/PHID-FILE-6uynhpat3csj33akmkjj/D264889.1758241485.diff
+#Patch71:	firefox-143-ffmpeg-8.patch
+#Patch72:	firefox-143-ffmpeg-8-v2.patch
+#Patch73:	firefox-143-ffmpeg-8-part3.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
@@ -336,7 +336,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.114
+BuildRequires:	pkgconfig(nss) >= 3.118
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -348,7 +348,7 @@ BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
 %if !0%{?use_bundled_cbindgen}
-BuildRequires:	cbindgen >= 0.28.0
+BuildRequires:	cbindgen >= 0.29.1
 %endif
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
@@ -522,7 +522,7 @@ unset MOZ_STDCXX_COMPAT
 EOF
 
 %build
-%global optflags %{optflags} -g0 -fno-exceptions
+%global optflags %{optflags} -g0
 
 %global optflags %{optflags} -Wno-error=c++11-narrowing-const-reference 
 %global optflags %{optflags} -Qunused-arguments -g0 -fno-lto
