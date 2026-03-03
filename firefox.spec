@@ -274,6 +274,8 @@ Patch16:	firefox-103.0-glibc-2.36.patch
 Patch17:	firefox-112.0.1-no-static-libstdc++.patch
 
 Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-fix-for-GCC-12.patch
+Patch52:	0003-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
+Patch53:	0004-Fix-sandbox-to-build-with-glibc-2.43.patch
 Patch58:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/firefox-gcc-13-build.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
