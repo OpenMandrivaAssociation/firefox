@@ -240,7 +240,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	149.0.2
+Version:	150.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -275,7 +275,6 @@ Patch17:	firefox-112.0.1-no-static-libstdc++.patch
 
 Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-fix-for-GCC-12.patch
 Patch52:	0003-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
-Patch53:	0004-Fix-sandbox-to-build-with-glibc-2.43.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 
@@ -338,7 +337,7 @@ BuildRequires:	pkgconfig(libproxy-1.0)
 BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
-BuildRequires:	pkgconfig(nss) >= 3.120.1
+BuildRequires:	pkgconfig(nss) >= 3.122.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -471,9 +470,6 @@ ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --enable-necko-wifi
-%ifarch %{x86_64}
-ac_add_options --enable-av1
-%endif
 ac_add_options --without-system-libevent
 ac_add_options --with-system-libvpx
 ac_add_options --enable-system-pixman
