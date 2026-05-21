@@ -277,6 +277,7 @@ Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-f
 Patch52:	0003-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
+Patch63:	mozilla-2040125.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
