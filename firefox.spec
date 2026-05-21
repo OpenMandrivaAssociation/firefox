@@ -278,11 +278,6 @@ Patch52:	0003-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
 
-#Patch70:	https://mozphab-phabhost-cdn.devsvcprod.mozaws.net/file/data/tnvi3x6flrosozndv32a/PHID-FILE-6uynhpat3csj33akmkjj/D264889.1758241485.diff
-#Patch71:	firefox-143-ffmpeg-8.patch
-#Patch72:	firefox-143-ffmpeg-8-v2.patch
-#Patch73:	firefox-143-ffmpeg-8-part3.patch
-
 BuildRequires:	doxygen
 BuildRequires:	makedepend
 BuildRequires:	make
