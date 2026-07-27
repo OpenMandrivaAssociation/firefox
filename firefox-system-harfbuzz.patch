@@ -1,0 +1,151 @@
+diff -ruN a/gfx/moz.build b/gfx/moz.build
+--- a/gfx/moz.build	2026-07-27 05:02:21.451192863 +0200
++++ b/gfx/moz.build	2026-07-27 05:02:21.564241263 +0200
+@@ -18,7 +18,6 @@
+     "gl",
+     "layers",
+     "graphite2/src",
+-    "harfbuzz/src",
+     "ots/src",
+     "thebes",
+     "ipc",
+@@ -29,6 +28,9 @@
+     "skia",
+ ]
+ 
++if not CONFIG["MOZ_SYSTEM_HARFBUZZ"]:
++    DIRS += ["harfbuzz/src"]
++
+ TEST_DIRS += ["tests/gtest"]
+ 
+ if CONFIG["FUZZING_INTERFACES"]:
+diff -ruN a/gfx/skia/moz.build b/gfx/skia/moz.build
+--- a/gfx/skia/moz.build	2026-07-27 05:02:21.491004029 +0200
++++ b/gfx/skia/moz.build	2026-07-27 05:02:21.564460386 +0200
+@@ -651,9 +651,14 @@
+         '-Wno-unused-private-field',
+     ]
+ 
+-LOCAL_INCLUDES += [
+-    "/gfx/harfbuzz/src",
+-]
++if CONFIG["MOZ_SYSTEM_HARFBUZZ"]:
++    # Skia uses #include "hb.h" / "hb-subset.h" (needs pkg-config -I).
++    CXXFLAGS += CONFIG["MOZ_HARFBUZZ_CFLAGS"]
++    CFLAGS += CONFIG["MOZ_HARFBUZZ_CFLAGS"]
++else:
++    LOCAL_INCLUDES += [
++        "/gfx/harfbuzz/src",
++    ]
+ 
+ if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'android', 'qt'):
+     LOCAL_INCLUDES += [
+diff -ruN a/gfx/system-harfbuzz-visibility.h b/gfx/system-harfbuzz-visibility.h
+--- a/gfx/system-harfbuzz-visibility.h	1970-01-01 01:00:00.000000000 +0100
++++ b/gfx/system-harfbuzz-visibility.h	2026-07-27 05:02:21.564624578 +0200
+@@ -0,0 +1,20 @@
++/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
++/* Force default visibility on system HarfBuzz API declarations.
++ *
++ * Gecko uses -fvisibility=hidden (see config/gcc_hidden.h). System HarfBuzz
++ * headers declare functions as plain `extern`, so the compiler records
++ * hidden undefined references. libharfbuzz.so exports those symbols with
++ * DEFAULT visibility, and ld.lld then errors with:
++ *   undefined hidden symbol: hb_face_destroy
++ *
++ * Redefining HB_EXTERN only adjusts ELF visibility of the *import*
++ * declarations so they match the shared library. It does not replace or
++ * stub any HarfBuzz functions — hb_*_destroy / reference counting still
++ * resolve to the real system library implementations (no memory leaks).
++ */
++#ifndef MOZ_SYSTEM_HARFBUZZ_VISIBILITY_H_
++#define MOZ_SYSTEM_HARFBUZZ_VISIBILITY_H_
++#ifndef HB_EXTERN
++#define HB_EXTERN __attribute__((visibility("default"))) extern
++#endif
++#endif /* MOZ_SYSTEM_HARFBUZZ_VISIBILITY_H_ */
+diff -ruN a/gfx/thebes/moz.build b/gfx/thebes/moz.build
+--- a/gfx/thebes/moz.build	2026-07-27 05:02:21.467316626 +0200
++++ b/gfx/thebes/moz.build	2026-07-27 05:02:21.564331184 +0200
+@@ -316,6 +316,11 @@
+ if CONFIG["MOZ_WAYLAND"]:
+     CXXFLAGS += CONFIG["MOZ_WAYLAND_CFLAGS"]
+ 
++if CONFIG["MOZ_SYSTEM_HARFBUZZ"]:
++    # Include path for "hb-*.h" / pkg-config; visibility is global via OS_*FLAGS.
++    CXXFLAGS += CONFIG["MOZ_HARFBUZZ_CFLAGS"]
++    CFLAGS += CONFIG["MOZ_HARFBUZZ_CFLAGS"]
++
+ LOCAL_INCLUDES += CONFIG["SKIA_INCLUDES"]
+ 
+ DEFINES["GRAPHITE2_STATIC"] = True
+diff -ruN a/toolkit/library/moz.build b/toolkit/library/moz.build
+--- a/toolkit/library/moz.build	2026-07-27 05:02:21.515355569 +0200
++++ b/toolkit/library/moz.build	2026-07-27 05:02:21.564566227 +0200
+@@ -317,6 +317,9 @@
+ if not CONFIG["MOZ_TREE_PIXMAN"]:
+     OS_LIBS += CONFIG["MOZ_PIXMAN_LIBS"]
+ 
++if CONFIG["MOZ_SYSTEM_HARFBUZZ"]:
++    OS_LIBS += CONFIG["MOZ_HARFBUZZ_LIBS"]
++
+ if CONFIG["HAVE_CLOCK_MONOTONIC"]:
+     OS_LIBS += CONFIG["REALTIME_LIBS"]
+ 
+diff -ruN a/toolkit/moz.configure b/toolkit/moz.configure
+--- a/toolkit/moz.configure	2026-07-27 05:02:21.431283205 +0200
++++ b/toolkit/moz.configure	2026-07-27 05:02:21.564023811 +0200
+@@ -1385,6 +1385,53 @@
+ set_config("MOZ_SYSTEM_WEBP", depends(when=system_webp)(lambda: True))
+ 
+ 
++# System HarfBuzz (distro packaging)
++# ==============================================================
++# Upstream vendors HarfBuzz; prefer the shared system library when requested.
++with only_when(compile_environment):
++    system_lib_option(
++        "--with-system-harfbuzz",
++        help="Use system HarfBuzz (located with pkgconfig)",
++        when=use_pkg_config,
++    )
++
++    # Subset is used by Skia PDF.
++    system_harfbuzz = pkg_check_modules(
++        "MOZ_HARFBUZZ",
++        "harfbuzz >= 8.0.0 harfbuzz-subset >= 8.0.0",
++        when="--with-system-harfbuzz",
++    )
++    set_config("MOZ_SYSTEM_HARFBUZZ", True, when=system_harfbuzz)
++
++    # Firefox compiles with -fvisibility=hidden (gcc_hidden.h). System
++    # HarfBuzz headers declare APIs as plain `extern`, so call sites become
++    # hidden undefined symbols and fail to link against libharfbuzz.so
++    # (DEFAULT visibility). Force HB_EXTERN to default visibility in *every*
++    # TU: gfxFontEntry.h / gfxFontUtils.h call hb_*_destroy from inline
++    # destructors, so any consumer of those headers needs the fix — not just
++    # thebes/skia. This only affects ELF visibility of imports; it does not
++    # change HarfBuzz refcounting or skip destroys (no leak risk).
++    @depends(system_harfbuzz, build_environment)
++    @imports(_from="os.path", _import="join")
++    def system_harfbuzz_visibility_flags(system_harfbuzz, build_env):
++        if not system_harfbuzz:
++            return []
++        header = join(build_env.topsrcdir, "gfx", "system-harfbuzz-visibility.h")
++        return ["-include", header]
++
++    # Inject globally so layout/inspector, dom, intl, netwerk, etc. all get it.
++    @depends(os_cxxflags, system_harfbuzz_visibility_flags)
++    def os_cxxflags_with_system_harfbuzz(flags, hb_flags):
++        return list(flags) + list(hb_flags)
++
++    @depends(os_cflags, system_harfbuzz_visibility_flags)
++    def os_cflags_with_system_harfbuzz(flags, hb_flags):
++        return list(flags) + list(hb_flags)
++
++    set_config("OS_CXXFLAGS", os_cxxflags_with_system_harfbuzz)
++    set_config("OS_CFLAGS", os_cflags_with_system_harfbuzz)
++
++
+ # Build Freetype in the tree
+ # ==============================================================
+ @depends(target)

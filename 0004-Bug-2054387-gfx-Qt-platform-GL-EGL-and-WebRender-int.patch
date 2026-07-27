@@ -1,0 +1,2045 @@
+From 345d4e40320d5c2b585fe7a69124cd69a20365cd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:25 +0200
+Subject: [PATCH 04/10] Bug 2054387 - gfx: Qt platform, GL/EGL, and WebRender
+ integration. r?#gfx-reviewers
+
+Add gfxPlatformQt and wire GLContext/EGL, layers, and WebRender
+compositors for the Qt widget toolkit (including software and EGL
+present paths).
+
+Differential Revision: https://phabricator.services.mozilla.com/D311738
+---
+ gfx/2d/2D.h                                   |   5 +-
+ gfx/2d/Factory.cpp                            |   8 +-
+ gfx/2d/NativeFontResourceFreeType.cpp         |   2 +-
+ gfx/2d/NativeFontResourceFreeType.h           |   2 +-
+ gfx/2d/UnscaledFontFreeType.h                 |   2 +-
+ gfx/2d/moz.build                              |   8 +-
+ gfx/gl/GLBlitHelper.cpp                       |  10 +-
+ gfx/gl/GLBlitHelper.h                         |   6 +-
+ gfx/gl/GLContext.h                            |   2 +-
+ gfx/gl/GLContextProvider.h                    |   6 +
+ gfx/gl/GLContextProviderEGL.cpp               |  52 +++-
+ gfx/gl/GLContextProviderGLX.cpp               |   2 +-
+ gfx/gl/GLContextProviderLinux.cpp             |  13 +-
+ gfx/gl/GLLibraryEGL.cpp                       |  37 ++-
+ gfx/gl/SharedSurface.cpp                      |   8 +-
+ gfx/gl/moz.build                              |  17 +-
+ gfx/layers/BuildConstants.h                   |   2 +-
+ gfx/layers/CanvasRenderer.cpp                 |   4 +-
+ gfx/layers/ImageContainer.h                   |   4 +-
+ gfx/layers/apz/test/gtest/TestPanning.cpp     |   6 +-
+ gfx/layers/moz.build                          |   5 +-
+ gfx/layers/opengl/CompositorOGL.cpp           |   6 +-
+ gfx/layers/opengl/CompositorOGL.h             |   2 +-
+ gfx/layers/opengl/OGLShaderProgram.cpp        |   2 +-
+ gfx/layers/opengl/TextureHostOGL.cpp          |   4 +-
+ gfx/skia/moz.build                            |   6 +-
+ gfx/src/X11UndefineNone.h                     |   6 +
+ gfx/src/X11Util.h                             |   8 +
+ gfx/thebes/SharedFontList.cpp                 |  14 +-
+ gfx/thebes/SharedFontList.h                   |   6 +-
+ gfx/thebes/gfxFcPlatformFontList.cpp          |  46 ++++
+ gfx/thebes/gfxFcPlatformFontList.h            |   2 +-
+ gfx/thebes/gfxPlatform.cpp                    |  25 +-
+ gfx/thebes/gfxPlatformQt.cpp                  | 243 ++++++++++++++++++
+ gfx/thebes/gfxPlatformQt.h                    |  54 ++++
+ gfx/thebes/moz.build                          |  29 ++-
+ gfx/webrender_bindings/RenderCompositor.cpp   |  10 +-
+ .../RenderCompositorEGL.cpp                   |  73 ++++--
+ .../RenderCompositorOGLSWGL.cpp               |  12 +-
+ gfx/webrender_bindings/moz.build              |   9 +-
+ widget/CompositorWidget.h                     |   4 +-
+ widget/LookAndFeel.h                          |  11 +
+ widget/NativeMenuSupport.h                    |   2 +-
+ widget/Theme.cpp                              |   7 +-
+ widget/WidgetEventImpl.cpp                    |   6 +-
+ widget/headless/HeadlessWidget.h              |   2 +-
+ widget/nsCUPSShim.h                           |   2 +
+ widget/nsIGtkTaskbarProgress.idl              |   7 +-
+ widget/nsIWidget.h                            |   2 +-
+ widget/nsXPLookAndFeel.cpp                    |   1 +
+ widget/windows/nsLookAndFeel.cpp              |   4 +
+ 51 files changed, 678 insertions(+), 128 deletions(-)
+ create mode 100644 gfx/thebes/gfxPlatformQt.cpp
+ create mode 100644 gfx/thebes/gfxPlatformQt.h
+
+diff --git a/gfx/2d/2D.h b/gfx/2d/2D.h
+index 8a2cb15bb68d..04bc9ef7fcdb 100644
+--- a/gfx/2d/2D.h
++++ b/gfx/2d/2D.h
+@@ -34,7 +34,8 @@
+ 
+ #include "nsRegionFwd.h"
+ 
+-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || \
++    defined(MOZ_WIDGET_QT)
+ #  ifndef MOZ_ENABLE_FREETYPE
+ #    define MOZ_ENABLE_FREETYPE
+ #  endif
+@@ -2233,7 +2234,7 @@ class GFX2D_API Factory {
+       bool aHasColorGlyphs = false);
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   static already_AddRefed<ScaledFont> CreateScaledFontForFontconfigFont(
+       const RefPtr<UnscaledFont>& aUnscaledFont, Float aSize,
+       RefPtr<SharedFTFace> aFace, FcPattern* aPattern);
+diff --git a/gfx/2d/Factory.cpp b/gfx/2d/Factory.cpp
+index d0d3d021569c..84582a7762b6 100644
+--- a/gfx/2d/Factory.cpp
++++ b/gfx/2d/Factory.cpp
+@@ -27,7 +27,7 @@
+ #  include "UnscaledFontMac.h"
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "ScaledFontFontconfig.h"
+ #  include "NativeFontResourceFreeType.h"
+ #  include "UnscaledFontFreeType.h"
+@@ -417,7 +417,7 @@ already_AddRefed<NativeFontResource> Factory::CreateNativeFontResource(
+ #elif defined(XP_DARWIN)
+     case FontType::MAC:
+       return NativeFontResourceMac::Create(aData, aSize);
+-#elif defined(MOZ_WIDGET_GTK)
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     case FontType::FONTCONFIG:
+       return NativeFontResourceFontconfig::Create(
+           aData, aSize, static_cast<FT_Library>(aFontContext));
+@@ -448,7 +448,7 @@ already_AddRefed<UnscaledFont> Factory::CreateUnscaledFontFromFontDescriptor(
+     case FontType::MAC:
+       return UnscaledFontMac::CreateFromFontDescriptor(aData, aDataLength,
+                                                        aIndex);
+-#elif defined(MOZ_WIDGET_GTK)
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     case FontType::FONTCONFIG:
+       return UnscaledFontFontconfig::CreateFromFontDescriptor(
+           aData, aDataLength, aIndex);
+@@ -473,7 +473,7 @@ already_AddRefed<ScaledFont> Factory::CreateScaledFontForMacFont(
+ }
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ already_AddRefed<ScaledFont> Factory::CreateScaledFontForFontconfigFont(
+     const RefPtr<UnscaledFont>& aUnscaledFont, Float aSize,
+     RefPtr<SharedFTFace> aFace, FcPattern* aPattern) {
+diff --git a/gfx/2d/NativeFontResourceFreeType.cpp b/gfx/2d/NativeFontResourceFreeType.cpp
+index 2294ec86e1a5..7e7d3199ab4b 100644
+--- a/gfx/2d/NativeFontResourceFreeType.cpp
++++ b/gfx/2d/NativeFontResourceFreeType.cpp
+@@ -65,7 +65,7 @@ already_AddRefed<SharedFTFace> NativeFontResourceFreeType::CloneFace(
+   return face.forget();
+ }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ NativeFontResourceFontconfig::NativeFontResourceFontconfig(
+     UniquePtr<uint8_t[]>&& aFontData, uint32_t aDataLength,
+     FT_Library aFTLibrary)
+diff --git a/gfx/2d/NativeFontResourceFreeType.h b/gfx/2d/NativeFontResourceFreeType.h
+index 4f74ea059153..88979860261b 100644
+--- a/gfx/2d/NativeFontResourceFreeType.h
++++ b/gfx/2d/NativeFontResourceFreeType.h
+@@ -48,7 +48,7 @@ class NativeFontResourceFreeType
+   FT_Library mFTLibrary;
+ };
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ class NativeFontResourceFontconfig final : public NativeFontResourceFreeType {
+  public:
+   MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(NativeFontResourceFontconfig,
+diff --git a/gfx/2d/UnscaledFontFreeType.h b/gfx/2d/UnscaledFontFreeType.h
+index 9aca499f3d89..1052315c304d 100644
+--- a/gfx/2d/UnscaledFontFreeType.h
++++ b/gfx/2d/UnscaledFontFreeType.h
+@@ -69,7 +69,7 @@ class UnscaledFontFreeType : public UnscaledFont {
+                                     uint32_t aNumVariations, FT_Face aFace);
+ };
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ class UnscaledFontFontconfig : public UnscaledFontFreeType {
+  public:
+   MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(UnscaledFontFontconfig, override)
+diff --git a/gfx/2d/moz.build b/gfx/2d/moz.build
+index eb15561c25e2..8c0b2513913e 100644
+--- a/gfx/2d/moz.build
++++ b/gfx/2d/moz.build
+@@ -92,7 +92,7 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
+     ]
+     DEFINES["WIN32"] = True
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk", "qt"):
+     EXPORTS.mozilla.gfx += [
+         "UnscaledFontFreeType.h",
+     ]
+@@ -101,7 +101,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
+         "UnscaledFontFreeType.cpp",
+     ]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+     SOURCES += [
+         "ScaledFontFontconfig.cpp",
+     ]
+@@ -198,12 +198,12 @@ FINAL_LIBRARY = "xul"
+ for var in ("USE_CAIRO", "MOZ2D_HAS_MOZ_CAIRO"):
+     DEFINES[var] = True
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk", "qt"):
+     DEFINES["MOZ_ENABLE_FREETYPE"] = True
+ 
+ COMPILE_FLAGS["WARNINGS_CXXFLAGS"] += ["-Werror=switch"]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk", "qt"):
+     CXXFLAGS += CONFIG["CAIRO_FT_CFLAGS"]
+ 
+ LOCAL_INCLUDES += CONFIG["SKIA_INCLUDES"]
+diff --git a/gfx/gl/GLBlitHelper.cpp b/gfx/gl/GLBlitHelper.cpp
+index b2f620a35412..8302ae2d3f03 100644
+--- a/gfx/gl/GLBlitHelper.cpp
++++ b/gfx/gl/GLBlitHelper.cpp
+@@ -40,7 +40,7 @@
+ #  include "mozilla/layers/D3D11YCbCrImage.h"
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "mozilla/layers/DMABUFSurfaceImage.h"
+ #  include "mozilla/widget/DMABufSurface.h"
+ #  include "mozilla/widget/DMABufDevice.h"
+@@ -975,7 +975,7 @@ bool GLBlitHelper::BlitSdToFramebuffer(const layers::SurfaceDescriptor& asd,
+                   destRect, destOrigin, fbSize, convertAlpha);
+     }
+ #endif
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     case layers::SurfaceDescriptor::TSurfaceDescriptorDMABuf: {
+       const auto& sd = asd.get_SurfaceDescriptorDMABuf();
+       RefPtr<DMABufSurface> surface = DMABufSurface::CreateDMABufSurface(sd);
+@@ -1051,7 +1051,7 @@ bool GLBlitHelper::BlitImageToFramebuffer(layers::Image* const srcImage,
+       return false;
+ #endif
+     case ImageFormat::DMABUF:
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+       return BlitImage(static_cast<layers::DMABUFSurfaceImage*>(srcImage),
+                        destRect, destOrigin, fbSize);
+ #else
+@@ -1594,7 +1594,7 @@ bool GLBlitHelper::BlitImage(layers::GPUVideoImage* const srcImage,
+   const auto& subdescUnion =
+       desc.get_SurfaceDescriptorRemoteDecoder().subdesc();
+   switch (subdescUnion.type()) {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     case layers::RemoteDecoderVideoSubDescriptor::TSurfaceDescriptorDMABuf: {
+       const auto& subdesc = subdescUnion.get_SurfaceDescriptorDMABuf();
+       RefPtr<DMABufSurface> surface =
+@@ -1641,7 +1641,7 @@ bool GLBlitHelper::BlitImage(layers::GPUVideoImage* const srcImage,
+ }
+ 
+ // -------------------------------------
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ bool GLBlitHelper::Blit(DMABufSurface* surface, const gfx::IntRect& destRect,
+                         OriginPos destOrigin, const gfx::IntSize& fbSize,
+                         Maybe<gfxAlphaType> convertAlpha) const {
+diff --git a/gfx/gl/GLBlitHelper.h b/gfx/gl/GLBlitHelper.h
+index cc54c3f6f4db..f519e035859c 100644
+--- a/gfx/gl/GLBlitHelper.h
++++ b/gfx/gl/GLBlitHelper.h
+@@ -44,7 +44,7 @@ class MacIOSurface;
+ #  include "mozilla/java/GeckoSurfaceTextureWrappers.h"
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ class DMABufSurface;
+ #endif
+ 
+@@ -73,7 +73,7 @@ class SurfaceTextureDescriptor;
+ class MacIOSurfaceImage;
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ class DMABUFSurfaceImage;
+ #endif
+ }  // namespace layers
+@@ -267,7 +267,7 @@ class GLBlitHelper final {
+                  const gfx::IntRect& destRect, OriginPos destOrigin,
+                  const gfx::IntSize& fbSize = gfx::IntSize()) const;
+ #endif
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   bool Blit(DMABufSurface* surface, const gfx::IntRect& destRect,
+             OriginPos destOrigin, const gfx::IntSize& fbSize = gfx::IntSize(),
+             Maybe<gfxAlphaType> convertAlpha = {}) const;
+diff --git a/gfx/gl/GLContext.h b/gfx/gl/GLContext.h
+index 0b4f615241eb..eed66fbb4137 100644
+--- a/gfx/gl/GLContext.h
++++ b/gfx/gl/GLContext.h
+@@ -3840,7 +3840,7 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
+   virtual GLenum GetPreferredARGB32Format() const { return LOCAL_GL_RGBA; }
+ 
+   virtual GLenum GetPreferredEGLImageTextureTarget() const {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     return LOCAL_GL_TEXTURE_2D;
+ #else
+     if (IsExtensionSupported(OES_EGL_image_external) &&
+diff --git a/gfx/gl/GLContextProvider.h b/gfx/gl/GLContextProvider.h
+index b24679b56a59..08848aa11180 100644
+--- a/gfx/gl/GLContextProvider.h
++++ b/gfx/gl/GLContextProvider.h
+@@ -59,6 +59,12 @@ namespace gl {
+ #  include "GLContextProviderImpl.h"
+ #  undef GL_CONTEXT_PROVIDER_NAME
+ #  define GL_CONTEXT_PROVIDER_DEFAULT GLContextProviderLinux
++#elif defined(MOZ_WIDGET_QT)
++// Qt uses the Linux provider with EGL only until GLX/DMABuf helpers are shared.
++#  define GL_CONTEXT_PROVIDER_NAME GLContextProviderLinux
++#  include "GLContextProviderImpl.h"
++#  undef GL_CONTEXT_PROVIDER_NAME
++#  define GL_CONTEXT_PROVIDER_DEFAULT GLContextProviderLinux
+ #endif
+ 
+ #if defined(MOZ_WIDGET_UIKIT)
+diff --git a/gfx/gl/GLContextProviderEGL.cpp b/gfx/gl/GLContextProviderEGL.cpp
+index 3bb2bebf8639..e88788cc7161 100644
+--- a/gfx/gl/GLContextProviderEGL.cpp
++++ b/gfx/gl/GLContextProviderEGL.cpp
+@@ -7,6 +7,13 @@
+     ((EGLNativeWindowType)aWidget->GetNativeData(NS_NATIVE_EGL_WINDOW))
+ #  define GET_NATIVE_WINDOW_FROM_COMPOSITOR_WIDGET(aWidget) \
+     (aWidget->AsGTK()->GetEGLNativeWindow())
++#elif defined(MOZ_WIDGET_QT)
++#  include "mozilla/widget/QtCompositorWidget.h"
++#  include "mozilla/widget/QtEglUtils.h"
++#  define GET_NATIVE_WINDOW_FROM_REAL_WIDGET(aWidget) \
++    ((EGLNativeWindowType)aWidget->GetNativeData(NS_NATIVE_EGL_WINDOW))
++#  define GET_NATIVE_WINDOW_FROM_COMPOSITOR_WIDGET(aWidget) \
++    (aWidget->AsQt()->GetEGLNativeWindow())
+ #elif defined(MOZ_WIDGET_ANDROID)
+ #  define GET_NATIVE_WINDOW_FROM_REAL_WIDGET(aWidget) \
+     ((EGLNativeWindowType)aWidget->GetNativeData(NS_JAVA_SURFACE))
+@@ -286,7 +293,7 @@ already_AddRefed<GLContext> GLContextEGLFactory::CreateImpl(
+   gl->MakeCurrent();
+   gl->SetIsDoubleBuffered(doubleBuffered);
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (surface) {
+     const int interval = gfxVars::SwapIntervalEGL() ? 1 : 0;
+     egl->fSwapInterval(interval);
+@@ -487,7 +494,7 @@ bool GLContextEGL::RenewSurface(CompositorWidget* aWidget) {
+   }
+   const bool ok = MakeCurrent(true);
+   MOZ_ASSERT(ok);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (mSurface) {
+     const int interval = gfxVars::SwapIntervalEGL() ? 1 : 0;
+     mEgl->fSwapInterval(interval);
+@@ -852,12 +859,32 @@ WaylandOffscreenGLSurface::~WaylandOffscreenGLSurface() {
+ EGLSurface GLContextEGL::CreateWaylandOffscreenSurface(
+     EglDisplay& egl, EGLConfig config, mozilla::gfx::IntSize& pbsize) {
+   wl_egl_window* eglwindow = nullptr;
++  struct wl_compositor* compositor = nullptr;
++
++#if defined(MOZ_WIDGET_GTK)
++  if (GdkDisplay* gdkDisplay = gdk_display_get_default()) {
++    compositor = gdk_wayland_display_get_wl_compositor(gdkDisplay);
++  }
++#endif
++#if defined(MOZ_WIDGET_QT)
++  if (!compositor) {
++    compositor = static_cast<struct wl_compositor*>(
++        widget::QtGetWaylandCompositor());
++  }
++#endif
++  if (!compositor) {
++    return nullptr;
++  }
+ 
+-  struct wl_compositor* compositor =
+-      gdk_wayland_display_get_wl_compositor(gdk_display_get_default());
+   struct wl_surface* wlsurface = wl_compositor_create_surface(compositor);
++  if (!wlsurface) {
++    return nullptr;
++  }
+   eglwindow = wl_egl_window_create(wlsurface, pbsize.width, pbsize.height);
+-  if (!eglwindow) return nullptr;
++  if (!eglwindow) {
++    wl_surface_destroy(wlsurface);
++    return nullptr;
++  }
+ 
+   const auto surface = egl.fCreateWindowSurface(
+       config, reinterpret_cast<EGLNativeWindowType>(eglwindow), nullptr);
+@@ -865,6 +892,9 @@ EGLSurface GLContextEGL::CreateWaylandOffscreenSurface(
+     MOZ_DIAGNOSTIC_ASSERT(!sWaylandOffscreenGLSurfaces.Contains(surface));
+     sWaylandOffscreenGLSurfaces.LookupOrInsert(
+         surface, new WaylandOffscreenGLSurface(wlsurface, eglwindow));
++  } else {
++    wl_egl_window_destroy(eglwindow);
++    wl_surface_destroy(wlsurface);
+   }
+   return surface;
+ }
+@@ -1039,10 +1069,12 @@ EGLSurface GLContextEGL::CreateCompatibleSurface(void* aWindow) const {
+ 
+ static void FillContextAttribs(bool es3, bool useGles, nsTArray<EGLint>* out) {
+   out->AppendElement(LOCAL_EGL_SURFACE_TYPE);
+-#ifdef MOZ_WAYLAND
++  // Offscreen/singleton GL configs. GTK Wayland needs WINDOW_BIT + a dummy
++  // wl_egl_window. Qt Wayland must keep PBUFFER/surfaceless: forcing WINDOW_BIT
++  // here made context creation fail when no wl_compositor dummy was available
++  // and left the browser without a working compositor.
++#if defined(MOZ_WIDGET_GTK) && defined(MOZ_WAYLAND)
+   if (GdkIsWaylandDisplay()) {
+-    // Wayland on desktop does not support PBuffer or FBO.
+-    // We create a dummy wl_egl_window instead.
+     out->AppendElement(LOCAL_EGL_WINDOW_BIT);
+   } else
+ #endif
+@@ -1149,7 +1181,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateWithoutSurface(
+     const std::shared_ptr<EglDisplay> egl, const GLContextCreateDesc& desc,
+     nsACString* const out_failureId) {
+   const auto WithUseGles = [&](const bool useGles) -> RefPtr<GLContextEGL> {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     // First try creating a context with no config and no surface, this is what
+     // we really want, and seems to be the only way to make selecting software
+     // Mesa init properly when it's not the first device.
+@@ -1188,7 +1220,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateWithoutSurface(
+ 
+     auto dummySize = mozilla::gfx::IntSize{16, 16};
+     EGLSurface surface = nullptr;
+-#ifdef MOZ_WAYLAND
++#if defined(MOZ_WIDGET_GTK) && defined(MOZ_WAYLAND)
+     if (GdkIsWaylandDisplay()) {
+       surface = GLContextEGL::CreateWaylandOffscreenSurface(*egl, surfaceConfig,
+                                                             dummySize);
+diff --git a/gfx/gl/GLContextProviderGLX.cpp b/gfx/gl/GLContextProviderGLX.cpp
+index 1cfade9c6989..c40b4cac975c 100644
+--- a/gfx/gl/GLContextProviderGLX.cpp
++++ b/gfx/gl/GLContextProviderGLX.cpp
+@@ -290,7 +290,7 @@ GLXLibrary::WrapperScope::~WrapperScope() {
+ std::shared_ptr<XlibDisplay> GLXLibrary::GetDisplay() {
+   std::shared_ptr<XlibDisplay> display;
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK)
+   static const bool kHaveGtk = !!gdk_display_get_default();
+   if (kHaveGtk) {
+     display = XlibDisplay::Borrow(DefaultXDisplay());
+diff --git a/gfx/gl/GLContextProviderLinux.cpp b/gfx/gl/GLContextProviderLinux.cpp
+index 22f80985a2e3..126cecbcdb54 100644
+--- a/gfx/gl/GLContextProviderLinux.cpp
++++ b/gfx/gl/GLContextProviderLinux.cpp
+@@ -12,7 +12,7 @@ namespace mozilla::gl {
+ using namespace mozilla::gfx;
+ using namespace mozilla::widget;
+ 
+-#ifdef MOZ_X11
++#if defined(MOZ_X11) && defined(MOZ_WIDGET_GTK)
+ static class GLContextProviderGLX sGLContextProviderGLX;
+ #endif
+ static class GLContextProviderEGL sGLContextProviderEGL;
+@@ -23,12 +23,13 @@ already_AddRefed<GLContext> GLContextProviderLinux::CreateForCompositorWidget(
+   if (gfxVars::UseEGL()) {
+     return sGLContextProviderEGL.CreateForCompositorWidget(
+         aCompositorWidget, aHardwareWebRender, aForceAccelerated);
+-#ifdef MOZ_X11
++#if defined(MOZ_X11) && defined(MOZ_WIDGET_GTK)
+   } else {
+     return sGLContextProviderGLX.CreateForCompositorWidget(
+         aCompositorWidget, aHardwareWebRender, aForceAccelerated);
+ #endif
+   }
++  return nullptr;
+ }
+ 
+ /*static*/
+@@ -39,29 +40,31 @@ already_AddRefed<GLContext> GLContextProviderLinux::CreateHeadless(
+     // We request EGL if software is required, because we don't know
+     // what X11 is using. It could be software or hardware.
+     return sGLContextProviderEGL.CreateHeadless(desc, out_failureId);
+-#ifdef MOZ_X11
++#if defined(MOZ_X11) && defined(MOZ_WIDGET_GTK)
+   } else {
+     return sGLContextProviderGLX.CreateHeadless(desc, out_failureId);
+ #endif
+   }
++  return nullptr;
+ }
+ 
+ /*static*/
+ GLContext* GLContextProviderLinux::GetGlobalContext() {
+   if (gfxVars::UseEGL()) {
+     return sGLContextProviderEGL.GetGlobalContext();
+-#ifdef MOZ_X11
++#if defined(MOZ_X11) && defined(MOZ_WIDGET_GTK)
+   } else {
+     return sGLContextProviderGLX.GetGlobalContext();
+ #endif
+   }
++  return nullptr;
+ }
+ 
+ /*static*/
+ void GLContextProviderLinux::Shutdown() {
+   if (gfxVars::UseEGL()) {
+     sGLContextProviderEGL.Shutdown();
+-#ifdef MOZ_X11
++#if defined(MOZ_X11) && defined(MOZ_WIDGET_GTK)
+   } else {
+     sGLContextProviderGLX.Shutdown();
+ #endif
+diff --git a/gfx/gl/GLLibraryEGL.cpp b/gfx/gl/GLLibraryEGL.cpp
+index a4a12146c3ae..a5b9a27dfb74 100644
+--- a/gfx/gl/GLLibraryEGL.cpp
++++ b/gfx/gl/GLLibraryEGL.cpp
+@@ -40,9 +40,17 @@
+ #  include "mozilla/widget/DMABufDevice.h"
+ #  ifdef MOZ_WAYLAND
+ #    include "mozilla/widget/nsWaylandDisplay.h"
+-#  endif  // MOZ_WIDGET_GTK
++#  endif
+ #  include <gdk/gdk.h>
+-#endif  // MOZ_WAYLAND
++#endif
++
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
++#  include "mozilla/widget/DMABufDevice.h"
++#endif
++
++#ifdef MOZ_WIDGET_QT
++#  include "mozilla/widget/QtEglUtils.h"
++#endif
+ 
+ #include <mutex>  // for call_once
+ 
+@@ -169,7 +177,7 @@ static std::shared_ptr<EglDisplay> GetAndInitDisplay(
+   return EglDisplay::Create(egl, display, false, aProofOfLock);
+ }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ static std::shared_ptr<EglDisplay> GetAndInitDeviceDisplay(
+     GLLibraryEGL& egl, const StaticMutexAutoLock& aProofOfLock) {
+   nsAutoCString drmRenderDevice(gfx::gfxVars::DrmRenderDevice());
+@@ -967,11 +975,13 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
+     }
+   } else {
+     void* nativeDisplay = EGL_DEFAULT_DISPLAY;
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     if (!ret && (!gfx::gfxVars::WebglUseHardware() || forceSoftware)) {
+       // Initialize a swrast egl device such as llvmpipe
+       ret = GetAndInitSoftwareDisplay(*this, aProofOfLock);
+     }
++#endif
++#ifdef MOZ_WIDGET_GTK
+     // Initialize the display the normal way
+     if (!ret && !gdk_display_get_default() && !forceSoftware) {
+       ret = GetAndInitDeviceDisplay(*this, aProofOfLock);
+@@ -988,6 +998,25 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
+     }
+ #  endif
+ #endif
++#ifdef MOZ_WIDGET_QT
++    if (!ret && !forceSoftware) {
++      // Bind EGL to the same native display QPA is using. Using
++      // EGL_DEFAULT_DISPLAY can pick the wrong platform (e.g. Wayland when
++      // Firefox is on xcb) and then crash in eglCreateWindowSurface.
++      if (widget::QtIsWaylandDisplay()) {
++        nativeDisplay = widget::QtGetWaylandDisplay();
++        if (!nativeDisplay) {
++          NS_WARNING("Failed to get Qt wl_display for EGL.");
++          return nullptr;
++        }
++      } else if (widget::QtIsX11Display()) {
++        void* xDisplay = widget::QtGetX11Display();
++        if (xDisplay) {
++          nativeDisplay = xDisplay;
++        }
++      }
++    }
++#endif
+     if (!ret && !forceSoftware) {
+       ret = GetAndInitDisplay(*this, nativeDisplay, aProofOfLock);
+     }
+diff --git a/gfx/gl/SharedSurface.cpp b/gfx/gl/SharedSurface.cpp
+index 3f1e8f4c5999..1e1b69c6b920 100644
+--- a/gfx/gl/SharedSurface.cpp
++++ b/gfx/gl/SharedSurface.cpp
+@@ -30,11 +30,13 @@
+ #  include "SharedSurfaceIO.h"
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
+-#  include "gfxPlatformGtk.h"
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "SharedSurfaceDMABUF.h"
+ #  include "mozilla/widget/DMABufDevice.h"
+ #endif
++#ifdef MOZ_WIDGET_GTK
++#  include "gfxPlatformGtk.h"
++#endif
+ 
+ #ifdef MOZ_WIDGET_ANDROID
+ #  include "SharedSurfaceAndroidHardwareBuffer.h"
+@@ -98,7 +100,7 @@ UniquePtr<SurfaceFactory> SurfaceFactory::Create(
+ #endif
+ 
+     case layers::TextureType::DMABUF:
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+       if (gl.GetContextType() == GLContextType::EGL &&
+           widget::DMABufDevice::IsDMABufWebGLEnabled()) {
+         return SurfaceFactory_DMABUF::Create(gl);
+diff --git a/gfx/gl/moz.build b/gfx/gl/moz.build
+index 4143236b6fc8..7d199b98f2bb 100644
+--- a/gfx/gl/moz.build
++++ b/gfx/gl/moz.build
+@@ -11,7 +11,7 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
+ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
+     gl_provider = "EAGL"
+     DEFINES["GLES_SILENCE_DEPRECATION"] = 1
+-elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+     gl_provider = "Linux"
+ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "android":
+     gl_provider = "EGL"
+@@ -108,11 +108,16 @@ elif gl_provider == "Linux":
+     # as it includes X11 headers which cause conflicts.
+     SOURCES += [
+         "GLContextProviderLinux.cpp",
+-        "SharedSurfaceDMABUF.cpp",
+     ]
+-    EXPORTS += ["GLContextGLX.h", "GLXLibrary.h"]
+-    if CONFIG["MOZ_X11"]:
+-        SOURCES += ["GLContextProviderGLX.cpp"]
++    # DMABuf helpers are shared by GTK and Qt; GLX remains GTK/X11 only.
++    if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
++        SOURCES += [
++            "SharedSurfaceDMABUF.cpp",
++        ]
++    if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++        EXPORTS += ["GLContextGLX.h", "GLXLibrary.h"]
++        if CONFIG["MOZ_X11"]:
++            SOURCES += ["GLContextProviderGLX.cpp"]
+ 
+ UNIFIED_SOURCES += [
+     "AndroidSurfaceTexture.cpp",
+@@ -146,7 +151,7 @@ include("/ipc/chromium/chromium-config.mozbuild")
+ 
+ FINAL_LIBRARY = "xul"
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+     CFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+ 
+diff --git a/gfx/layers/BuildConstants.h b/gfx/layers/BuildConstants.h
+index 247b33b83fd4..d4e83584613b 100644
+--- a/gfx/layers/BuildConstants.h
++++ b/gfx/layers/BuildConstants.h
+@@ -37,7 +37,7 @@ constexpr bool kIsMacOS =
+ #endif
+ 
+ constexpr bool kIsLinux =
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     true;
+ #else
+     false;
+diff --git a/gfx/layers/CanvasRenderer.cpp b/gfx/layers/CanvasRenderer.cpp
+index 320ca2ed82e0..464e1da84698 100644
+--- a/gfx/layers/CanvasRenderer.cpp
++++ b/gfx/layers/CanvasRenderer.cpp
+@@ -12,7 +12,7 @@
+ #include "PersistentBufferProvider.h"
+ #include "WebGLTypes.h"
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "mozilla/widget/DMABufSurface.h"
+ #  include "mozilla/widget/DMABufDevice.h"
+ #endif
+@@ -110,7 +110,7 @@ TextureType TexTypeForWebgl(KnowsCompositor* const knowsCompositor,
+     return TextureType::MacIOSurface;
+   }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (kIsLinux) {
+     if (!knowsCompositor->UsingSoftwareWebRender() &&
+         widget::DMABufDevice::IsDMABufWebGLEnabled()) {
+diff --git a/gfx/layers/ImageContainer.h b/gfx/layers/ImageContainer.h
+index 952fe1a3c60d..0ac59a26b42f 100644
+--- a/gfx/layers/ImageContainer.h
++++ b/gfx/layers/ImageContainer.h
+@@ -85,6 +85,6 @@ class SurfaceTextureImage;
+ #elif defined(XP_DARWIN)
+ class MacIOSurfaceImage;
+-#elif MOZ_WIDGET_GTK
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ class DMABUFSurfaceImage;
+ #endif
+ 
+@@ -181,7 +181,7 @@ class Image {
+   virtual MacIOSurfaceImage* AsMacIOSurfaceImage() { return nullptr; }
+ #endif
+   virtual PlanarYCbCrImage* AsPlanarYCbCrImage() { return nullptr; }
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   virtual DMABUFSurfaceImage* AsDMABUFSurfaceImage() { return nullptr; }
+ #endif
+ 
+diff --git a/gfx/layers/apz/test/gtest/TestPanning.cpp b/gfx/layers/apz/test/gtest/TestPanning.cpp
+index 9e629bdf95ec..5d0c091d0bec 100644
+--- a/gfx/layers/apz/test/gtest/TestPanning.cpp
++++ b/gfx/layers/apz/test/gtest/TestPanning.cpp
+@@ -357,7 +357,7 @@ TEST_F(APZCPanningTesterMock, HoldGesture_ActiveWheelListener) {
+   PanGesture(PanGestureInput::PANGESTURE_MAYSTART, manager, panPoint,
+              ScreenPoint(0, 0), mcc->Time());
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // On Linux, send a CANCELLED. This signifies the end of the hold gesture.
+   // (On Mac the widget code goes directly to sending START.)
+   mcc->AdvanceByMillis(5);
+@@ -430,7 +430,7 @@ TEST_F(APZCPanningTesterMock, HoldGesture_PreventDefaultAfterLongHold) {
+   // Allow enough time to pass for the content response timeout to be reached.
+   mcc->AdvanceByMillis(30);
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // On Linux, send a CANCELLED. This signifies the end of the hold gesture.
+   // (On Mac the widget code goes directly to sending START.)
+   QueueMockHitResult(scrollId, dispatchToContent);
+@@ -513,7 +513,7 @@ TEST_F(APZCPanningTesterMock, HoldGesture_SubframeTargeting) {
+   PanGesture(PanGestureInput::PANGESTURE_MAYSTART, manager, panPoint,
+              ScreenPoint(0, 0), mcc->Time());
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // On Linux, send a CANCELLED. This signifies the end of the hold gesture.
+   // (On Mac the widget code goes directly to sending START.)
+   mcc->AdvanceByMillis(5);
+diff --git a/gfx/layers/moz.build b/gfx/layers/moz.build
+index 5c22be217f56..12ccdf4aa878 100644
+--- a/gfx/layers/moz.build
++++ b/gfx/layers/moz.build
+@@ -242,7 +242,7 @@ EXPORTS.mozilla.layers += [
+     "ZoomConstraints.h",
+ ]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+     EXPORTS.mozilla.layers += [
+         "DMABUFSurfaceImage.h",
+         "opengl/DMABUFTextureClientOGL.h",
+@@ -254,7 +254,8 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+         "opengl/DMABUFTextureHostOGL.cpp",
+     ]
+ 
+-if CONFIG["MOZ_WAYLAND"]:
++# Native Wayland layers currently depend on widget/gtk helpers.
++if CONFIG["MOZ_WAYLAND"] and CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     EXPORTS.mozilla.layers += [
+         "NativeLayerWayland.h",
+         "SurfacePoolWayland.h",
+diff --git a/gfx/layers/opengl/CompositorOGL.cpp b/gfx/layers/opengl/CompositorOGL.cpp
+index 4d7a5280c2ee..b7a58d25cf36 100644
+--- a/gfx/layers/opengl/CompositorOGL.cpp
++++ b/gfx/layers/opengl/CompositorOGL.cpp
+@@ -290,7 +290,7 @@ void CompositorOGL::CleanupResources() {
+   mNativeLayersReferenceRT = nullptr;
+   mFullWindowRenderTarget = nullptr;
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // TextureSources might hold RefPtr<gl::GLContext>.
+   // All of them needs to be released to destroy GLContext.
+   // GLContextGLX has to be destroyed before related gtk window is destroyed.
+@@ -1664,7 +1664,7 @@ void PerUnitTexturePoolOGL::DestroyTextures() {
+ }
+ 
+ void CompositorOGL::RegisterTextureSource(TextureSource* aTextureSource) {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (mDestroyed) {
+     return;
+   }
+@@ -1673,7 +1673,7 @@ void CompositorOGL::RegisterTextureSource(TextureSource* aTextureSource) {
+ }
+ 
+ void CompositorOGL::UnregisterTextureSource(TextureSource* aTextureSource) {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (mDestroyed) {
+     return;
+   }
+diff --git a/gfx/layers/opengl/CompositorOGL.h b/gfx/layers/opengl/CompositorOGL.h
+index 6a3d49f16386..f08eb390340f 100644
+--- a/gfx/layers/opengl/CompositorOGL.h
++++ b/gfx/layers/opengl/CompositorOGL.h
+@@ -412,7 +412,7 @@ class CompositorOGL final : public Compositor {
+   // with a non-null aNativeLayer.
+   RefPtr<NativeLayer> mCurrentNativeLayer;
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // Hold TextureSources which own device data that have to be deleted before
+   // destroying this CompositorOGL.
+   std::unordered_set<TextureSource*> mRegisteredTextureSources;
+diff --git a/gfx/layers/opengl/OGLShaderProgram.cpp b/gfx/layers/opengl/OGLShaderProgram.cpp
+index c5a53296f049..6697a8e0b030 100644
+--- a/gfx/layers/opengl/OGLShaderProgram.cpp
++++ b/gfx/layers/opengl/OGLShaderProgram.cpp
+@@ -115,7 +115,7 @@ void ShaderConfigOGL::SetRoundedClip(bool aEnabled) {
+ void ShaderConfigOGL::SetNV12(bool aEnabled) {
+   SetFeature(ENABLE_TEXTURE_NV12, aEnabled);
+   MOZ_ASSERT(!(mFeatures & ENABLE_TEXTURE_YCBCR));
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   SetFeature(ENABLE_TEXTURE_NV12_GA_SWITCH, aEnabled);
+ #endif
+ }
+diff --git a/gfx/layers/opengl/TextureHostOGL.cpp b/gfx/layers/opengl/TextureHostOGL.cpp
+index b90c14426358..df0dbd5b6784 100644
+--- a/gfx/layers/opengl/TextureHostOGL.cpp
++++ b/gfx/layers/opengl/TextureHostOGL.cpp
+@@ -33,7 +33,7 @@
+ #  include "mozilla/webrender/RenderAndroidSurfaceTextureHost.h"
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "mozilla/layers/DMABUFTextureHostOGL.h"
+ #endif
+ 
+@@ -100,7 +100,7 @@ already_AddRefed<TextureHost> CreateTextureHostOGL(
+       break;
+     }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     case SurfaceDescriptor::TSurfaceDescriptorDMABuf: {
+       result = new DMABUFTextureHostOGL(aFlags, aDesc);
+       if (!result->IsValid()) {
+diff --git a/gfx/skia/moz.build b/gfx/skia/moz.build
+--- a/gfx/skia/moz.build
++++ b/gfx/skia/moz.build
+@@ -563,7 +563,7 @@
+     SOURCES += [
+         'skia/src/ports/SkTypeface_mac_ct.cpp',
+     ]
+-if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk':
++if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'qt'):
+     UNIFIED_SOURCES += [
+         'skia/src/ports/SkLog_stdio.cpp',
+         'skia/src/ports/SkOSFile_posix.cpp',
+@@ -655,7 +655,7 @@
+     "/gfx/harfbuzz/src",
+ ]
+ 
+-if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'android'):
++if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'android', 'qt'):
+     LOCAL_INCLUDES += [
+         "/gfx/cairo/cairo/src",
+     ]
+@@ -663,6 +663,8 @@
+ 
+ if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk':
+     CXXFLAGS += CONFIG['MOZ_PANGO_CFLAGS']
++elif CONFIG['MOZ_WIDGET_TOOLKIT'] == 'qt':
++    CXXFLAGS += CONFIG['MOZ_QT6_CFLAGS']
+ 
+ if CONFIG['TARGET_CPU'] in ('mips32', 'mips64'):
+     # The skia code uses `mips` as a variable, but it's a builtin preprocessor
+diff --git a/gfx/src/X11UndefineNone.h b/gfx/src/X11UndefineNone.h
+index 8cfbb0bf7410..932fc4ad9ea4 100644
+--- a/gfx/src/X11UndefineNone.h
++++ b/gfx/src/X11UndefineNone.h
+@@ -50,3 +50,9 @@
+ #  undef DestroyAll
+ #  define X11DestroyAll 0
+ #endif
++
++// X11/extensions/XI.h defines COUNT as 0, which breaks enum variants named
++// COUNT (e.g. in WebRender FFI headers). Qt's XCB platform can pull XI.h in.
++#ifdef COUNT
++#  undef COUNT
++#endif
+diff --git a/gfx/src/X11Util.h b/gfx/src/X11Util.h
+index 70b0eb782b14..22172af44009 100644
+--- a/gfx/src/X11Util.h
++++ b/gfx/src/X11Util.h
+@@ -12,6 +12,9 @@
+ #  include <gdk/gdkx.h>
+ #  include "mozilla/WidgetUtilsGtk.h"
+ #  include "X11UndefineNone.h"
++#elif defined(MOZ_WIDGET_QT)
++#  include <X11/Xlib.h>
++#  include "X11UndefineNone.h"
+ #else
+ #  error Unknown toolkit
+ #endif
+@@ -29,6 +32,11 @@ inline Display* DefaultXDisplay() {
+   if (mozilla::widget::GdkIsX11Display(gdkDisplay)) {
+     return GDK_DISPLAY_XDISPLAY(gdkDisplay);
+   }
++#elif defined(MOZ_WIDGET_QT)
++  // Qt owns the X display connection via the xcb QPA plugin; callers that need
++  // a Display* should obtain it through Qt native interfaces. Returning null
++  // here keeps X11-optional code paths safe.
++  return nullptr;
+ #endif
+   return nullptr;
+ }
+diff --git a/gfx/thebes/SharedFontList.cpp b/gfx/thebes/SharedFontList.cpp
+index 1770cd8315d7..89744a4e03fb 100644
+--- a/gfx/thebes/SharedFontList.cpp
++++ b/gfx/thebes/SharedFontList.cpp
+@@ -312,7 +312,7 @@ bool Family::FindAllFacesForStyleInternal(FontList* aList,
+     auto* face = facePtrs[0].ToPtr<Face>(aList);
+     if (face && face->HasValidDescriptor()) {
+       aFaceList.AppendElement(face);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+       if (face->mSize) {
+         return true;
+       }
+@@ -343,7 +343,7 @@ bool Family::FindAllFacesForStyleInternal(FontList* aList,
+     auto* face = facePtrs[faceIndex].ToPtr<Face>(aList);
+     if (face && face->HasValidDescriptor()) {
+       aFaceList.AppendElement(face);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+       if (face->mSize) {
+         return true;
+       }
+@@ -368,7 +368,7 @@ bool Family::FindAllFacesForStyleInternal(FontList* aList,
+       face = facePtrs[order[trial]].ToPtr<Face>(aList);
+       if (face && face->HasValidDescriptor()) {
+         aFaceList.AppendElement(face);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+         if (face->mSize) {
+           return true;
+         }
+@@ -413,7 +413,7 @@ bool Family::FindAllFacesForStyleInternal(FontList* aList,
+       } else if (distance == minDistance) {
+         if (matched) {
+           aFaceList.AppendElement(matched);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+           if (matched->mSize) {
+             anyNonScalable = true;
+           }
+@@ -427,7 +427,7 @@ bool Family::FindAllFacesForStyleInternal(FontList* aList,
+   MOZ_ASSERT(matched, "didn't match a font within a family");
+   if (matched) {
+     aFaceList.AppendElement(matched);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     if (matched->mSize) {
+       anyNonScalable = true;
+     }
+@@ -440,14 +440,14 @@ bool Family::FindAllFacesForStyleInternal(FontList* aList,
+ void Family::FindAllFacesForStyle(FontList* aList, const gfxFontStyle& aStyle,
+                                   nsTArray<Face*>& aFaceList,
+                                   bool aIgnoreSizeTolerance) const {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   bool anyNonScalable =
+ #else
+   (void)
+ #endif
+       FindAllFacesForStyleInternal(aList, aStyle, aFaceList);
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // aFaceList now contains whatever faces are the best style match for
+   // the requested style. If specifically-sized bitmap faces are supported,
+   // we need to additionally filter the list to choose the appropriate size.
+diff --git a/gfx/thebes/SharedFontList.h b/gfx/thebes/SharedFontList.h
+index 47384c4941bc..aef1c70f4344 100644
+--- a/gfx/thebes/SharedFontList.h
++++ b/gfx/thebes/SharedFontList.h
+@@ -170,7 +170,7 @@ struct Face {
+     nsCString mDescriptor;  // descriptor that can be used to instantiate a
+                             // platform font reference
+     uint16_t mIndex;        // an index used with descriptor (on some platforms)
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     uint16_t mSize;  // pixel size if bitmap; zero indicates scalable
+ #endif
+     bool mFixedPitch;                  // is the face fixed-pitch (monospaced)?
+@@ -185,7 +185,7 @@ struct Face {
+   Face(FontList* aList, const InitData& aData)
+       : mDescriptor(aList, aData.mDescriptor),
+         mIndex(aData.mIndex),
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+         mSize(aData.mSize),
+ #endif
+         mFixedPitch(aData.mFixedPitch),
+@@ -204,7 +204,7 @@ struct Face {
+ 
+   String mDescriptor;
+   uint16_t mIndex;
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   uint16_t mSize;
+ #endif
+   bool mFixedPitch;
+diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFontList.cpp
+index d0397ceac08d..81ca11633d54 100644
+--- a/gfx/thebes/gfxFcPlatformFontList.cpp
++++ b/gfx/thebes/gfxFcPlatformFontList.cpp
+@@ -46,6 +46,11 @@
+ #  include "mozilla/WidgetUtilsGtk.h"
+ #endif
+ 
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
++// For mozilla::dom::SystemFontOptions (PContent.ipdl).
++#  include "mozilla/dom/PContent.h"
++#endif
++
+ #ifdef MOZ_X11
+ #  include "mozilla/X11Util.h"
+ #endif
+@@ -3192,3 +3197,44 @@ void gfxFcPlatformFontList::SubstituteSystemFontOptions(FcPattern* aPattern) {
+ }
+ 
+ #endif  // MOZ_WIDGET_GTK
++
++#ifdef MOZ_WIDGET_QT
++void gfxFcPlatformFontList::ClearSystemFontOptions() {
++  if (mSystemFontOptions) {
++    cairo_font_options_destroy(mSystemFontOptions);
++    mSystemFontOptions = nullptr;
++  }
++}
++
++bool gfxFcPlatformFontList::UpdateSystemFontOptions() {
++  // Qt look-and-feel font options can be wired via QFont later.
++  return false;
++}
++
++void gfxFcPlatformFontList::SystemFontOptionsToIpc(
++    dom::SystemFontOptions& aOptions) {
++  aOptions.antialias() = CAIRO_ANTIALIAS_DEFAULT;
++  aOptions.subpixelOrder() = CAIRO_SUBPIXEL_ORDER_DEFAULT;
++  aOptions.hintStyle() = CAIRO_HINT_STYLE_DEFAULT;
++  aOptions.lcdFilter() = mFreetypeLcdSetting;
++}
++
++void gfxFcPlatformFontList::UpdateSystemFontOptionsFromIpc(
++    const dom::SystemFontOptions& aOptions) {
++  ClearSystemFontOptions();
++  mSystemFontOptions = cairo_font_options_create();
++  cairo_font_options_set_antialias(mSystemFontOptions,
++                                   cairo_antialias_t(aOptions.antialias()));
++  cairo_font_options_set_hint_style(mSystemFontOptions,
++                                    cairo_hint_style_t(aOptions.hintStyle()));
++  cairo_font_options_set_subpixel_order(
++      mSystemFontOptions, cairo_subpixel_order_t(aOptions.subpixelOrder()));
++  mFreetypeLcdSetting = aOptions.lcdFilter();
++}
++
++void gfxFcPlatformFontList::SubstituteSystemFontOptions(FcPattern* aPattern) {
++  if (mSystemFontOptions) {
++    cairo_ft_font_options_substitute(mSystemFontOptions, aPattern);
++  }
++}
++#endif  // MOZ_WIDGET_QT
+diff --git a/gfx/thebes/gfxFcPlatformFontList.h b/gfx/thebes/gfxFcPlatformFontList.h
+index e6d235cd1806..0be7be37b50a 100644
+--- a/gfx/thebes/gfxFcPlatformFontList.h
++++ b/gfx/thebes/gfxFcPlatformFontList.h
+@@ -390,7 +390,7 @@ class gfxFcPlatformFontList final : public gfxPlatformFontList {
+   RefPtr<FcConfig> mLastConfig;
+ 
+   // The current system font options in effect.
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // NOTE(emilio): This is a *system cairo* cairo_font_options_t object. As
+   // such, it can't be used outside of the few functions defined here.
+   cairo_font_options_t* mSystemFontOptions = nullptr;
+diff --git a/gfx/thebes/gfxPlatform.cpp b/gfx/thebes/gfxPlatform.cpp
+index f1c3642bb913..76875fb566aa 100644
+--- a/gfx/thebes/gfxPlatform.cpp
++++ b/gfx/thebes/gfxPlatform.cpp
+@@ -82,6 +82,9 @@
+ #elif defined(MOZ_WIDGET_GTK)
+ #  include "gfxPlatformGtk.h"
+ #  include "DMABufFormats.h"
++#elif defined(MOZ_WIDGET_QT)
++#  include "gfxPlatformQt.h"
++
+ #elif defined(ANDROID)
+ #  include "gfxAndroidPlatform.h"
+ #endif
+@@ -791,6 +794,8 @@ bool gfxPlatform::HasVariationFontSupport() {
+     sHasVariationFontSupport = gfxPlatformMac::CheckVariationFontSupport();
+ #elif defined(MOZ_WIDGET_GTK)
+     sHasVariationFontSupport = gfxPlatformGtk::CheckVariationFontSupport();
++#elif defined(MOZ_WIDGET_QT)
++    sHasVariationFontSupport = gfxPlatformQt::CheckVariationFontSupport();
+ #elif defined(ANDROID)
+     sHasVariationFontSupport = gfxAndroidPlatform::CheckVariationFontSupport();
+ #else
+@@ -930,6 +935,8 @@ void gfxPlatform::Init() {
+   gPlatform = new gfxPlatformMac;
+ #elif defined(MOZ_WIDGET_GTK)
+   gPlatform = new gfxPlatformGtk;
++#elif defined(MOZ_WIDGET_QT)
++  gPlatform = new gfxPlatformQt;
+ #elif defined(ANDROID)
+   gPlatform = new gfxAndroidPlatform;
+ #else
+@@ -1957,7 +1964,7 @@ BackendPrefsData gfxPlatform::GetBackendPrefs() const {
+   data.mCanvasBitmask = BackendTypeBit(BackendType::SKIA);
+   data.mContentBitmask = BackendTypeBit(BackendType::SKIA);
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   data.mCanvasBitmask |= BackendTypeBit(BackendType::CAIRO);
+   data.mContentBitmask |= BackendTypeBit(BackendType::CAIRO);
+ #endif
+@@ -1988,7 +1995,7 @@ void gfxPlatform::InitBackendPrefs(BackendPrefsData&& aPrefsData) {
+   }
+ 
+   uint32_t swBackendBits = BackendTypeBit(BackendType::SKIA);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   swBackendBits |= BackendTypeBit(BackendType::CAIRO);
+ #endif
+   mSoftwareBackend = GetContentBackendPref(swBackendBits);
+@@ -2642,7 +2649,7 @@ void gfxPlatform::InitWebRenderConfig() {
+ 
+   bool hasHardware = gfxConfig::IsEnabled(Feature::WEBRENDER);
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // We require a hardware driver to back the GL context unless the user forced
+   // on WebRender.
+   if (!gfxConfig::IsForcedOnByUser(Feature::WEBRENDER) &&
+@@ -2723,7 +2730,7 @@ void gfxPlatform::InitWebRenderConfig() {
+ 
+   UpdateForceSubpixelAAWherePossible();
+ 
+-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_ANDROID) || (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   if (StaticPrefs::gfx_webrender_software_opengl_AtStartup()) {
+     gfxVars::SetAllowSoftwareWebRenderOGL(true);
+   }
+@@ -3213,7 +3220,7 @@ void gfxPlatform::InitHardwareVideoConfig() {
+   CODEC_HW_FEATURE_SETUP(VP9)
+ 
+   // H264/HEVC_HW_DECODE/ENCODE are used on Linux, Android, and Windows.
+-#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_ANDROID) || defined(XP_WIN)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT) || defined(MOZ_WIDGET_ANDROID) || defined(XP_WIN)
+   CODEC_HW_FEATURE_SETUP(H264)
+   CODEC_HW_FEATURE_SETUP(HEVC)
+ #endif
+@@ -3328,7 +3335,7 @@ void gfxPlatform::InitWebGLConfig() {
+     }
+   }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (kIsLinux) {
+     FeatureState& feature =
+         gfxConfig::GetFeature(Feature::DMABUF_SURFACE_EXPORT);
+@@ -3613,7 +3620,7 @@ bool gfxPlatform::UsesOffMainThreadCompositing() {
+     result = gfxVars::BrowserTabsRemoteAutostart() ||
+              !StaticPrefs::
+                  layers_offmainthreadcomposition_force_disabled_AtStartup();
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     // Linux users who chose OpenGL are being included in OMTC
+     result |= StaticPrefs::
+         layers_acceleration_force_enabled_AtStartup_DoNotUseDirectly();
+@@ -4105,7 +4112,7 @@ bool gfxPlatform::FallbackFromAcceleration(FeatureStatus aStatus,
+   }
+ #endif
+ 
+-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_ANDROID) || (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   // Before we disable OpenGL and HW_COMPOSITING, we should check if we can
+   // fallback from WebRender to Software WebRender + OpenGL compositing.
+   if (swglFallbackAllowed && gfxVars::AllowSoftwareWebRenderOGL() &&
+@@ -4118,7 +4125,7 @@ bool gfxPlatform::FallbackFromAcceleration(FeatureStatus aStatus,
+   }
+ #endif
+   // Android does not want to fallback to SW-WR.
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (swglFallbackAllowed && gfxVars::AllowSoftwareWebRenderOGL() &&
+       gfxVars::UseSoftwareWebRender()) {
+     // Fallback from Software WebRender + OpenGL to Software WebRender.
+diff --git a/gfx/thebes/gfxPlatformQt.cpp b/gfx/thebes/gfxPlatformQt.cpp
+new file mode 100644
+index 000000000000..8c056d839ec4
+--- /dev/null
++++ b/gfx/thebes/gfxPlatformQt.cpp
+@@ -0,0 +1,243 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "gfxPlatformQt.h"
++
++#include "gfx2DGlue.h"
++#include "gfxConfig.h"
++#include "gfxFcPlatformFontList.h"
++#include "gfxImageSurface.h"
++#include "mozilla/gfx/2D.h"
++#include "mozilla/gfx/Logging.h"
++#include "mozilla/gfx/gfxVars.h"
++#include "mozilla/Components.h"
++#include "mozilla/StaticPrefs_media.h"
++#include "mozilla/StaticPrefs_widget.h"
++#include "mozilla/TimeStamp.h"
++#include "mozilla/widget/DMABufDevice.h"
++#include "mozilla/widget/DMABufFormats.h"
++#include "SoftwareVsyncSource.h"
++#include "nsIGfxInfo.h"
++#include "nsXULAppAPI.h"
++#include "prenv.h"
++
++#pragma GCC visibility push(default)
++#include <QGuiApplication>
++#include <QScreen>
++#pragma GCC visibility pop
++
++using namespace mozilla;
++using namespace mozilla::gfx;
++using namespace mozilla::widget;
++
++static FT_Library gPlatformFTLibrary = nullptr;
++
++// Highest monitor refresh rate in Hz (at least 60). Used for the software
++// vsync timer so high-refresh displays are not capped at 60 Hz.
++static double QtHighestScreenRefreshRateHz() {
++  double best = gfxPlatform::GetSoftwareVsyncRate();
++  if (!qGuiApp) {
++    return best;
++  }
++  const QList<QScreen*> screens = QGuiApplication::screens();
++  for (QScreen* screen : screens) {
++    if (!screen) {
++      continue;
++    }
++    // refreshRate() is 0 when unknown on some platforms.
++    const qreal hz = screen->refreshRate();
++    if (hz > best) {
++      best = double(hz);
++    }
++  }
++  // Clamp to a sane range (CI/tests assume not far below 60; upper bound
++  // avoids pathological values from buggy drivers).
++  if (best < 59.0) {
++    best = 60.0;
++  } else if (best > 360.0) {
++    best = 360.0;
++  }
++  return best;
++}
++
++static TimeDuration QtVsyncPeriodFromScreens() {
++  return TimeDuration::FromMilliseconds(1000.0 / QtHighestScreenRefreshRateHz());
++}
++
++gfxPlatformQt::gfxPlatformQt() {
++  // Enable EGL-based WebRender compositing on Linux/Qt (X11 and Wayland QPA).
++  // Content processes inherit this via gfxVars.
++  if (XRE_IsParentProcess() && !IsHeadless()) {
++    gfxVars::SetUseEGL(true);
++    InitDmabufConfig();
++    if (gfxConfig::IsEnabled(Feature::DMABUF)) {
++      gfxVars::SetUseDMABuf(true);
++    }
++  }
++
++  InitBackendPrefs(GetBackendPrefs());
++
++  gPlatformFTLibrary = Factory::NewFTLibrary();
++  MOZ_RELEASE_ASSERT(gPlatformFTLibrary);
++  Factory::SetFTLibrary(gPlatformFTLibrary);
++
++  // Temporary NVIDIA driver workaround (same as GTK).
++  PR_SetEnv("__GL_ALLOW_FXAA_USAGE=0");
++}
++
++gfxPlatformQt::~gfxPlatformQt() {
++  Factory::ReleaseFTLibrary(gPlatformFTLibrary);
++  gPlatformFTLibrary = nullptr;
++}
++
++already_AddRefed<gfxASurface> gfxPlatformQt::CreateOffscreenSurface(
++    const IntSize& aSize, gfxImageFormat aFormat) {
++  if (!Factory::AllowedSurfaceSize(aSize)) {
++    return nullptr;
++  }
++  RefPtr<gfxASurface> surface = new gfxImageSurface(aSize, aFormat);
++  return surface.forget();
++}
++
++bool gfxPlatformQt::CreatePlatformFontList() {
++  return gfxPlatformFontList::Initialize(new gfxFcPlatformFontList);
++}
++
++void gfxPlatformQt::ReadSystemFontList(mozilla::dom::SystemFontList* aList) {
++  gfxFcPlatformFontList::PlatformFontList()->ReadSystemFontList(aList);
++}
++
++void gfxPlatformQt::GetCommonFallbackFonts(
++    uint32_t, Script, FontPresentation, nsTArray<const char*>& aFontList) {
++  aFontList.AppendElement("DejaVu Sans");
++  aFontList.AppendElement("FreeSans");
++  aFontList.AppendElement("Arial");
++}
++
++already_AddRefed<mozilla::gfx::VsyncSource>
++gfxPlatformQt::CreateGlobalHardwareVsyncSource() {
++  // Wayland: each toplevel gets a QtWaylandVsyncSource (frame callbacks).
++  // The global source remains a rate-matched software timer for content
++  // process refresh-driver plumbing and as a fallback before windows exist.
++  // X11: same display-rate timer (XRandR via QScreen::refreshRate()).
++  return MakeAndAddRef<SoftwareVsyncSource>(QtVsyncPeriodFromScreens());
++}
++
++bool gfxPlatformQt::IsWaylandDisplay() {
++  if (IsHeadless()) {
++    return false;
++  }
++  return QGuiApplication::platformName().contains(QLatin1String("wayland"),
++                                                  Qt::CaseInsensitive);
++}
++
++bool gfxPlatformQt::CheckVariationFontSupport() { return true; }
++
++void gfxPlatformQt::InitAcceleration() {
++  gfxPlatform::InitAcceleration();
++
++  if (XRE_IsContentProcess()) {
++    ImportCachedContentDeviceData();
++  }
++}
++
++void gfxPlatformQt::InitDmabufConfig() {
++  FeatureState& feature = gfxConfig::GetFeature(Feature::DMABUF);
++  feature.EnableByDefault();
++
++  nsCString failureId;
++  int32_t status;
++  nsCOMPtr<nsIGfxInfo> gfxInfo = components::GfxInfo::Service();
++  if (NS_FAILED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DMABUF, failureId,
++                                          &status))) {
++    feature.Disable(FeatureStatus::BlockedNoGfxInfo, "gfxInfo is broken",
++                    "FEATURE_FAILURE_NO_GFX_INFO"_ns);
++  } else if (status != nsIGfxInfo::FEATURE_STATUS_OK) {
++    feature.Disable(FeatureStatus::Blocklisted, "Blocklisted by gfxInfo",
++                    failureId);
++  }
++
++  if (StaticPrefs::widget_dmabuf_force_enabled_AtStartup()) {
++    feature.UserForceEnable("Force enabled by pref");
++  } else if (!StaticPrefs::widget_dmabuf_enabled_AtStartup()) {
++    feature.UserDisable("Force disable by pref",
++                        "FEATURE_FAILURE_USER_FORCE_DISABLED"_ns);
++  }
++
++  if (!gfxVars::UseEGL()) {
++    feature.ForceDisable(FeatureStatus::Unavailable, "Requires EGL",
++                         "FEATURE_FAILURE_REQUIRES_EGL"_ns);
++  }
++
++  if (!gfxVars::WebglUseHardware()) {
++    feature.Disable(FeatureStatus::Blocklisted,
++                    "DMABuf disabled with software rendering", failureId);
++  }
++
++  nsAutoCString drmRenderDevice;
++  gfxInfo->GetDrmRenderDevice(drmRenderDevice);
++  gfxVars::SetDrmRenderDevice(drmRenderDevice);
++
++  if (feature.IsEnabled()) {
++    DMABufDeviceLock device;
++    if (!device.GetDMABufDevice()->IsEnabled(failureId)) {
++      feature.ForceDisable(FeatureStatus::Failed, "Failed to configure",
++                           failureId);
++    }
++    (void)GetGlobalDMABufFormats();
++  }
++}
++
++void gfxPlatformQt::InitPlatformHardwareVideoConfig() {
++  FeatureState& featureDec =
++      gfxConfig::GetFeature(Feature::HARDWARE_VIDEO_DECODING);
++  if (!gfxVars::UseEGL()) {
++    featureDec.ForceDisable(FeatureStatus::Unavailable, "Requires EGL",
++                            "FEATURE_FAILURE_REQUIRES_EGL"_ns);
++    gfxConfig::ForceDisable(Feature::HARDWARE_VIDEO_ENCODING,
++                            FeatureStatus::Unavailable, "Requires EGL",
++                            "FEATURE_FAILURE_REQUIRES_EGL"_ns);
++  }
++
++  if (!featureDec.IsEnabled()) {
++    return;
++  }
++
++  FeatureState& featureZeroCopy =
++      gfxConfig::GetFeature(Feature::HW_DECODED_VIDEO_ZERO_COPY);
++
++  featureZeroCopy.EnableByDefault();
++  uint32_t state =
++      StaticPrefs::media_ffmpeg_vaapi_force_surface_zero_copy_AtStartup();
++  if (state == 0) {
++    featureZeroCopy.UserDisable("Force disable by pref",
++                                "FEATURE_FAILURE_USER_FORCE_DISABLED"_ns);
++  } else if (state == 1) {
++    featureZeroCopy.UserEnable("Force enabled by pref");
++  } else {
++    nsCString failureId;
++    int32_t status = nsIGfxInfo::FEATURE_STATUS_UNKNOWN;
++    nsCOMPtr<nsIGfxInfo> gfxInfo = components::GfxInfo::Service();
++    if (NS_FAILED(gfxInfo->GetFeatureStatus(
++            nsIGfxInfo::FEATURE_HW_DECODED_VIDEO_ZERO_COPY, failureId,
++            &status))) {
++      featureZeroCopy.Disable(FeatureStatus::BlockedNoGfxInfo,
++                              "gfxInfo is broken",
++                              "FEATURE_FAILURE_NO_GFX_INFO"_ns);
++    } else if (status == nsIGfxInfo::FEATURE_BLOCKED_PLATFORM_TEST) {
++      featureZeroCopy.ForceDisable(FeatureStatus::Unavailable,
++                                   "Force disabled by gfxInfo", failureId);
++    } else if (status != nsIGfxInfo::FEATURE_ALLOW_ALWAYS) {
++      featureZeroCopy.Disable(FeatureStatus::Blocklisted,
++                              "Blocklisted by gfxInfo", failureId);
++    }
++  }
++  if (featureZeroCopy.IsEnabled()) {
++    gfxVars::SetHwDecodedVideoZeroCopy(true);
++  }
++}
++
++namespace mozilla::gfx {
++bool IsDMABufEnabled() { return gfxVars::UseDMABuf(); }
++}  // namespace mozilla::gfx
+diff --git a/gfx/thebes/gfxPlatformQt.h b/gfx/thebes/gfxPlatformQt.h
+new file mode 100644
+index 000000000000..2bef9fa63fca
+--- /dev/null
++++ b/gfx/thebes/gfxPlatformQt.h
+@@ -0,0 +1,54 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef GFX_PLATFORM_QT_H
++#define GFX_PLATFORM_QT_H
++
++#include "gfxPlatform.h"
++
++class gfxPlatformQt final : public gfxPlatform {
++  friend class gfxPlatform;
++
++ public:
++  gfxPlatformQt();
++  virtual ~gfxPlatformQt();
++
++  static gfxPlatformQt* GetPlatform() {
++    return static_cast<gfxPlatformQt*>(gfxPlatform::GetPlatform());
++  }
++
++  already_AddRefed<gfxASurface> CreateOffscreenSurface(
++      const IntSize& aSize, gfxImageFormat aFormat) override;
++
++  bool CreatePlatformFontList() override;
++
++  void ReadSystemFontList(mozilla::dom::SystemFontList* aList) override;
++
++  void GetCommonFallbackFonts(uint32_t aCh, Script aRunScript,
++                              FontPresentation aPresentation,
++                              nsTArray<const char*>& aFontList) override;
++
++  bool SupportsApzWheelInput() const override { return true; }
++
++  already_AddRefed<mozilla::gfx::VsyncSource> CreateGlobalHardwareVsyncSource()
++      override;
++
++  bool IsWaylandDisplay() override;
++
++  static bool CheckVariationFontSupport();
++
++ protected:
++  bool AccelerateLayersByDefault() override { return true; }
++
++  void InitAcceleration() override;
++  void InitDmabufConfig();
++  void InitPlatformHardwareVideoConfig() override;
++};
++
++// Wrapper for third party code (WebRTC) where gfxVars can't be included.
++namespace mozilla::gfx {
++bool IsDMABufEnabled();
++}
++
++#endif
+diff --git a/gfx/thebes/moz.build b/gfx/thebes/moz.build
+index 6919fcff1cd3..d10df8dde2d5 100644
+--- a/gfx/thebes/moz.build
++++ b/gfx/thebes/moz.build
+@@ -150,6 +150,23 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+             "XlibDisplay.cpp",
+         ]
+ 
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    EXPORTS += [
++        "gfxFT2FontBase.h",
++        "gfxPlatformQt.h",
++    ]
++    EXPORTS.mozilla.gfx += [
++        "PrintTargetPDF.h",
++    ]
++    SOURCES += [
++        "gfxFcPlatformFontList.cpp",
++        "gfxFT2FontBase.cpp",
++        "gfxFT2Utils.cpp",
++        "gfxPlatformQt.cpp",
++        "PrintTargetPDF.cpp",
++    ]
++    CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
++
+ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
+     EXPORTS += [
+         "gfxDWriteCommon.h",
+@@ -276,19 +293,25 @@ LOCAL_INCLUDES += [
+     "/gfx/cairo/cairo/src",
+     "/image/encoders/jpeg",
+     "/third_party/xsimd/include",
+-    "/widget/gtk",
+ ]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
++if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++    LOCAL_INCLUDES += ["/widget/gtk"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    LOCAL_INCLUDES += ["/widget/qt"]
++
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk", "qt"):
+     DEFINES["MOZ_ENABLE_FREETYPE"] = True
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android"):
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "qt"):
+     CXXFLAGS += CONFIG["CAIRO_FT_CFLAGS"]
+ 
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+     CFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+     CXXFLAGS += CONFIG["MOZ_PANGO_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
+ 
+ if CONFIG["MOZ_WAYLAND"]:
+     CXXFLAGS += CONFIG["MOZ_WAYLAND_CFLAGS"]
+diff --git a/gfx/webrender_bindings/RenderCompositor.cpp b/gfx/webrender_bindings/RenderCompositor.cpp
+index e1c986104faa..9e743c1f68a3 100644
+--- a/gfx/webrender_bindings/RenderCompositor.cpp
++++ b/gfx/webrender_bindings/RenderCompositor.cpp
+@@ -22,7 +22,8 @@
+ #  include "mozilla/widget/WinCompositorWidget.h"
+ #endif
+ 
+-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || \
++    defined(MOZ_WIDGET_QT)
+ #  include "mozilla/webrender/RenderCompositorEGL.h"
+ #endif
+ 
+@@ -246,7 +247,8 @@ UniquePtr<RenderCompositor> RenderCompositor::Create(
+   }
+ #endif
+ 
+-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || \
++    defined(MOZ_WIDGET_QT)
+   UniquePtr<RenderCompositor> eglCompositor =
+       RenderCompositorEGL::Create(aWidget, aError);
+   if (eglCompositor) {
+@@ -257,6 +259,10 @@ UniquePtr<RenderCompositor> RenderCompositor::Create(
+ #if defined(MOZ_WIDGET_ANDROID)
+   // RenderCompositorOGL is not used on android
+   return nullptr;
++#elif defined(MOZ_WIDGET_QT)
++  // Qt uses EGL window surfaces (XID / wl_egl_window). RenderCompositorOGL's
++  // GLX-oriented path is not appropriate; fall back to software if EGL fails.
++  return RenderCompositorSWGL::Create(aWidget, aError);
+ #elif defined(XP_DARWIN)
+   if (gfx::gfxVars::UseWebRenderCompositor() &&
+       aWidget->GetCompositorOptions().AllowNativeCompositor()) {
+diff --git a/gfx/webrender_bindings/RenderCompositorEGL.cpp b/gfx/webrender_bindings/RenderCompositorEGL.cpp
+index e27bac7772fb..2e02be4ec7f8 100644
+--- a/gfx/webrender_bindings/RenderCompositorEGL.cpp
++++ b/gfx/webrender_bindings/RenderCompositorEGL.cpp
+@@ -20,6 +20,10 @@
+ #  include "mozilla/widget/GtkCompositorWidget.h"
+ #endif
+ 
++#ifdef MOZ_WIDGET_QT
++#  include "mozilla/widget/QtCompositorWidget.h"
++#endif
++
+ #ifdef MOZ_WIDGET_ANDROID
+ #  include "mozilla/java/GeckoSurfaceTextureWrappers.h"
+ #  include "mozilla/layers/AndroidHardwareBuffer.h"
+@@ -48,6 +52,10 @@ UniquePtr<RenderCompositor> RenderCompositorEGL::Create(
+     }
+     return nullptr;
+   }
++  // Qt: allow deferred EGL surface creation (Wayland surface may appear only
++  // after map). BeginFrame retries CreateEGLSurface. Returning nullptr here
++  // would fall through to SWGL+QBackingStore, which is wrong for exclusive
++  // OpenGLSurface top-levels.
+   return MakeUnique<RenderCompositorEGL>(aWidget, std::move(gl));
+ }
+ 
+@@ -64,6 +72,13 @@ EGLSurface RenderCompositorEGL::CreateEGLSurface() {
+   return surface;
+ }
+ 
++static void ConfigureEGLSurfaceInterval(gl::GLContext* aGL) {
++  const auto& gle = gl::GLContextEGL::Cast(aGL);
++  const auto& egl = gle->mEgl;
++  const int interval = gfx::gfxVars::SwapIntervalEGL() ? 1 : 0;
++  egl->fSwapInterval(interval);
++}
++
+ RenderCompositorEGL::RenderCompositorEGL(
+     const RefPtr<widget::CompositorWidget>& aWidget,
+     RefPtr<gl::GLContext>&& aGL)
+@@ -81,12 +96,19 @@ RenderCompositorEGL::RenderCompositorEGL(
+     // non-blocking buffer swaps. We need MakeCurrent() to set our current EGL
+     // context before we call eglSwapInterval, which is why we do it here
+     // rather than where the surface was created.
+-    const auto& gle = gl::GLContextEGL::Cast(gl());
+-    const auto& egl = gle->mEgl;
+     MakeCurrent();
+-
+-    const int interval = gfx::gfxVars::SwapIntervalEGL() ? 1 : 0;
+-    egl->fSwapInterval(interval);
++    ConfigureEGLSurfaceInterval(gl());
++  }
++#endif
++#ifdef MOZ_WIDGET_QT
++  // Qt builds do not define MOZ_X11/MOZ_WAYLAND (GTK-tied); create the window
++  // EGL surface up front for both xcb and wayland QPA backends.
++  if (!mEGLSurface) {
++    mEGLSurface = CreateEGLSurface();
++    if (mEGLSurface) {
++      MakeCurrent();
++      ConfigureEGLSurfaceInterval(gl());
++    }
+   }
+ #endif
+ }
+@@ -101,6 +123,19 @@ RenderCompositorEGL::~RenderCompositorEGL() {
+ 
+ bool RenderCompositorEGL::BeginFrame() {
+   LOG("RenderCompositorEGL::BeginFrame()");
++#ifdef MOZ_WIDGET_QT
++  // Deferred surface: native window may only exist after the first show/map.
++  if (mEGLSurface == EGL_NO_SURFACE) {
++    if (auto* qtWidget = mWidget->AsQt()) {
++      qtWidget->SetEGLNativeWindowSize(GetBufferSize());
++    }
++    mEGLSurface = CreateEGLSurface();
++    if (mEGLSurface != EGL_NO_SURFACE) {
++      MakeCurrent();
++      ConfigureEGLSurfaceInterval(gl());
++    }
++  }
++#endif
+   if (kIsLinux && mEGLSurface == EGL_NO_SURFACE) {
+     gfxCriticalNote
+         << "We don't have EGLSurface to draw into. Called too early?";
+@@ -110,6 +145,11 @@ bool RenderCompositorEGL::BeginFrame() {
+   if (auto* gtkWidget = mWidget->AsGTK()) {
+     gtkWidget->SetEGLNativeWindowSize(GetBufferSize());
+   }
++#endif
++#ifdef MOZ_WIDGET_QT
++  if (auto* qtWidget = mWidget->AsQt()) {
++    qtWidget->SetEGLNativeWindowSize(GetBufferSize());
++  }
+ #endif
+   if (!MakeCurrent()) {
+     gfxCriticalNote << "Failed to make render context current, can't draw.";
+@@ -146,7 +186,7 @@ RenderedFrameId RenderCompositorEGL::EndFrame(
+ #endif
+ 
+   RenderedFrameId frameId = GetNextRenderFrameId();
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (mWidget->IsHidden()) {
+     return frameId;
+   }
+@@ -227,27 +267,28 @@ bool RenderCompositorEGL::Resume() {
+ 
+     gl::GLContextEGL::Cast(gl())->SetEGLSurfaceOverride(mEGLSurface);
+   } else if (kIsLinux) {
++    bool createWindowSurface = false;
+ #ifdef MOZ_X11
+     if (widget::GdkIsX11Display()) {
++      createWindowSurface = true;
++    }
++#endif
++#ifdef MOZ_WIDGET_QT
++    // Qt: always (re)create the window surface on resume for any QPA backend.
++    createWindowSurface = true;
++#endif
++    if (createWindowSurface) {
+       DestroyEGLSurface();
+       mEGLSurface = CreateEGLSurface();
+       if (mEGLSurface != EGL_NO_SURFACE) {
+-        // We have a new EGL surface, which on wayland needs to be configured
+-        // for non-blocking buffer swaps. We need MakeCurrent() to set our
+-        // current EGL context before we call eglSwapInterval, which is why we
+-        // do it here rather than where the surface was created.
+-        const auto& gle = gl::GLContextEGL::Cast(gl());
+-        const auto& egl = gle->mEgl;
++        // Need MakeCurrent() before eglSwapInterval.
+         MakeCurrent();
+-
+-        const int interval = gfx::gfxVars::SwapIntervalEGL() ? 1 : 0;
+-        egl->fSwapInterval(interval);
++        ConfigureEGLSurfaceInterval(gl());
+       } else {
+         RenderThread::Get()->HandleWebRenderError(WebRenderError::NEW_SURFACE);
+         return false;
+       }
+     }
+-#endif
+   }
+   return true;
+ }
+diff --git a/gfx/webrender_bindings/RenderCompositorOGLSWGL.cpp b/gfx/webrender_bindings/RenderCompositorOGLSWGL.cpp
+index e03c4d32f11e..496d61dad7ce 100644
+--- a/gfx/webrender_bindings/RenderCompositorOGLSWGL.cpp
++++ b/gfx/webrender_bindings/RenderCompositorOGLSWGL.cpp
+@@ -34,6 +34,10 @@
+ #  endif
+ #endif
+ 
++#ifdef MOZ_WIDGET_QT
++#  include "mozilla/widget/QtCompositorWidget.h"
++#endif
++
+ namespace mozilla {
+ using namespace layers;
+ using namespace gfx;
+@@ -73,7 +77,9 @@ UniquePtr<RenderCompositor> RenderCompositorOGLSWGL::Create(
+     return nullptr;
+   }
+   compositor = compositorOGL;
+-#elif defined(MOZ_WIDGET_GTK)
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
++  // GPU-accelerated present of SWGL tiles via CompositorOGL + EGL window
++  // surface (avoids the pure CPU QBackingStore / Cairo path on Qt).
+   nsCString log;
+   RefPtr<CompositorOGL> compositorOGL;
+   compositorOGL = new CompositorOGL(aWidget);
+@@ -217,7 +223,7 @@ bool RenderCompositorOGLSWGL::RequestFullRender() { return mFullRender; }
+ void RenderCompositorOGLSWGL::Pause() {
+ #ifdef MOZ_WIDGET_ANDROID
+   DestroyEGLSurface();
+-#elif defined(MOZ_WIDGET_GTK)
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   mCompositor->Pause();
+ #endif
+ }
+@@ -260,7 +266,7 @@ bool RenderCompositorOGLSWGL::Resume() {
+ 
+   gl::GLContextEGL::Cast(GetGLContext())->SetEGLSurfaceOverride(mEGLSurface);
+   mCompositor->SetDestinationSurfaceSize(size.ToUnknownSize());
+-#elif defined(MOZ_WIDGET_GTK)
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   bool resumed = mCompositor->Resume();
+   if (!resumed) {
+     RenderThread::Get()->HandleWebRenderError(WebRenderError::NEW_SURFACE);
+diff --git a/gfx/webrender_bindings/moz.build b/gfx/webrender_bindings/moz.build
+index 5ad8cad9c769..5b0172f52c44 100644
+--- a/gfx/webrender_bindings/moz.build
++++ b/gfx/webrender_bindings/moz.build
+@@ -91,7 +91,7 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
+         "RenderDcompSurfaceTextureHost.cpp",
+     ]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+     EXPORTS.mozilla.webrender += [
+         "RenderDMABUFTextureHost.h",
+     ]
+@@ -99,7 +99,8 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+         "RenderDMABUFTextureHost.cpp",
+     ]
+ 
+-if CONFIG["MOZ_WAYLAND"]:
++# RenderCompositorNative currently depends on widget/gtk Wayland surfaces.
++if CONFIG["MOZ_WAYLAND"] and CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     EXPORTS.mozilla.webrender += [
+         "RenderCompositorNative.h",
+     ]
+@@ -107,7 +108,7 @@ if CONFIG["MOZ_WAYLAND"]:
+         "RenderCompositorNative.cpp",
+     ]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk", "qt"):
+     CXXFLAGS += CONFIG["CAIRO_FT_CFLAGS"]
+ 
+ if CONFIG["COMPILE_ENVIRONMENT"]:
+@@ -134,5 +135,7 @@ LOCAL_INCLUDES += [
+ ]
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++# Note: do not add MOZ_QT6_CFLAGS here. Qt headers can pull in X11 XI.h which
++# defines COUNT and corrupts cbindgen output for webrender_ffi_generated.h.
+ 
+ COMPILE_FLAGS["WARNINGS_CXXFLAGS"] += ["-Werror=switch"]
+diff --git a/widget/CompositorWidget.h b/widget/CompositorWidget.h
+index a303bd028f01..b9b7c4f866ce 100644
+--- a/widget/CompositorWidget.h
++++ b/widget/CompositorWidget.h
+@@ -32,6 +32,7 @@ namespace widget {
+ 
+ class WinCompositorWidget;
+ class GtkCompositorWidget;
++class QtCompositorWidget;
+ class AndroidCompositorWidget;
+ class CocoaCompositorWidget;
+ class CompositorWidgetInitData;
+@@ -59,7 +60,7 @@ class CompositorWidgetDelegate {
+ 
+ // Platforms that support out-of-process widgets.
+ #if defined(XP_WIN) || defined(MOZ_X11) || defined(MOZ_WIDGET_ANDROID) || \
+-    defined(MOZ_WAYLAND) || defined(XP_MACOSX)
++    defined(MOZ_WAYLAND) || defined(XP_MACOSX) || defined(MOZ_WIDGET_QT)
+ // CompositorWidgetParent should implement CompositorWidget and
+ // PCompositorWidgetParent.
+ class CompositorWidgetParent;
+@@ -260,6 +261,7 @@ class CompositorWidget {
+ 
+   virtual WinCompositorWidget* AsWindows() { return nullptr; }
+   virtual GtkCompositorWidget* AsGTK() { return nullptr; }
++  virtual QtCompositorWidget* AsQt() { return nullptr; }
+   virtual AndroidCompositorWidget* AsAndroid() { return nullptr; }
+   virtual CocoaCompositorWidget* AsCocoa() { return nullptr; }
+ 
+diff --git a/widget/LookAndFeel.h b/widget/LookAndFeel.h
+index 715bb9525ff9..059e270ae4fe 100644
+--- a/widget/LookAndFeel.h
++++ b/widget/LookAndFeel.h
+@@ -335,6 +335,13 @@ class LookAndFeel {
+     // The system's hour cycle, either 0 if unknown, 12, or 24.
+     HourCycle,
+ 
++    /**
++     * Whether dialog primary/accept buttons should be placed to the left of
++     * cancel/secondary actions (Windows and KDE), rather than to the right
++     * (GNOME and macOS). On Qt this follows QStyle::SH_DialogButtonLayout.
++     */
++    DialogPrimaryButtonOnLeft,
++
+     /*
+      * Not an ID; used to define the range of valid IDs.  Must be last.
+      */
+@@ -346,6 +353,10 @@ class LookAndFeel {
+     return GetInt(IntID::UseOverlayScrollbars);
+   }
+ 
++  static bool DialogPrimaryButtonOnLeft() {
++    return GetInt(IntID::DialogPrimaryButtonOnLeft) != 0;
++  }
++
+   static constexpr int32_t kDefaultTooltipOffset = 21;
+   static int32_t TooltipOffsetVertical() {
+     return GetInt(IntID::TooltipOffsetVertical, kDefaultTooltipOffset);
+diff --git a/widget/NativeMenuSupport.h b/widget/NativeMenuSupport.h
+index ffbd8f299db0..74aea5dccdaa 100644
+--- a/widget/NativeMenuSupport.h
++++ b/widget/NativeMenuSupport.h
+@@ -9,7 +9,7 @@
+ 
+ class nsIWidget;
+ 
+-#if defined(XP_MACOSX) || defined(MOZ_WIDGET_GTK)
++#if defined(XP_MACOSX) || defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  define HAS_NATIVE_MENU_SUPPORT 1
+ #endif
+ 
+diff --git a/widget/Theme.cpp b/widget/Theme.cpp
+index 6ea267d340e0..06838bd887db 100644
+--- a/widget/Theme.cpp
++++ b/widget/Theme.cpp
+@@ -113,12 +113,13 @@ static StaticRefPtr<Theme> gRDMInstance;
+ 
+ }  // namespace
+ 
+-#ifdef ANDROID
++#if defined(ANDROID)
+ already_AddRefed<Theme> do_CreateNativeThemeDoNotUseDirectly() {
+-  // Android doesn't have a native theme.
++  // Android uses the non-native theme.
+   return do_AddRef(new Theme(Theme::ScrollbarStyle()));
+ }
+ #endif
++// Qt: do_CreateNativeThemeDoNotUseDirectly lives in nsNativeThemeQt.cpp
+ 
+ already_AddRefed<nsITheme> do_GetBasicNativeThemeDoNotUseDirectly() {
+   if (MOZ_UNLIKELY(!gNonNativeInstance)) {
+@@ -1499,7 +1500,7 @@ UniquePtr<ScrollbarDrawing> Theme::ScrollbarStyle() {
+   return MakeUnique<ScrollbarDrawingWin>();
+ #elif defined(MOZ_WIDGET_COCOA) || defined(MOZ_WIDGET_UIKIT)
+   return MakeUnique<ScrollbarDrawingCocoa>();
+-#elif MOZ_WIDGET_GTK
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   return MakeUnique<ScrollbarDrawingGTK>();
+ #elif ANDROID
+   return MakeUnique<ScrollbarDrawingAndroid>();
+diff --git a/widget/WidgetEventImpl.cpp b/widget/WidgetEventImpl.cpp
+index ff217ead07bb..183b7dc12543 100644
+--- a/widget/WidgetEventImpl.cpp
++++ b/widget/WidgetEventImpl.cpp
+@@ -40,9 +40,9 @@
+ #  include "WinUtils.h"
+ #endif  // #if defined (XP_WIN)
+ 
+-#if defined(MOZ_WIDGET_GTK) || defined(XP_MACOSX)
++#if defined(MOZ_WIDGET_GTK) || defined(XP_MACOSX) || defined(MOZ_WIDGET_QT)
+ #  include "NativeKeyBindings.h"
+-#endif  // #if defined(MOZ_WIDGET_GTK) || defined(XP_MACOSX)
++#endif
+ 
+ namespace mozilla {
+ 
+@@ -1311,7 +1311,7 @@ bool WidgetKeyboardEvent::InitEditCommandsFor(
+   // always trusted.
+   if (mFlags.mIsSynthesizedForTests) {
+     MOZ_DIAGNOSTIC_ASSERT(IsTrusted());
+-#if defined(MOZ_WIDGET_GTK) || defined(XP_MACOSX)
++#if defined(MOZ_WIDGET_GTK) || defined(XP_MACOSX) || defined(MOZ_WIDGET_QT)
+     // TODO: We should implement `NativeKeyBindings` for Windows and Android
+     //       too in bug 1301497 for getting rid of the #if.
+     widget::NativeKeyBindings::GetEditCommandsForTests(aType, *this,
+diff --git a/widget/headless/HeadlessWidget.h b/widget/headless/HeadlessWidget.h
+index 9daa3334e7ec..bf1c47c875d9 100644
+--- a/widget/headless/HeadlessWidget.h
++++ b/widget/headless/HeadlessWidget.h
+@@ -12,7 +12,7 @@
+ 
+ // The various synthesized event values are hardcoded to avoid pulling
+ // in the platform specific widget code.
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  define MOZ_HEADLESS_SCROLL_MULTIPLIER 3
+ #  define MOZ_HEADLESS_SCROLL_DELTA_MODE \
+     mozilla::dom::WheelEvent_Binding::DOM_DELTA_LINE
+diff --git a/widget/nsCUPSShim.h b/widget/nsCUPSShim.h
+index bdb0cf8fab82..12a7e6ff786f 100644
+--- a/widget/nsCUPSShim.h
++++ b/widget/nsCUPSShim.h
+@@ -45,6 +45,7 @@ class nsCUPSShim {
+   X(Optional::No, cupsEnumDests)            \
+   X(Optional::No, cupsFreeDestInfo)         \
+   X(Optional::No, cupsFreeDests)            \
++  X(Optional::No, cupsFreeOptions)          \
+   X(Optional::No, cupsGetDestMediaByName)   \
+   X(Optional::Yes, cupsFindDestDefault)     \
+   X(Optional::Yes, cupsGetDestMediaDefault) \
+@@ -56,6 +57,7 @@ class nsCUPSShim {
+   X(Optional::No, cupsGetDests2)            \
+   X(Optional::No, cupsGetNamedDest)         \
+   X(Optional::No, cupsGetOption)            \
++  X(Optional::No, cupsPrintFile)            \
+   X(Optional::No, cupsServer)               \
+   X(Optional::Yes, httpAddrPort)            \
+   X(Optional::No, httpClose)                \
+diff --git a/widget/nsIGtkTaskbarProgress.idl b/widget/nsIGtkTaskbarProgress.idl
+index ebefe5e3a1d5..964913f94478 100644
+--- a/widget/nsIGtkTaskbarProgress.idl
++++ b/widget/nsIGtkTaskbarProgress.idl
+@@ -17,6 +17,11 @@ interface nsIGtkTaskbarProgress : nsITaskbarProgress
+    * Sets the window that is considered primary for purposes of
+    * setting the XApp progress property.
+    */
+-
+   void setPrimaryWindow(in mozIDOMWindowProxy aWindow);
++
++  /**
++   * Number of active downloads for launcher badge / Plasma JobView.
++   * Optional for backends that ignore it (GTK XApp progress).
++   */
++  void setActiveDownloadCount(in unsigned long count);
+ };
+diff --git a/widget/nsIWidget.h b/widget/nsIWidget.h
+index 459b278379ee..45626dce97b3 100644
+--- a/widget/nsIWidget.h
++++ b/widget/nsIWidget.h
+@@ -211,7 +211,7 @@ enum TouchPointerState : uint8_t {
+ #ifdef XP_WIN
+ #  define NS_NATIVE_ICOREWINDOW 103  // winrt specific
+ #endif
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  define NS_NATIVE_EGL_WINDOW 106
+ #endif
+ #ifdef MOZ_WIDGET_ANDROID
+diff --git a/widget/nsXPLookAndFeel.cpp b/widget/nsXPLookAndFeel.cpp
+index 34b327e08b2d..52171998c772 100644
+--- a/widget/nsXPLookAndFeel.cpp
++++ b/widget/nsXPLookAndFeel.cpp
+@@ -162,6 +162,7 @@ static const char sIntPrefs[][45] = {
+     "ui.pointingDeviceKinds",
+     "ui.nativeMenubar",
+     "ui.hourCycle",
++    "ui.dialogPrimaryButtonOnLeft",
+ };
+ 
+ static_assert(std::size(sIntPrefs) == size_t(LookAndFeel::IntID::End),
+diff --git a/widget/windows/nsLookAndFeel.cpp b/widget/windows/nsLookAndFeel.cpp
+index 248a32dc8bf0..049c63ce2807 100644
+--- a/widget/windows/nsLookAndFeel.cpp
++++ b/widget/windows/nsLookAndFeel.cpp
+@@ -712,6 +712,10 @@ nsresult nsLookAndFeel::NativeGetInt(IntID aID, int32_t& aResult) {
+       aResult = static_cast<int32_t>(result);
+       break;
+     }
++    case IntID::DialogPrimaryButtonOnLeft:
++      // Windows HIG: primary/accept to the left of cancel.
++      aResult = 1;
++      break;
+     default:
+       aResult = 0;
+       res = NS_ERROR_FAILURE;
+-- 
+2.55.0
+

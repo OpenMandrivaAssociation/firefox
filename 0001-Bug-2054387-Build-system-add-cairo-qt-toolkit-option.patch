@@ -1,0 +1,1680 @@
+From 6a7debb5f098e0788cd703e4dcf19f20acbc6e79 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:04 +0200
+Subject: [PATCH 01/10] Bug 2054387 - Build system: add cairo-qt toolkit option
+ and wiring. r?#firefox-build-system-reviewers
+
+Add --enable-default-toolkit=cairo-qt configure support, AppConstants
+MOZ_WIDGET_QT, moz.build toolkit selection, and related build hooks so a
+Qt 6 widget backend can be selected without implementing widget code yet
+in this commit's intent (files land together with later commits in the
+stack).
+
+Differential Revision: https://phabricator.services.mozilla.com/D311735
+---
+ browser/config/mozconfigs/linux64/qt-debug    |  12 +
+ browser/config/mozconfigs/linux64/qt-opt      |  20 +
+ config/external/moz.build                     |   4 +
+ image/decoders/icon/moz.build                 |   2 +
+ image/decoders/moz.build                      |   2 +
+ intl/locale/moz.build                         |   2 +
+ ipc/chromium/moz.build                        |  15 +
+ modules/libpref/init/StaticPrefList.yaml      | 108 ++++-
+ netwerk/wifi/moz.build                        |  18 +-
+ taskcluster/kinds/build/kind.yml              |   1 +
+ taskcluster/kinds/build/linux-qt.yml          |  54 +++
+ taskcluster/kinds/source-test/kind.yml        |   1 +
+ taskcluster/kinds/source-test/qt-smoke.yml    |  47 ++
+ toolkit/library/moz.build                     |   7 +
+ toolkit/modules/AppConstants.sys.mjs          |   7 +
+ toolkit/modules/moz.build                     |   2 +-
+ toolkit/moz.build                             |   2 +-
+ toolkit/moz.configure                         | 455 ++++++++++++++++--
+ toolkit/themes/moz.build                      |   2 +-
+ toolkit/toolkit.mozbuild                      |   5 +
+ toolkit/xre/moz.build                         |   4 +
+ toolkit/xre/nsAppRunner.cpp                   |  19 +-
+ toolkit/xre/nsXREDirProvider.cpp              |  14 +-
+ toolkit/xre/nsXREDirProvider.h                |   4 +-
+ tools/@types/generated/lib.gecko.xpcom.d.ts   |   1 +
+ tools/@types/subs/AppConstants.sys.d.mts      |   5 +-
+ uriloader/exthandler/moz.build                |   6 +
+ .../exthandler/unix/nsOSHelperAppService.cpp  |  33 +-
+ widget/moz.build                              |  28 +-
+ xpcom/system/nsIXULRuntime.idl                |   7 +
+ 30 files changed, 797 insertions(+), 90 deletions(-)
+ create mode 100644 browser/config/mozconfigs/linux64/qt-debug
+ create mode 100644 browser/config/mozconfigs/linux64/qt-opt
+ create mode 100644 taskcluster/kinds/build/linux-qt.yml
+ create mode 100644 taskcluster/kinds/source-test/qt-smoke.yml
+
+diff --git a/browser/config/mozconfigs/linux64/qt-debug b/browser/config/mozconfigs/linux64/qt-debug
+new file mode 100644
+index 000000000000..6082c8c443cb
+--- /dev/null
++++ b/browser/config/mozconfigs/linux64/qt-debug
+@@ -0,0 +1,12 @@
++# Experimental Linux64 Qt (cairo-qt) debug build.
++. "$topsrcdir/build/unix/mozconfig.unix"
++
++ac_add_options --enable-default-toolkit=cairo-qt
++ac_add_options --enable-debug
++ac_add_options --disable-optimize
++ac_add_options --enable-webrtc
++ac_add_options --enable-pulseaudio
++
++export MOZILLA_OFFICIAL=1
++
++. "$topsrcdir/build/mozconfig.common.override"
+diff --git a/browser/config/mozconfigs/linux64/qt-opt b/browser/config/mozconfigs/linux64/qt-opt
+new file mode 100644
+index 000000000000..ea52f1277d1d
+--- /dev/null
++++ b/browser/config/mozconfigs/linux64/qt-opt
+@@ -0,0 +1,20 @@
++# Experimental Linux64 Qt (cairo-qt) opt build.
++# Requires Qt6 (Core/Gui/Widgets/PrintSupport/DBus) on the build host / image.
++# Not yet part of the default Firefox CI graph until worker images ship Qt6.
++
++. "$topsrcdir/build/unix/mozconfig.unix"
++
++ac_add_options --enable-default-toolkit=cairo-qt
++ac_add_options --enable-update-channel=${MOZ_UPDATE_CHANNEL:-default}
++ac_add_options --disable-tests
++ac_add_options --enable-release
++ac_add_options --enable-optimize
++ac_add_options --disable-debug
++ac_add_options --enable-webrtc
++ac_add_options --enable-pulseaudio
++
++# Package js shell.
++export MOZ_PACKAGE_JSSHELL=1
++export MOZILLA_OFFICIAL=1
++
++. "$topsrcdir/build/mozconfig.common.override"
+diff --git a/config/external/moz.build b/config/external/moz.build
+index 961353353255..0a0e182b8737 100644
+--- a/config/external/moz.build
++++ b/config/external/moz.build
+@@ -53,6 +53,10 @@ if not CONFIG["MOZ_SYSTEM_WEBP"]:
+ 
+ external_dirs += ["media/ffvpx"]
+ 
++# Static VA-API stub library used by ffvpx and FFmpeg on Linux desktop.
++if CONFIG["MOZ_ENABLE_VAAPI"] or CONFIG["MOZ_ENABLE_V4L2"]:
++    external_dirs += ["media/mozva"]
++
+ external_dirs += [
+     "media/libcubeb",
+     "media/libmkv",
+diff --git a/image/decoders/icon/moz.build b/image/decoders/icon/moz.build
+index ef19884c7226..e33f2c15cf04 100644
+--- a/image/decoders/icon/moz.build
++++ b/image/decoders/icon/moz.build
+@@ -23,6 +23,8 @@ platform = None
+ 
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     platform = "gtk"
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    platform = "qt"
+ 
+ if CONFIG["OS_ARCH"] == "WINNT":
+     platform = "win"
+diff --git a/image/decoders/moz.build b/image/decoders/moz.build
+index 70d6dbf02453..26deb94eedd8 100644
+--- a/image/decoders/moz.build
++++ b/image/decoders/moz.build
+@@ -8,6 +8,8 @@ toolkit = CONFIG["MOZ_WIDGET_TOOLKIT"]
+ # fix that another time.
+ if toolkit == "gtk":
+     DIRS += ["icon/gtk", "icon"]
++elif toolkit == "qt":
++    DIRS += ["icon/qt", "icon"]
+ 
+ if CONFIG["OS_ARCH"] == "WINNT":
+     DIRS += ["icon/win", "icon"]
+diff --git a/intl/locale/moz.build b/intl/locale/moz.build
+index 4d6ff0428de7..b2bec91ce709 100644
+--- a/intl/locale/moz.build
++++ b/intl/locale/moz.build
+@@ -16,6 +16,8 @@ elif toolkit in ("cocoa", "uikit"):
+     DIRS += ["mac"]
+ elif toolkit == "gtk":
+     DIRS += ["gtk"]
++elif toolkit == "qt":
++    DIRS += ["qt"]
+ elif toolkit == "android":
+     DIRS += ["android"]
+ 
+diff --git a/ipc/chromium/moz.build b/ipc/chromium/moz.build
+index eee352ed8bee..53a2a4d82442 100644
+--- a/ipc/chromium/moz.build
++++ b/ipc/chromium/moz.build
+@@ -134,9 +134,24 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     SOURCES += [
+         "src/base/message_pump_glib.cc",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    SOURCES += [
++        "src/base/message_pump_qt.cc",
++    ]
++    GeneratedFile(
++        "moc_message_pump_qt.cpp",
++        script="/widget/qt/moc_generate.py",
++        inputs=["src/base/message_pump_qt.h"],
++        flags=["%s" % CONFIG["MOZ_QT_MOC"]],
++    )
++    SOURCES += ["!moc_message_pump_qt.cpp"]
+ 
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
++    # message_pump_qt includes Qt headers that need default visibility.
++    NoVisibilityFlags()
+ 
+ TEST_DIRS += [
+     "gtest",
+diff --git a/modules/libpref/init/StaticPrefList.yaml b/modules/libpref/init/StaticPrefList.yaml
+index dbef574d44cb..b8ef39e4b1cc 100644
+--- a/modules/libpref/init/StaticPrefList.yaml
++++ b/modules/libpref/init/StaticPrefList.yaml
+@@ -7847,7 +7847,7 @@
+   value: false
+   mirror: always
+ 
+-#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_ANDROID)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_QT)
+   # -1 = disabled (no preblend, original behavior)
+   #  0 = sRGB transfer
+   # >0 = value/100.0 exponent
+@@ -7872,7 +7872,7 @@
+     mirror: always
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ -   name: gfx.font_rendering.fontconfig.max_generic_substitutions
+     type: RelaxedAtomicUint32
+     value: 3
+@@ -8302,7 +8302,7 @@
+   value: false
+   mirror: always
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ - name: gfx.webrender.reject-software-driver
+   type: bool
+   value: true
+@@ -8677,11 +8677,14 @@
+   mirror: always
+ #endif
+ 
+-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ - name: gfx.webrender.software.opengl
+   type: bool
+ #if defined(MOZ_WIDGET_ANDROID)
+   value: true
++#elif defined(MOZ_WIDGET_QT)
++  # SW-WR + OpenGL present uses the exclusive EGL window on HW top-levels.
++  value: true
+ #else
+   value: false
+ #endif
+@@ -12769,7 +12772,7 @@
+     value: @IS_NOT_NIGHTLY_BUILD@
+     mirror: always
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ # Force to copy dmabuf video frames
+ # Used for debugging/troubleshooting only
+ # 0 - force disable
+@@ -12779,7 +12782,7 @@
+   type: uint32_t
+   value: 2
+   mirror: once
+-#endif # MOZ_WIDGET_GTK
++#endif # MOZ_WIDGET_GTK || MOZ_WIDGET_QT
+ 
+ # Set to true in marionette tests to disable the sanity test
+ # which would lead to unnecessary start of the RDD process.
+@@ -13827,15 +13830,20 @@
+   mirror: always
+ #endif
+ 
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
++# Screen/window capture via PipeWire + xdg-desktop-portal ScreenCast.
++# Works on Wayland and X11 when a portal backend is available; otherwise
++# Linux falls back to X11 capturers (when built with WEBRTC_USE_X11).
+ - name: media.webrtc.capture.allow-pipewire
+   type: RelaxedAtomicBool
+   value: true
+   mirror: always
+ 
++# Camera capture via PipeWire + Camera portal. Falls back to V4L2 if the
++# portal is unavailable or PipeWire init fails.
+ - name: media.webrtc.camera.allow-pipewire
+   type: bool
+-  value: false
++  value: true
+   mirror: once
+ #endif
+ 
+@@ -20490,18 +20498,68 @@
+   mirror: always
+ #endif
+ 
+-# Whether native GTK global menubar support is enabled.
+-# Disabled because there are some minor bugs and it needs deeper integration
+-# with the front-end.
++# Whether native global menubar support is enabled (GTK and Qt widgets).
++# Exports menus via com.canonical.dbusmenu for Plasma/Unity AppMenu.
++#if defined(MOZ_WIDGET_QT)
++# Primary Qt names. Call sites dual-read: widget.qt.* first, then
++# widget.gtk.* when the qt pref has no user value (legacy configs).
++- name: widget.qt.global-menu.enabled
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++- name: widget.qt.global-menu.wayland.enabled
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++# Legacy aliases (same defaults). Used only when widget.qt.* is unset.
++- name: widget.gtk.global-menu.enabled
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++- name: widget.gtk.global-menu.wayland.enabled
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++# Qt native QMenu context menus (shortcuts/icons via MenuUtilsQt).
++- name: widget.qt.native-context-menus
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++# Legacy alias for native context menus on Qt builds.
++- name: widget.gtk.native-context-menus
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++# Paint form controls with QStyle (Breeze/etc.). When false, use Theme.
++- name: widget.qt.theme.native-controls.enabled
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++# Unity LauncherEntry badge count for active downloads (Plasma Task Manager).
++- name: widget.qt.downloads.launcher-count.enabled
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++
++# Plasma notification-area job tracker via org.kde.JobViewServer (QtDBus, no KF).
++- name: widget.qt.downloads.jobview.enabled
++  type: RelaxedAtomicBool
++  value: true
++  mirror: always
++#else
++# Off by default on GTK; needs deeper front-end integration.
+ - name: widget.gtk.global-menu.enabled
+   type: RelaxedAtomicBool
+   value: false
+   mirror: always
+ 
+-# Whether GTK global menubar support is enabled using wayland's experimental
+-# dbus_annotation protocol:
+-# https://gitlab.freedesktop.org/wayland/wayland-protocols/-/merge_requests/52
+-# Disabled until it has a final shape and it is available in compositors.
+ - name: widget.gtk.global-menu.wayland.enabled
+   type: RelaxedAtomicBool
+   value: false
+@@ -20513,6 +20571,7 @@
+   type: RelaxedAtomicBool
+   value: false
+   mirror: always
++#endif
+ 
+ # Whether we use overlay scrollbars on GTK.
+ - name: widget.gtk.overlay-scrollbars.enabled
+@@ -20678,7 +20737,7 @@
+   mirror: once
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ # Whether to use DMABuf backend.
+ - name: widget.dmabuf.enabled
+   type: bool
+@@ -20714,7 +20773,9 @@
+   type: bool
+   value: true
+   mirror: once
++#endif # MOZ_WIDGET_GTK || MOZ_WIDGET_QT
+ 
++#ifdef MOZ_WIDGET_GTK
+ # Use gdk_window_move_to_rect to move Wayland popups when available.
+ - name: widget.wayland.use-move-to-rect
+   type: bool
+@@ -20747,17 +20808,19 @@
+   type: int32_t
+   value: 3000
+   mirror: always
++#endif  # MOZ_WIDGET_GTK
+ 
+-# Whether to use gtk portal for the file picker.
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
++# Whether to use XDG portal for the file picker (GTK and Qt).
+ #  - 0: never
+ #  - 1: always
+-#  - 2: auto (true for flatpak or GTK_USE_PORTAL=1, false otherwise)
++#  - 2: auto (true for flatpak/snap or GTK_USE_PORTAL=1 / QT_USE_PORTAL=1)
+ - name: widget.use-xdg-desktop-portal.file-picker
+   type: int32_t
+   value: 2
+   mirror: always
+ 
+-# Whether to use gtk portal for the mime handler.
++# Whether to use XDG portal for the mime handler.
+ #  - 0: never
+ #  - 1: always
+ #  - 2: auto (for now only true for flatpak, see bug 1516290)
+@@ -20795,16 +20858,17 @@
+   type: int32_t
+   value: 2
+   mirror: always
+-# Whether to use XDG portal for opening to a file.
++
++# Whether to use XDG portal for opening a URI/file.
+ # https://flatpak.github.io/xdg-desktop-portal/#gdbus-org.freedesktop.portal.OpenURI
+ #  - 0: never
+ #  - 1: always
+-#  - 2: auto (true for flatpak or GTK_USE_PORTAL=1, false otherwise)
++#  - 2: auto (true for flatpak or GTK_USE_PORTAL=1 / QT_USE_PORTAL=1)
+ - name: widget.use-xdg-desktop-portal.open-uri
+   type: int32_t
+   value: 2
+   mirror: always
+-#endif
++#endif  # MOZ_WIDGET_GTK || MOZ_WIDGET_QT
+ 
+ #ifdef XP_WIN
+ # WindowsUIUtils::Share to wait for user action on Windows share dialog
+diff --git a/netwerk/wifi/moz.build b/netwerk/wifi/moz.build
+index 50ff685d038b..af7d57a8994e 100644
+--- a/netwerk/wifi/moz.build
++++ b/netwerk/wifi/moz.build
+@@ -49,13 +49,23 @@ elif CONFIG["OS_ARCH"] == "SunOS":
+         "solaris",
+     ]
+ elif CONFIG["NECKO_WIFI_DBUS"]:
+-    UNIFIED_SOURCES += [
+-        "dbus/DbusWifiScanner.cpp",
+-    ]
+     LOCAL_INCLUDES += [
+         "dbus",
+     ]
+-    CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++    if CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++        # QtDBus system bus → NetworkManager (no GIO).
++        SOURCES += [
++            "dbus/QtDbusWifiScanner.cpp",
++        ]
++        CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
++        # Qt headers conflict with -fvisibility=hidden wrappers.
++        NoVisibilityFlags()
++    else:
++        # GTK path: GIO GDBus.
++        UNIFIED_SOURCES += [
++            "dbus/DbusWifiScanner.cpp",
++        ]
++        CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+ 
+ TEST_DIRS += ["gtest"]
+ 
+diff --git a/taskcluster/kinds/build/kind.yml b/taskcluster/kinds/build/kind.yml
+index 4f0d651f330d..b14fdf558a48 100644
+--- a/taskcluster/kinds/build/kind.yml
++++ b/taskcluster/kinds/build/kind.yml
+@@ -24,6 +24,7 @@ tasks-from:
+     - android-stuff.yml
+     - ios.yml
+     - linux.yml
++    - linux-qt.yml
+     - linux-base-toolchains.yml
+     - macosx.yml
+     - macosx-native.yml
+diff --git a/taskcluster/kinds/build/linux-qt.yml b/taskcluster/kinds/build/linux-qt.yml
+new file mode 100644
+index 000000000000..50400738dd97
+--- /dev/null
++++ b/taskcluster/kinds/build/linux-qt.yml
+@@ -0,0 +1,54 @@
++# This Source Code Form is subject to the terms of the Mozilla Public
++# License, v. 2.0. If a copy of the MPL was not distributed with this
++# file, You can obtain one at http://mozilla.org/MPL/2.0/.
++---
++# Experimental cairo-qt (Qt6 widget toolkit) Linux builds.
++#
++# Prerequisites on the worker / docker image (not yet in standard Firefox
++# Linux images):
++#   - Qt6 >= 6.11: Core, Gui, Widgets, PrintSupport, DBus (+ private Gui headers)
++#   - Optional: dbusmenu-qt6, PipeWire, libva
++#
++# Until images include Qt, this job is try-only (run-on-projects: []).
++# Select on try with: ./mach try fuzzy -q 'linux64-qt'
++
++linux64-qt/opt:
++    description: "Linux64 Opt (cairo-qt / Qt6) [experimental]"
++    index:
++        product: firefox
++        job-name: linux64-qt-opt
++    treeherder:
++        platform: linux64-qt/opt
++        symbol: Bq
++        tier: 3
++    worker-type: b-linux-docker-amd
++    worker:
++        max-run-time: 7200
++        env:
++            PERFHERDER_EXTRA_OPTIONS: qt
++    run:
++        using: mozharness
++        actions: [build]
++        config:
++            - builds/releng_base_firefox.py
++            - builds/releng_base_linux_64_builds.py
++        script: mozharness/scripts/fx_desktop_build.py
++        tooltool-downloads: public
++        extra-config:
++            disable_package_metrics: true
++        mozconfig-variant: qt-opt
++    # Empty until docker images ship Qt6; enable on try explicitly.
++    run-on-projects: []
++    fetches:
++        toolchain:
++            - linux64-clang
++            - linux64-rust
++            - linux64-nasm
++            - linux64-node
++            - linux64-cbindgen
++            - linux64-dump_syms
++            - linux64-pkgconf
++            - sysroot-x86_64-linux-gnu
++            - sysroot-wasm32-wasi
++    optimization:
++        skip-unless-expanded: null
+diff --git a/taskcluster/kinds/source-test/kind.yml b/taskcluster/kinds/source-test/kind.yml
+index 6d85abeddd5b..0217d5ad16b1 100644
+--- a/taskcluster/kinds/source-test/kind.yml
++++ b/taskcluster/kinds/source-test/kind.yml
+@@ -37,6 +37,7 @@ tasks-from:
+     - puppeteer.yml
+     - python.yml
+     - python-android.yml
++    - qt-smoke.yml
+     - shadow-scheduler.yml
+     - taskgraph.yml
+     - vendor.yml
+diff --git a/taskcluster/kinds/source-test/qt-smoke.yml b/taskcluster/kinds/source-test/qt-smoke.yml
+new file mode 100644
+index 000000000000..b9228da2d125
+--- /dev/null
++++ b/taskcluster/kinds/source-test/qt-smoke.yml
+@@ -0,0 +1,47 @@
++# This Source Code Form is subject to the terms of the Mozilla Public
++# License, v. 2.0. If a copy of the MPL was not distributed with this
++# file, You can obtain one at http://mozilla.org/MPL/2.0/.
++---
++# Source-level gates for cairo-qt (no Qt SDK on the worker).
++# Full compile remains linux64-qt/opt (try-only until images ship Qt6).
++
++qt-source-smoke:
++    description: "cairo-qt source smoke (mozconfigs + no first-party GIO)"
++    platform: lint/opt
++    worker-type: t-linux-docker-amd
++    worker:
++        docker-image: {in-tree: "lint"}
++        max-run-time: 1800
++    treeherder:
++        kind: test
++        platform: lint/opt
++        symbol: Qt(s)
++        tier: 2
++    run-on-projects: ['autoland', 'mozilla-central', 'try']
++    run-on-repo-type: [hg]
++    run:
++        using: run-task
++        cwd: '{checkout}'
++        command: >-
++            set -e;
++            test -f browser/config/mozconfigs/linux64/qt-opt;
++            test -f browser/config/mozconfigs/linux64/qt-debug;
++            test -f taskcluster/kinds/build/linux-qt.yml;
++            test -x widget/qt/ci/smoke-configure.sh;
++            test -x widget/qt/ci/smoke-runtime.sh;
++            if rg -n 'gio/gio\.h|g_dbus_proxy|GDBusProxy' --glob '!ci/**'
++              widget/qt toolkit/system/unixdesktop
++              browser/components/shell/nsQtShellService.cpp
++              netwerk/wifi/dbus/QtDbusWifiScanner.cpp; then
++              echo 'FAIL: first-party GIO found'; exit 1;
++            fi;
++            rg -n 'setDesktopFileName|ShouldUsePortal|PortalLocationProviderQt' widget/qt/ >/dev/null;
++            echo 'qt-source-smoke OK'
++    when:
++        files-changed:
++            - 'widget/qt/**'
++            - 'toolkit/system/unixdesktop/**'
++            - 'browser/config/mozconfigs/linux64/qt*'
++            - 'taskcluster/kinds/build/linux-qt.yml'
++            - 'taskcluster/kinds/source-test/qt-smoke.yml'
++            - 'dom/geolocation/Geolocation.cpp'
+diff --git a/toolkit/library/moz.build b/toolkit/library/moz.build
+index 377b348dfd1b..ce0c24100b5c 100644
+--- a/toolkit/library/moz.build
++++ b/toolkit/library/moz.build
+@@ -327,6 +327,15 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk" and CONFIG["COMPILE_ENVIRONMENT"]:
+     OS_LIBS += CONFIG["MOZ_X11_LIBS"]
+     OS_LIBS += CONFIG["MOZ_PANGO_LIBS"]
+ 
++if CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt" and CONFIG["COMPILE_ENVIRONMENT"]:
++    OS_LIBS += CONFIG["MOZ_QT6_LIBS"]
++    # Fontconfig/FreeType used by gfx for Linux desktop.
++    OS_LIBS += CONFIG["FT2_LIBS"]
++    # System cairo: gfxFcPlatformFontList font options (not tree cairo).
++    OS_LIBS += ["cairo"]
++    # GLib/GIO used by WebRTC portal/desktop capture and other Linux helpers.
++    OS_LIBS += CONFIG["GLIB_LIBS"]
++
+ if CONFIG["MOZ_ENABLE_LIBPROXY"]:
+     OS_LIBS += CONFIG["MOZ_LIBPROXY_LIBS"]
+ 
+diff --git a/toolkit/modules/AppConstants.sys.mjs b/toolkit/modules/AppConstants.sys.mjs
+index a26725ead2f7..dca631a6dfb0 100644
+--- a/toolkit/modules/AppConstants.sys.mjs
++++ b/toolkit/modules/AppConstants.sys.mjs
+@@ -64,6 +64,13 @@ export var AppConstants = Object.freeze({
+   false,
+ #endif
+ 
++  MOZ_WIDGET_QT:
++#ifdef MOZ_WIDGET_QT
++  true,
++#else
++  false,
++#endif
++
+   MOZ_WMF_CDM: @MOZ_WMF_CDM_BOOL@,
+ 
+   XP_UNIX:
+diff --git a/toolkit/modules/moz.build b/toolkit/modules/moz.build
+index 9c4bda140a22..c0b0022ec718 100644
+--- a/toolkit/modules/moz.build
++++ b/toolkit/modules/moz.build
+@@ -245,7 +245,7 @@ EXTRA_JS_MODULES.sessionstore += [
+ 
+ EXTRA_JS_MODULES.third_party.fathom += ["third_party/fathom/fathom.mjs"]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("windows", "gtk", "cocoa"):
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("windows", "gtk", "cocoa", "qt"):
+     DEFINES["HAVE_SHELL_SERVICE_BOOL"] = "true"
+ else:
+     DEFINES["HAVE_SHELL_SERVICE_BOOL"] = "false"
+diff --git a/toolkit/moz.build b/toolkit/moz.build
+index 1d4006082b75..136b7f9f582d 100644
+--- a/toolkit/moz.build
++++ b/toolkit/moz.build
+@@ -49,7 +49,7 @@ DIRS += ["xre"]
+ 
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] != "android":
+     DIRS += ["mozapps/handling"]
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+     DIRS += [
+         "system/commonproxy",
+         "system/unixproxy",
+diff --git a/toolkit/moz.configure b/toolkit/moz.configure
+index 9b6779574bdb..b7bbaa648659 100644
+--- a/toolkit/moz.configure
++++ b/toolkit/moz.configure
+@@ -533,12 +533,14 @@ def toolkit_choices(target):
+         # cairo-gtk3 - X11 backend with optional Wayland backend (auto detected)
+         # cairo-gtk3-wayland - Wayland backend with optional X11 backend (auto detected)
+         # cairo-gtk3-x11-wayland - builds explicitly with X11 & Wayland backends
++        # cairo-qt - Qt 6.11+ widget backend (X11 and/or Wayland via Qt QPA)
+         return (
+             "cairo-gtk3",
+             "cairo-gtk3-wayland",
+             "cairo-gtk3-x11-wayland",
+             "cairo-gtk3-wayland-only",
+             "cairo-gtk3-x11-only",
++            "cairo-qt",
+         )
+ 
+ 
+@@ -588,6 +590,20 @@ def toolkit_gtk(toolkit):
+     return toolkit == "gtk"
+ 
+ 
++@depends(toolkit)
++def toolkit_qt(toolkit):
++    return toolkit == "qt"
++
++
++@depends(toolkit)
++def toolkit_linux_desktop(toolkit):
++    return toolkit in ("gtk", "qt")
++
++
++set_config("MOZ_WIDGET_LINUX_DESKTOP", True, when=toolkit_linux_desktop)
++set_define("MOZ_WIDGET_LINUX_DESKTOP", True, when=toolkit_linux_desktop)
++
++
+ @depends(toolkit_gtk, full_toolkit)
+ def toolkit_gtk_x11(toolkit_gtk, full_toolkit):
+     return toolkit_gtk and full_toolkit != "cairo-gtk3-wayland-only"
+@@ -608,40 +624,106 @@ def toolkit_gtk_wayland_optional(full_toolkit):
+     return full_toolkit == "cairo-gtk3"
+ 
+ 
++# Qt uses QPA for both X11 and Wayland; Gecko's MOZ_X11/MOZ_WAYLAND code
++# paths remain GTK-oriented (GDK, DMABuf helpers, etc.). Do not enable those
++# defines for Qt until the shared Linux pieces are extracted.
++@depends(toolkit_gtk_x11)
++def need_x11(toolkit_gtk_x11):
++    return toolkit_gtk_x11
++
++
++@depends(toolkit_gtk_x11_optional)
++def x11_optional(toolkit_gtk_x11_optional):
++    return toolkit_gtk_x11_optional
++
++
+ # Wayland support
+ # ==============================================================
+-wayland_headers = pkg_check_modules(
++wayland_headers_gtk = pkg_check_modules(
+     "MOZ_WAYLAND",
+     "gtk+-wayland-3.0 >= 3.14 xkbcommon >= 0.4.1",
+     allow_missing=toolkit_gtk_wayland_optional,
+     when=toolkit_gtk_wayland,
+ )
+ 
++wayland_headers_qt = pkg_check_modules(
++    "MOZ_WAYLAND_QT",
++    "wayland-client >= 1.11 xkbcommon >= 0.4.1",
++    allow_missing=True,
++    when=toolkit_qt,
++)
++
+ 
+-@depends(wayland_headers, toolkit_gtk, artifact_builds, toolkit_gtk_wayland)
+-def wayland_headers(wayland, toolkit_gtk, artifacts, toolkit_gtk_wayland):
++@depends(
++    wayland_headers_gtk,
++    wayland_headers_qt,
++    toolkit_gtk,
++    toolkit_qt,
++    artifact_builds,
++    toolkit_gtk_wayland,
++)
++def wayland_headers(
++    wayland_gtk,
++    wayland_qt,
++    toolkit_gtk,
++    toolkit_qt,
++    artifacts,
++    toolkit_gtk_wayland,
++):
++    # MOZ_WAYLAND currently gates GTK-tied code (mozwayland, NativeLayerWayland,
++    # DMABuf Wayland paths). Qt uses QPA for Wayland windowing instead; enable
++    # Gecko MOZ_WAYLAND for Qt only after those pieces are toolkit-neutral.
++    if toolkit_qt:
++        return False
+     if not toolkit_gtk_wayland:
+         return False
+     if toolkit_gtk and artifacts:
+         return True
+-    return wayland
++    return wayland_gtk
+ 
+ 
+ set_config("MOZ_WAYLAND", depends_if(wayland_headers)(lambda _: True))
+ set_define("MOZ_WAYLAND", depends_if(wayland_headers)(lambda _: True))
+ 
+ 
+-# Hardware-accelerated video decode (VAAPI, Vulkan, V4L2) on Linux
+-# ================================================================
+-set_config("MOZ_ENABLE_VAAPI", True, when=toolkit_gtk)
+-set_define("MOZ_ENABLE_VAAPI", True, when=toolkit_gtk)
++# GTK's pkg_check_modules("MOZ_WAYLAND") already publishes CFLAGS/LIBS. For Qt
++# the package uses a different prefix; map it onto the same config keys.
++@depends(wayland_headers_qt, when=toolkit_qt)
++def qt_wayland_cflags(wayland_qt):
++    return wayland_qt.cflags if wayland_qt else []
++
++
++@depends(wayland_headers_qt, when=toolkit_qt)
++def qt_wayland_libs(wayland_qt):
++    return wayland_qt.libs if wayland_qt else []
++
+ 
+-set_config("MOZ_ENABLE_VULKAN_VIDEO", True, when=toolkit_gtk)
+-set_define("MOZ_ENABLE_VULKAN_VIDEO", True, when=toolkit_gtk)
++set_config("MOZ_WAYLAND_CFLAGS", qt_wayland_cflags, when=toolkit_qt)
++set_config("MOZ_WAYLAND_LIBS", qt_wayland_libs, when=toolkit_qt)
++
++
++# Hardware-accelerated video decode with VAAPI and V4L2 on Linux
++# ==============================================================
++# VAAPI depends on DMABuf helpers (libgbm/libdrm). Shared for GTK and Qt.
++@depends(toolkit_gtk, toolkit_qt)
++def enable_vaapi(toolkit_gtk, toolkit_qt):
++    return bool(toolkit_gtk or toolkit_qt)
++
++
++set_config("MOZ_ENABLE_VAAPI", True, when=enable_vaapi)
++set_define("MOZ_ENABLE_VAAPI", True, when=enable_vaapi)
++
++@depends(toolkit_gtk, toolkit_qt)
++def enable_vulkan_video(toolkit_gtk, toolkit_qt):
++    return bool(toolkit_gtk or toolkit_qt)
++
++
++set_config("MOZ_ENABLE_VULKAN_VIDEO", True, when=enable_vulkan_video)
++set_define("MOZ_ENABLE_VULKAN_VIDEO", True, when=enable_vulkan_video)
+ 
+ @depends(target, toolkit_gtk)
+ def v4l2(target, toolkit_gtk):
+-    # V4L2 decode is only used in GTK/Linux and generally only appears on
++    # V4L2 decode is only used on GTK/Linux and generally only appears on
+     # embedded SOCs.
+     if target.cpu in ("arm", "aarch64", "riscv64") and toolkit_gtk:
+         return True
+@@ -729,7 +811,7 @@ set_config("MOZ_GL_PROVIDER", gl_provider)
+ # ==============================================================
+ @depends(toolkit)
+ def pdf_printing(toolkit):
+-    if toolkit in ("windows", "gtk", "android"):
++    if toolkit in ("windows", "gtk", "qt", "android"):
+         return True
+ 
+ 
+@@ -743,7 +825,7 @@ option(env="USE_FC_FREETYPE", help="Force-enable the use of fontconfig freetype"
+ 
+ @depends("USE_FC_FREETYPE", toolkit)
+ def fc_freetype(value, toolkit):
+-    if value or (toolkit == "gtk" and value.origin == "default"):
++    if value or (toolkit in ("gtk", "qt") and value.origin == "default"):
+         return True
+ 
+ 
+@@ -1521,7 +1603,7 @@ set_define("MOZ_RAW", depends_if("--enable-raw")(lambda _: True))
+ 
+ # X11
+ # ==============================================================
+-@depends(webrtc, when=toolkit_gtk)
++@depends(webrtc, when=need_x11)
+ def x11_libs(webrtc):
+     libs = [
+         "x11",
+@@ -1547,8 +1629,8 @@ def x11_libs(webrtc):
+ x11 = pkg_check_modules(
+     "MOZ_X11",
+     x11_libs,
+-    allow_missing=toolkit_gtk_x11_optional,
+-    when=toolkit_gtk_x11,
++    allow_missing=x11_optional,
++    when=need_x11,
+     config=False,  # set after the OpenBSD hook below
+ )
+ 
+@@ -1575,7 +1657,7 @@ pkg_check_modules(
+     "MOZ_X11_SM",
+     ["ice", "sm"],
+     cflags_only=True,
+-    allow_missing=toolkit_gtk_x11_optional,
++    allow_missing=x11_optional,
+     when=toolkit_gtk_x11,
+ )
+ 
+@@ -3518,16 +3600,318 @@ with only_when(toolkit_gtk):
+     set_define("GDK_VERSION_MIN_REQUIRED", "GDK_VERSION_3_14")
+     set_define("GDK_VERSION_MAX_ALLOWED", "GDK_VERSION_3_14")
+ 
+-    pkg_check_modules("GLIB", "glib-2.0 >= 2.42 gobject-2.0")
++    set_define("MOZ_ACCESSIBILITY_ATK", True, when=accessibility)
++
++# GLib (GTK widget stack and Linux desktop code shared with Qt, e.g. gamepad)
++# ==============================================================
++with only_when(toolkit_linux_desktop):
++    # gio-unix provides gio/gdesktopappinfo.h used by GRefPtr on Linux.
++    pkg_check_modules(
++        "GLIB", "glib-2.0 >= 2.42 gobject-2.0 gio-2.0 gio-unix-2.0"
++    )
+ 
+     set_define("GLIB_VERSION_MIN_REQUIRED", "GLIB_VERSION_2_42")
+     set_define("GLIB_VERSION_MAX_ALLOWED", "GLIB_VERSION_2_42")
+ 
+-    set_define("MOZ_ACCESSIBILITY_ATK", True, when=accessibility)
++# Qt 6
++# ==============================================================
++with only_when(toolkit_qt):
++    pkg_check_modules(
++        "MOZ_QT6",
++        "Qt6Core >= 6.11 Qt6Gui >= 6.11 Qt6Widgets >= 6.11 "
++        "Qt6PrintSupport >= 6.11 Qt6DBus >= 6.11",
++    )
++
++    # Avoid Qt keywords (signals/slots/emit) clashing with Gecko identifiers.
++    set_define("QT_NO_KEYWORDS", True)
++
++    @depends(when=toolkit_qt)
++    @imports(_from="os.path", _import="join")
++    @imports(_from="os.path", _import="exists")
++    @imports(_from="os.path", _import="dirname")
++    @imports(_from="shutil", _import="which")
++    @imports(_from="subprocess", _import="check_output")
++    @imports(_from="subprocess", _import="CalledProcessError")
++    def moz_qt_moc():
++        """Locate moc without distro-specific path hardcodes.
++
++        Prefer pkg-config variables from Qt6Core / Qt6CoreTools, then tools
++        that query the same Qt install (qtpaths / qmake), then PATH.
++        """
++        candidates = []
++
++        def add_moc_from_dir(directory):
++            if directory:
++                candidates.append(join(directory, "moc"))
++
++        for package in ("Qt6CoreTools", "Qt6Core"):
++            for variable in ("libexecdir", "host_bins", "bindir"):
++                try:
++                    value = check_output(
++                        ["pkg-config", f"--variable={variable}", package],
++                        text=True,
++                    ).strip()
++                except CalledProcessError:
++                    value = ""
++                add_moc_from_dir(value)
++
++        # qtpaths / qmake report host tool locations portably when present.
++        for tool, args in (
++            ("qtpaths6", ["--query", "QT_HOST_LIBEXECS"]),
++            ("qtpaths6", ["--query", "QT_INSTALL_LIBEXECS"]),
++            ("qtpaths", ["--query", "QT_HOST_LIBEXECS"]),
++            ("qtpaths", ["--query", "QT_INSTALL_LIBEXECS"]),
++            ("qmake6", ["-query", "QT_HOST_LIBEXECS"]),
++            ("qmake6", ["-query", "QT_INSTALL_LIBEXECS"]),
++            ("qmake", ["-query", "QT_HOST_LIBEXECS"]),
++            ("qmake", ["-query", "QT_INSTALL_LIBEXECS"]),
++        ):
++            tool_path = which(tool)
++            if not tool_path:
++                continue
++            try:
++                directory = check_output([tool_path] + args, text=True).strip()
++            except (CalledProcessError, OSError):
++                continue
++            # qmake may return "unknown" for unset keys.
++            if directory and directory.lower() != "unknown":
++                add_moc_from_dir(directory)
++
++        # Last resort: anything named moc / moc-qt6 on PATH.
++        for name in ("moc-qt6", "moc"):
++            found = which(name)
++            if found:
++                candidates.append(found)
++
++        seen = set()
++        for path in candidates:
++            if not path or path in seen:
++                continue
++            seen.add(path)
++            if exists(path):
++                return path
++
++        die(
++            "Qt moc not found. Install Qt6 development tools (moc) or ensure "
++            "pkg-config Qt6Core reports libexecdir/bindir. Required for "
++            "--enable-default-toolkit=cairo-qt."
++        )
++
++    set_config("MOZ_QT_MOC", moz_qt_moc)
++
++    @depends(when=toolkit_qt)
++    @imports(_from="os.path", _import="join")
++    @imports(_from="os.path", _import="exists")
++    @imports(_from="shutil", _import="which")
++    @imports(_from="subprocess", _import="check_output")
++    @imports(_from="subprocess", _import="CalledProcessError")
++    def moz_qt_private_gui_cflags():
++        """CFLAGS for private QtGui headers (QPA), e.g. qpa/qplatformnativeinterface.h.
++
++        Layout is portable across distros:
++          $includedir/QtGui/$version/QtGui
++        where includedir and version come from pkg-config Qt6Gui.
++        """
++        try:
++            includedir = check_output(
++                ["pkg-config", "--variable=includedir", "Qt6Gui"],
++                text=True,
++            ).strip()
++            version = check_output(
++                ["pkg-config", "--modversion", "Qt6Gui"],
++                text=True,
++            ).strip()
++        except CalledProcessError:
++            die("pkg-config Qt6Gui is required for cairo-qt")
++
++        if not includedir or not version:
++            die("Could not determine Qt6Gui includedir/version via pkg-config")
++
++        candidates = [
++            join(includedir, "QtGui", version, "QtGui"),
++        ]
++
++        # Some installs expose the same tree via qtpaths/qmake headers path.
++        for tool, args in (
++            ("qtpaths6", ["--query", "QT_INSTALL_HEADERS"]),
++            ("qtpaths", ["--query", "QT_INSTALL_HEADERS"]),
++            ("qmake6", ["-query", "QT_INSTALL_HEADERS"]),
++            ("qmake", ["-query", "QT_INSTALL_HEADERS"]),
++        ):
++            tool_path = which(tool)
++            if not tool_path:
++                continue
++            try:
++                headers = check_output([tool_path] + args, text=True).strip()
++            except (CalledProcessError, OSError):
++                continue
++            if headers and headers.lower() != "unknown":
++                candidates.append(join(headers, "QtGui", version, "QtGui"))
++
++        seen = set()
++        for path in candidates:
++            if not path or path in seen:
++                continue
++            seen.add(path)
++            header = join(path, "qpa", "qplatformnativeinterface.h")
++            if exists(header):
++                return [f"-I{path}"]
++
++        die(
++            "Qt6Gui private headers not found (need "
++            "qpa/qplatformnativeinterface.h under "
++            "$Qt6Gui_includedir/QtGui/$version/QtGui). Install the Qt6 Gui "
++            "private/development package for your distro."
++        )
++
++    set_config("MOZ_QT_PRIVATE_GUI_CFLAGS", moz_qt_private_gui_cflags)
++
++    # Optional KDE Frameworks. Pure-Qt builds remain possible with
++    # --disable-kf6. When enabled (default), individual KF packages are
++    # auto-detected and used only if found — never hard-required.
++    option(
++        "--disable-kf6",
++        help="Disable optional KDE Frameworks (KF6) integration on Qt",
++        when=toolkit_qt,
++    )
++
++    @depends("--enable-kf6", when=toolkit_qt)
++    def enable_kf6(value):
++        return bool(value)
++
++    # Optional KF6Service for Plasma app trading / preferred handlers.
++    # KF6 often ships CMake packages without a pkg-config .pc file, so probe
++    # via cmake find_package rather than pkg-config.
++    @depends(toolkit_qt, enable_kf6, when=toolkit_qt)
++    @checking("for KF6Service (cmake)")
++    @imports(_from="os.path", _import="join")
++    @imports(_from="os.path", _import="exists")
++    @imports(_from="os.path", _import="dirname")
++    @imports(_from="os", _import="makedirs")
++    @imports(_from="shutil", _import="which")
++    @imports(_from="subprocess", _import="run")
++    @imports(_from="tempfile", _import="TemporaryDirectory")
++    @imports(_from="textwrap", _import="dedent")
++    @imports(_from="builtins", _import="open")
++    def kf6_service_cmake(_toolkit_qt, enable_kf6):
++        if not enable_kf6:
++            return None
++        cmake = which("cmake")
++        if not cmake:
++            return None
++
++        cmakelists = dedent(
++            """\
++            cmake_minimum_required(VERSION 3.16)
++            project(moz_kf6_service_probe LANGUAGES CXX)
++            find_package(KF6Service QUIET)
++            if(NOT KF6Service_FOUND)
++              message(FATAL_ERROR "KF6Service not found")
++            endif()
++            get_target_property(_incs KF6::Service INTERFACE_INCLUDE_DIRECTORIES)
++            if(_incs)
++              foreach(i IN LISTS _incs)
++                message(STATUS "MOZ_KF6_INC=${i}")
++              endforeach()
++            endif()
++            set(_loc "")
++            get_target_property(_configs KF6::Service IMPORTED_CONFIGURATIONS)
++            foreach(cfg IN ITEMS RELWITHDEBINFO RELEASE NONE DEBUG ${_configs})
++              if(NOT _loc AND cfg)
++                get_target_property(_try KF6::Service IMPORTED_LOCATION_${cfg})
++                if(_try)
++                  set(_loc "${_try}")
++                endif()
++              endif()
++            endforeach()
++            if(NOT _loc)
++              get_target_property(_loc KF6::Service IMPORTED_LOCATION)
++            endif()
++            if(_loc)
++              message(STATUS "MOZ_KF6_LIB=${_loc}")
++              get_filename_component(_libdir "${_loc}" DIRECTORY)
++              message(STATUS "MOZ_KF6_LIBDIR=${_libdir}")
++            endif()
++            """
++        )
++
++        with TemporaryDirectory(prefix="moz-kf6-") as tmp:
++            with open(join(tmp, "CMakeLists.txt"), "w", encoding="utf-8") as fh:
++                fh.write(cmakelists)
++            build = join(tmp, "build")
++            makedirs(build, exist_ok=True)
++            proc = run(
++                [cmake, "-S", tmp, "-B", build],
++                capture_output=True,
++                text=True,
++                check=False,
++            )
++
++        if proc.returncode != 0:
++            return None
++
++        incs = []
++        lib = None
++        libdir = None
++        for line in (proc.stdout or "").splitlines():
++            # cmake STATUS lines look like: -- MOZ_KF6_INC=/path
++            if "MOZ_KF6_INC=" in line:
++                incs.append(line.split("MOZ_KF6_INC=", 1)[1].strip())
++            elif "MOZ_KF6_LIBDIR=" in line:
++                libdir = line.split("MOZ_KF6_LIBDIR=", 1)[1].strip()
++            elif "MOZ_KF6_LIB=" in line:
++                lib = line.split("MOZ_KF6_LIB=", 1)[1].strip()
++
++        if not incs and not lib:
++            # Fall back to conventional layout when cmake found the package
++            # but properties were empty (some distro exports).
++            for candidate in (
++                "/usr/include/KF6/KService",
++                "/usr/local/include/KF6/KService",
++            ):
++                if exists(candidate):
++                    incs.append(candidate)
++                    break
++            for candidate in (
++                "/usr/lib64/libKF6Service.so",
++                "/usr/lib/libKF6Service.so",
++                "/usr/lib/x86_64-linux-gnu/libKF6Service.so",
++            ):
++                if exists(candidate):
++                    lib = candidate
++                    libdir = dirname(candidate)
++                    break
++
++        if not incs or not lib:
++            return None
++
++        cflags = [f"-I{i}" for i in incs]
++        # Shared lib pulls its own DT_NEEDED deps (Qt6Xml, KF6ConfigCore, …).
++        libs = []
++        if libdir:
++            libs.append(f"-L{libdir}")
++        libs.append("-lKF6Service")
++        return namespace(cflags=cflags, libs=libs, found=True)
++
++    set_config("MOZ_ENABLE_KF6_SERVICE", depends_if(kf6_service_cmake)(lambda _: True))
++    set_define(
++        "MOZ_ENABLE_KF6_SERVICE", True, when=depends_if(kf6_service_cmake)(lambda _: True)
++    )
++    set_config(
++        "MOZ_KF6_SERVICE_CFLAGS",
++        depends(kf6_service_cmake)(lambda k: k.cflags if k else []),
++    )
++    set_config(
++        "MOZ_KF6_SERVICE_LIBS",
++        depends(kf6_service_cmake)(lambda k: k.libs if k else []),
++    )
+ 
+ # DBus
+ # ==============================================================
+-with only_when(toolkit_gtk):
++# libdbus is used by GTK widgets, Necko WiFi, and some Linux desktop
++# integrations. Qt widget code prefers QtDBus but still benefits from
++# MOZ_ENABLE_DBUS for shared Linux features such as Necko WiFi.
++with only_when(toolkit_linux_desktop):
+     option("--disable-dbus", help="Disable dbus support", when=use_pkg_config)
+ 
+     @depends("--enable-dbus", when=use_pkg_config)
+@@ -3540,11 +3924,25 @@ with only_when(toolkit_gtk):
+         set_config("MOZ_ENABLE_DBUS", True)
+         set_define("MOZ_ENABLE_DBUS", True)
+ 
++# Optional libdbusmenu-qt6 for Plasma global menubar (Qt toolkit).
++# When missing, widget/qt falls back to dlopen of libdbusmenu-glib.
++# pkg_check_modules publishes MOZ_DBUSMENU_QT_{CFLAGS,LIBS}.
++with only_when(toolkit_qt):
++    dbusmenu_qt = pkg_check_modules(
++        "MOZ_DBUSMENU_QT",
++        "dbusmenu-qt6",
++        allow_missing=True,
++    )
++    set_config("MOZ_ENABLE_DBUSMENU_QT", True, when=dbusmenu_qt)
++    set_define("MOZ_ENABLE_DBUSMENU_QT", True, when=dbusmenu_qt)
++
+ 
+ # Necko's wifi scanner
+ # ==============================================================
+-@depends(target)
+-def necko_wifi_when(target):
++@depends(target, toolkit)
++def necko_wifi_when(target, toolkit):
++    # Linux WiFi scanning uses NetworkManager over D-Bus (QtDBus on Qt,
++    # GIO on GTK).
+     return target.os in ("WINNT", "OSX", "DragonFly", "FreeBSD") or (
+         target.kernel == "Linux" and target.os == "GNU"
+     )
+@@ -3558,17 +3956,20 @@ set_define("NECKO_WIFI", True, when="--enable-necko-wifi")
+ 
+ @depends(
+     depends("--enable-necko-wifi", when=necko_wifi_when)(lambda x: x),
+-    depends(enable_dbus_option, when=toolkit_gtk)(lambda x: x),
++    depends(enable_dbus_option, when=toolkit_linux_desktop)(lambda x: x),
++    toolkit_gtk,
++    toolkit_qt,
+     when=use_pkg_config
+     & depends(target)(lambda t: t.os == "GNU" and t.kernel == "Linux"),
+ )
+-def necko_wifi_dbus(necko_wifi, dbus):
+-    if necko_wifi and not dbus:
++def necko_wifi_dbus(necko_wifi, dbus, toolkit_gtk, toolkit_qt):
++    # DBus WiFi scanner (NetworkManager). Works with GTK (GIO) or Qt (QtDBus).
++    if necko_wifi and (toolkit_gtk or toolkit_qt) and not dbus:
+         die(
+             "Necko WiFi scanning needs DBus on your platform, remove --disable-dbus"
+             " or use --disable-necko-wifi"
+         )
+-    return necko_wifi and dbus
++    return necko_wifi and dbus and (toolkit_gtk or toolkit_qt)
+ 
+ 
+ set_config("NECKO_WIFI_DBUS", True, when=necko_wifi_dbus)
+@@ -3598,7 +3999,7 @@ set_define("MOZ_LAYERS_HAVE_LOG", True, when="--enable-dump-painting")
+ 
+ # libproxy support
+ # ==============================================================
+-with only_when(toolkit_gtk):
++with only_when(toolkit_linux_desktop):
+     system_lib_option(
+         "--enable-libproxy",
+         help="Enable libproxy support",
+diff --git a/toolkit/themes/moz.build b/toolkit/themes/moz.build
+index f7ddee71d2a7..b20e42c50381 100644
+--- a/toolkit/themes/moz.build
++++ b/toolkit/themes/moz.build
+@@ -18,7 +18,7 @@ app = CONFIG["MOZ_BUILD_APP"]
+ 
+ if toolkit == "cocoa":
+     DIRS += ["osx"]
+-elif toolkit == "gtk":
++elif toolkit in ("gtk", "qt"):
+     DIRS += ["linux"]
+ elif app == "mobile/android":
+     DIRS += ["mobile"]
+diff --git a/toolkit/toolkit.mozbuild b/toolkit/toolkit.mozbuild
+index f3c59b08567c..06c87c346bf5 100644
+--- a/toolkit/toolkit.mozbuild
++++ b/toolkit/toolkit.mozbuild
+@@ -145,9 +145,15 @@
+ 
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     DIRS += [
+-        "/media/mozva",
++        # media/mozva is built via config/external when VAAPI/V4L2 is enabled
++        # (shared with Qt). Keep only the GNOME FreeDesktop service here.
+         "/toolkit/system/gnome",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    # FreeDesktop/Qt MIME and protocol handlers (no GIO).
++    DIRS += [
++        "/toolkit/system/unixdesktop",
++    ]
+ 
+ if CONFIG["ENABLE_WEBDRIVER"]:
+     DIRS += [
+diff --git a/toolkit/xre/moz.build b/toolkit/xre/moz.build
+index 390b16041f35..a13569eb8f84 100644
+--- a/toolkit/xre/moz.build
++++ b/toolkit/xre/moz.build
+@@ -106,6 +106,10 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+         "nsNativeAppSupportUnix.cpp",
+     ]
+     CXXFLAGS += CONFIG["MOZ_X11_SM_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    UNIFIED_SOURCES += [
++        "nsNativeAppSupportDefault.cpp",
++    ]
+ else:
+     UNIFIED_SOURCES += [
+         "nsNativeAppSupportDefault.cpp",
+diff --git a/toolkit/xre/nsAppRunner.cpp b/toolkit/xre/nsAppRunner.cpp
+index e2dac09d83bd..18a2764c16af 100644
+--- a/toolkit/xre/nsAppRunner.cpp
++++ b/toolkit/xre/nsAppRunner.cpp
+@@ -263,9 +263,9 @@
+ 
+ #ifdef MOZ_WIDGET_GTK
+ #  include "nsAppShell.h"
+-#endif
+-#ifdef MOZ_ENABLE_DBUS
+-#  include "DBusService.h"
++#  ifdef MOZ_ENABLE_DBUS
++#    include "DBusService.h"
++#  endif
+ #endif
+ 
+ extern void InstallSignalHandlers(const char* ProgramName);
+@@ -1611,6 +1611,12 @@ nsXULAppInfo::GetNativeMenubar(bool* aResult) {
+   return NS_OK;
+ }
+ 
++NS_IMETHODIMP
++nsXULAppInfo::GetDialogPrimaryButtonOnLeft(bool* aResult) {
++  *aResult = LookAndFeel::DialogPrimaryButtonOnLeft();
++  return NS_OK;
++}
++
+ NS_IMETHODIMP
+ nsXULAppInfo::GetContentThemeDerivedColorSchemeIsDark(bool* aResult) {
+   *aResult =
+@@ -4399,7 +4405,8 @@ int XREMain::XRE_mainInit(bool* aExitFlag,
+   }
+ 
+   if (gfxPlatform::IsHeadless()) {
+-#if defined(XP_WIN) || defined(MOZ_WIDGET_GTK) || defined(XP_MACOSX)
++#if defined(XP_WIN) || defined(MOZ_WIDGET_GTK) || defined(XP_MACOSX) || \
++    defined(MOZ_WIDGET_QT)
+     printf_stderr("*** You are running in headless mode.\n");
+ #else
+     Output(
+@@ -4791,7 +4798,7 @@ int XREMain::XRE_mainInit(bool* aExitFlag,
+     return 0;
+   }
+ 
+-#ifdef MOZ_ENABLE_DBUS
++#if defined(MOZ_ENABLE_DBUS) && defined(MOZ_WIDGET_GTK)
+   const char* dbusServiceLauncher = nullptr;
+   ar = CheckArg("dbus-service", &dbusServiceLauncher, CheckArgFlag::None);
+   if (ar == ARG_BAD) {
+@@ -4808,11 +4815,9 @@ int XREMain::XRE_mainInit(bool* aExitFlag,
+     return 0;
+   }
+ 
+-#  ifdef MOZ_WIDGET_GTK
+   if (XRE_IsParentProcess()) {
+     widget::RegisterHostApp();
+   }
+-#  endif
+ #endif
+ 
+   rv = XRE_InitCommandLine(gArgc, gArgv);
+diff --git a/toolkit/xre/nsXREDirProvider.cpp b/toolkit/xre/nsXREDirProvider.cpp
+index dcce3335e14f..e4a2b2a6b6da 100644
+--- a/toolkit/xre/nsXREDirProvider.cpp
++++ b/toolkit/xre/nsXREDirProvider.cpp
+@@ -101,10 +101,10 @@ nsIFile* gDataDirHome = nullptr;
+ constinit nsCOMPtr<nsIFile> gDataDirProfileLocal{};
+ constinit nsCOMPtr<nsIFile> gDataDirProfile{};
+ 
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_LINUX_DESKTOP)
+ nsXREDirProvider::legacyOrXDGHomeTelemetry gXdgTelemetry =
+     nsXREDirProvider::legacyOrXDGHomeTelemetry::empty;
+-#endif  // defined(MOZ_WIDGET_GTK)
++#endif  // defined(MOZ_WIDGET_LINUX_DESKTOP)
+ 
+ // These are required to allow nsXREDirProvider to be usable in xpcshell tests.
+ // where gAppData is null.
+@@ -251,7 +251,7 @@ nsresult nsXREDirProvider::GetUserProfilesRootDir(nsIFile** aResult) {
+       rv = tmp;
+     }
+ 
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_LINUX_DESKTOP)
+     switch (gXdgTelemetry) {
+       case legacyOrXDGHomeTelemetry::legacyExists:
+         mozilla::glean::profiles::creation_place.Get("legacy_existing"_ns)
+@@ -277,7 +277,7 @@ nsresult nsXREDirProvider::GetUserProfilesRootDir(nsIFile** aResult) {
+         }
+       } break;
+     }
+-#endif  // defined(MOZ_WIDGET_GTK)
++#endif  // defined(MOZ_WIDGET_LINUX_DESKTOP)
+   }
+   file.swap(*aResult);
+   return rv;
+@@ -1308,7 +1308,7 @@ nsresult nsXREDirProvider::AppendSysUserExtensionPath(nsIFile* aFile) {
+   return NS_OK;
+ }
+ 
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_LINUX_DESKTOP)
+ /*
+  * Return whether MOZ_LEGACY_HOME == 1, via environment or at build time
+  */
+@@ -1557,7 +1557,7 @@ nsresult nsXREDirProvider::GetLegacyOrXDGHomePath(const char* aHomeDir,
+ 
+   return NS_OK;
+ }
+-#endif  // defined(MOZ_WIDGET_GTK)
++#endif  // defined(MOZ_WIDGET_LINUX_DESKTOP)
+ 
+ nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, bool aLocal) {
+   NS_ASSERTION(aFile, "Null pointer!");
+@@ -1619,7 +1619,7 @@ nsresult nsXREDirProvider::AppendProfilePath(nsIFile* aFile, bool aLocal) {
+   // Make it hidden (by starting with "."), except when local (the
+   // profile is already under ~/.cache or XDG_CACHE_HOME).
+   if (!aLocal
+-#  if defined(MOZ_WIDGET_GTK)
++#  if defined(MOZ_WIDGET_LINUX_DESKTOP)
+       && (IsForceLegacyHome() || LegacyHomeExists(nullptr))
+ #  endif
+   ) {
+diff --git a/toolkit/xre/nsXREDirProvider.h b/toolkit/xre/nsXREDirProvider.h
+index 6c7e1990d3be..ee6df920b39d 100644
+--- a/toolkit/xre/nsXREDirProvider.h
++++ b/toolkit/xre/nsXREDirProvider.h
+@@ -68,7 +68,7 @@ class nsXREDirProvider final : public nsIDirectoryServiceProvider2,
+ 
+   static nsresult GetUserDataDirectory(nsIFile** aFile, bool aLocal);
+ 
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_LINUX_DESKTOP)
+   static nsresult GetLegacyOrXDGEnvValue(const char* aHomeDir,
+                                          const char* aEnvName,
+                                          nsCString aSubdir, nsIFile** aFile,
+@@ -93,7 +93,7 @@ class nsXREDirProvider final : public nsIDirectoryServiceProvider2,
+     xdgDefault,
+     xdgConfigHome
+   };
+-#endif  // defined(MOZ_WIDGET_GTK)
++#endif  // defined(MOZ_WIDGET_LINUX_DESKTOP)
+ 
+   /* make sure you clone it, if you need to do stuff to it */
+   nsIFile* GetGREDir() { return mGREDir; }
+diff --git a/tools/@types/generated/lib.gecko.xpcom.d.ts b/tools/@types/generated/lib.gecko.xpcom.d.ts
+index 8729df3a3cc7..6644f00021c1 100644
+--- a/tools/@types/generated/lib.gecko.xpcom.d.ts
++++ b/tools/@types/generated/lib.gecko.xpcom.d.ts
+@@ -15171,6 +15171,7 @@ interface nsIXULRuntime extends nsISupports, Enums<typeof nsIXULRuntime_Experime
+   readonly windowsDLLBlocklistStatus: boolean;
+   readonly restartedByOS: boolean;
+   readonly nativeMenubar: boolean;
++  readonly dialogPrimaryButtonOnLeft: boolean;
+   readonly chromeColorSchemeIsDark: boolean;
+   readonly contentThemeDerivedColorSchemeIsDark: boolean;
+   readonly prefersReducedMotion: boolean;
+diff --git a/tools/@types/subs/AppConstants.sys.d.mts b/tools/@types/subs/AppConstants.sys.d.mts
+index 0d4c07999734..07fa85335603 100644
+--- a/tools/@types/subs/AppConstants.sys.d.mts
++++ b/tools/@types/subs/AppConstants.sys.d.mts
+@@ -46,6 +46,9 @@ export const AppConstants: Readonly<{
+   // #ifdef MOZ_WIDGET_GTK
+   MOZ_WIDGET_GTK: boolean;
+ 
++  // #ifdef MOZ_WIDGET_QT
++  MOZ_WIDGET_QT: boolean;
++
+   MOZ_WMF_CDM: boolean;
+ 
+   // #ifdef XP_UNIX
+@@ -121,7 +124,7 @@ export const AppConstants: Readonly<{
+   MOZ_MACBUNDLE_ID: "org.mozilla.firefox";
+   MOZ_MACBUNDLE_NAME: "Firefox.app";
+   MOZ_UPDATE_CHANNEL: "nightly" | "beta" | "aurora" | "release" | "esr" | "default" | "unofficial";
+-  MOZ_WIDGET_TOOLKIT: "android" | "cocoa" | "gtk" | "windows" | "uikit";
++  MOZ_WIDGET_TOOLKIT: "android" | "cocoa" | "gtk" | "qt" | "windows" | "uikit";
+ 
+   DEBUG_JS_MODULES: string;
+ 
+diff --git a/uriloader/exthandler/moz.build b/uriloader/exthandler/moz.build
+index 2b9da3a738f4..f00e40e97dfc 100644
+--- a/uriloader/exthandler/moz.build
++++ b/uriloader/exthandler/moz.build
+@@ -87,6 +87,12 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+         "unix/nsGNOMERegistry.cpp",
+         "unix/nsMIMEInfoUnix.cpp",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    # Share UNIX MIME helpers; FreeDesktop registry uses unixdesktop service.
++    UNIFIED_SOURCES += [
++        "unix/nsGNOMERegistry.cpp",
++        "unix/nsMIMEInfoUnix.cpp",
++    ]
+ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "android":
+     UNIFIED_SOURCES += [
+         "android/nsMIMEInfoAndroid.cpp",
+diff --git a/uriloader/exthandler/unix/nsOSHelperAppService.cpp b/uriloader/exthandler/unix/nsOSHelperAppService.cpp
+index 5b0cc5e133f5..4c2cab5bf3dd 100644
+--- a/uriloader/exthandler/unix/nsOSHelperAppService.cpp
++++ b/uriloader/exthandler/unix/nsOSHelperAppService.cpp
+@@ -8,13 +8,21 @@
+ 
+ #include "nsOSHelperAppService.h"
+ #include "nsMIMEInfoUnix.h"
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "nsGNOMERegistry.h"
++#endif
++#ifdef MOZ_WIDGET_GTK
+ #  ifdef MOZ_BUILD_APP_IS_BROWSER
+ #    include "nsIToolkitShellService.h"
+ #    include "nsIGNOMEShellService.h"
+ #  endif
+ #endif
++#ifdef MOZ_WIDGET_QT
++#  ifdef MOZ_BUILD_APP_IS_BROWSER
++#    include "nsIToolkitShellService.h"
++#    include "nsIUnixShellService.h"
++#  endif
++#endif
+ #include "nsISupports.h"
+ #include "nsString.h"
+ #include "nsReadableUtils.h"
+@@ -1096,8 +1104,8 @@ nsresult nsOSHelperAppService::OSProtocolHandlerExists(
+   nsresult rv = NS_OK;
+ 
+   if (!XRE_IsContentProcess()) {
+-#ifdef MOZ_WIDGET_GTK
+-    // Check the GNOME registry for a protocol handler
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
++    // FreeDesktop handlers via GIO (GTK) or unixdesktop (Qt).
+     *aHandlerExists = nsGNOMERegistry::HandlerExists(aProtocolScheme);
+ #else
+     *aHandlerExists = false;
+@@ -1117,7 +1125,7 @@ nsresult nsOSHelperAppService::OSProtocolHandlerExists(
+ 
+ NS_IMETHODIMP nsOSHelperAppService::GetApplicationDescription(
+     const nsACString& aScheme, nsAString& _retval) {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   nsGNOMERegistry::GetAppDescForScheme(aScheme, _retval);
+   return _retval.IsEmpty() ? NS_ERROR_NOT_AVAILABLE : NS_OK;
+ #else
+@@ -1133,6 +1141,11 @@ NS_IMETHODIMP nsOSHelperAppService::IsCurrentAppOSDefaultForProtocol(
+           do_GetService(NS_TOOLKITSHELLSERVICE_CONTRACTID)) {
+     return shell->IsDefaultForScheme(aScheme, _retval);
+   }
++#elif defined(MOZ_BUILD_APP_IS_BROWSER) && defined(MOZ_WIDGET_QT)
++  if (nsCOMPtr<nsIUnixShellService> shell =
++          do_GetService(NS_TOOLKITSHELLSERVICE_CONTRACTID)) {
++    return shell->IsDefaultForScheme(aScheme, _retval);
++  }
+ #endif
+   return NS_OK;
+ }
+@@ -1218,12 +1231,12 @@ already_AddRefed<nsMIMEInfoBase> nsOSHelperAppService::GetFromExtension(
+                                minorType, mime_types_description, true);
+ 
+   if (NS_FAILED(rv) || majorType.IsEmpty()) {
+-#ifdef MOZ_WIDGET_GTK
+-    LOG("Looking in GNOME registry\n");
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
++    LOG("Looking in FreeDesktop registry\n");
+     RefPtr<nsMIMEInfoBase> gnomeInfo =
+         nsGNOMERegistry::GetFromExtension(aFileExt);
+     if (gnomeInfo) {
+-      LOG("Got MIMEInfo from GNOME registry\n");
++      LOG("Got MIMEInfo from FreeDesktop registry\n");
+       return gnomeInfo.forget();
+     }
+ #endif
+@@ -1332,12 +1345,12 @@ already_AddRefed<nsMIMEInfoBase> nsOSHelperAppService::GetFromType(
+   LookUpExtensionsAndDescription(majorType, minorType, extensions,
+                                  mime_types_description);
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (handler.IsEmpty()) {
+     RefPtr<nsMIMEInfoBase> gnomeInfo = nsGNOMERegistry::GetFromType(aMIMEType);
+     if (gnomeInfo) {
+-      LOG("Got MIMEInfo from GNOME registry without extensions; setting them "
+-          "to %s\n",
++      LOG("Got MIMEInfo from FreeDesktop registry without extensions; setting "
++          "them to %s\n",
+           NS_LossyConvertUTF16toASCII(extensions).get());
+ 
+       NS_ASSERTION(!gnomeInfo->HasExtensions(), "How'd that happen?");
+diff --git a/widget/moz.build b/widget/moz.build
+index d01f7790b5e4..431b34731f06 100644
+--- a/widget/moz.build
++++ b/widget/moz.build
+@@ -53,7 +53,7 @@ XPCOM_MANIFESTS += [
+     "components.conf",
+ ]
+ 
+-if toolkit in ("android", "cocoa", "gtk", "uikit", "windows"):
++if toolkit in ("android", "cocoa", "gtk", "qt", "uikit", "windows"):
+     DIRS += [toolkit]
+ 
+ if toolkit == "cocoa":
+@@ -75,6 +75,12 @@ elif toolkit == "gtk":
+         "nsIGtkTaskbarProgress.idl",
+         "nsITaskbarProgress.idl",
+     ]
++elif toolkit == "qt":
++    # Same taskbar progress IDL as GTK (setPrimaryWindow + setProgressState).
++    XPIDL_SOURCES += [
++        "nsIGtkTaskbarProgress.idl",
++        "nsITaskbarProgress.idl",
++    ]
+ elif toolkit == "windows":
+     XPIDL_SOURCES += [
+         "nsIJumpListBuilder.idl",
+@@ -316,7 +322,7 @@ if CONFIG["NS_PRINTING"]:
+         "nsPrintSettingsService.cpp",
+     ]
+ 
+-    if toolkit in ("cocoa", "gtk"):
++    if toolkit in ("cocoa", "gtk", "qt"):
+         UNIFIED_SOURCES += [
+             "nsCUPSShim.cpp",
+             "nsPrinterCUPS.cpp",
+@@ -338,17 +344,17 @@ EXPORTS.ipc = [
+ if CONFIG["MOZ_X11"] or CONFIG["MOZ_WAYLAND"]:
+     DIRS += ["x11"]
+ 
+-if toolkit in {"gtk", "cocoa", "windows", "android", "uikit"}:
++if toolkit in {"gtk", "cocoa", "windows", "android", "uikit", "qt"}:
+     UNIFIED_SOURCES += [
+         "nsBaseFilePicker.cpp",
+     ]
+ 
+-if toolkit in {"gtk", "cocoa", "windows"}:
++if toolkit in {"gtk", "cocoa", "windows", "qt"}:
+     UNIFIED_SOURCES += [
+         "nsBaseColorPicker.cpp",
+     ]
+ 
+-if toolkit in ("gtk", "windows", "cocoa", "uikit", "android"):
++if toolkit in ("gtk", "windows", "cocoa", "uikit", "android", "qt"):
+     UNIFIED_SOURCES += [
+         "nsNativeTheme.cpp",
+     ]
+@@ -371,8 +377,8 @@ LOCAL_INCLUDES += [
+     "/widget/headless",
+ ]
+ 
+-# We use the CUPS headers on Cocoa and GTK, but on GTK we don't depend on there being system headers.
+-if toolkit == "gtk":
++# We use the CUPS headers on Cocoa, GTK, and Qt; on GTK/Qt we don't depend on system headers.
++if toolkit in ("gtk", "qt"):
+     LOCAL_INCLUDES += ["/third_party/cups/include"]
+ 
+ if toolkit == "windows":
+@@ -387,6 +393,12 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+         "gtk/PlatformWidgetTypes.ipdlh",
+         "headless/HeadlessWidgetTypes.ipdlh",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    IPDL_SOURCES = [
++        "headless/HeadlessWidgetTypes.ipdlh",
++        "qt/PCompositorWidget.ipdl",
++        "qt/PlatformWidgetTypes.ipdlh",
++    ]
+ elif toolkit == "android":
+     IPDL_SOURCES = [
+         "android/PCompositorWidget.ipdl",
+@@ -426,5 +438,7 @@ FINAL_LIBRARY = "xul"
+ 
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
+ if CONFIG["MOZ_WAYLAND"]:
+     CXXFLAGS += CONFIG["MOZ_WAYLAND_CFLAGS"]
+diff --git a/xpcom/system/nsIXULRuntime.idl b/xpcom/system/nsIXULRuntime.idl
+index 5971413a5612..124aeb776455 100644
+--- a/xpcom/system/nsIXULRuntime.idl
++++ b/xpcom/system/nsIXULRuntime.idl
+@@ -319,6 +319,13 @@ interface nsIXULRuntime : nsISupports
+   /** Whether the desktop environment uses a native menubar */
+   readonly attribute boolean nativeMenubar;
+ 
++  /**
++   * Whether dialog primary/accept buttons should be on the left of cancel
++   * (Windows / KDE). False means primary on the right (GNOME / macOS).
++   * On Qt this reflects QStyle::SH_DialogButtonLayout.
++   */
++  readonly attribute boolean dialogPrimaryButtonOnLeft;
++
+   /** Whether the chrome color-scheme is dark */
+   readonly attribute boolean chromeColorSchemeIsDark;
+ 
+-- 
+2.55.0
+

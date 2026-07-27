@@ -1,0 +1,1191 @@
+From 668aa1cd3cb80734d15c2c4c0e86613654be95a8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:35 +0200
+Subject: [PATCH 08/10] Bug 2054387 - media: enable VAAPI/DMABuf and WebRTC
+ paths for Qt. r?#media-playback-reviewers,#webrtc-reviewers
+
+Extend FFmpeg VAAPI, desktop capture, and related Linux media plumbing
+so they build and run with MOZ_WIDGET_QT as well as GTK.
+
+Differential Revision: https://phabricator.services.mozilla.com/D311742
+---
+ dom/geolocation/Geolocation.cpp               |  40 ++++++-
+ dom/geolocation/moz.build                     |   7 ++
+ dom/ipc/ContentParent.cpp                     |   6 +-
+ dom/ipc/PContent.ipdl                         |   4 +-
+ .../platforms/ffmpeg/FFmpegDecoderModule.h    |  11 +-
+ .../platforms/ffmpeg/FFmpegEncoderModule.cpp  |   8 +-
+ .../platforms/ffmpeg/FFmpegLibWrapper.cpp     |   6 +-
+ dom/media/platforms/ffmpeg/FFmpegLibWrapper.h |   6 +-
+ dom/media/platforms/ffmpeg/FFmpegLibs.h       |   2 +-
+ .../platforms/ffmpeg/FFmpegVideoDecoder.cpp   |  45 ++++----
+ .../platforms/ffmpeg/FFmpegVideoDecoder.h     |   9 +-
+ .../ffmpeg/FFmpegVulkanVideoDecoder.cpp       |  10 +-
+ dom/media/platforms/ffmpeg/VALibWrapper.h     |   4 +-
+ dom/media/platforms/ffmpeg/moz.build          |   2 +-
+ dom/media/systemservices/moz.build            |  11 +-
+ .../video_engine/desktop_capture_impl.cc      |  27 ++++-
+ .../video_engine/video_capture_factory.cc     | 109 ++++++++++++------
+ dom/media/webrtc/MediaEngineWebRTC.cpp        |  12 +-
+ dom/media/webrtc/moz.build                    |   2 +-
+ dom/webgpu/SharedTexture.cpp                  |   4 +-
+ dom/webgpu/ipc/WebGPUParent.cpp               |   6 +-
+ dom/webgpu/moz.build                          |   6 +-
+ layout/base/nsLayoutUtils.cpp                 |   2 +-
+ layout/style/nsMediaFeatures.cpp              |   2 +-
+ .../desktop_capture_gn/moz.build              |   2 +
+ .../desktop_capture/desktop_capturer.cc       |   2 +-
+ .../linux/wayland/base_capturer_pipewire.cc   |   6 +-
+ .../linux/wayland/egl_dmabuf.cc               |  38 ++++--
+ .../mouse_cursor_monitor_linux.cc             |   5 +-
+ .../modules/portal/portal_gn/moz.build        |   2 +
+ .../video_capture_internal_impl_gn/moz.build  |   2 +
+ third_party/pipewire/libpipewire/moz.build    |   2 +
+ 32 files changed, 278 insertions(+), 122 deletions(-)
+
+diff --git a/dom/geolocation/Geolocation.cpp b/dom/geolocation/Geolocation.cpp
+index 87b78f8d13a1..4d6a511d1d02 100644
+--- a/dom/geolocation/Geolocation.cpp
++++ b/dom/geolocation/Geolocation.cpp
+@@ -43,12 +43,18 @@ class nsIPrincipal;
+ #  include "AndroidLocationProvider.h"
+ #endif
+ 
+-#ifdef MOZ_ENABLE_DBUS
++#if defined(MOZ_ENABLE_DBUS) && defined(MOZ_WIDGET_GTK)
+ #  include "GeoclueLocationProvider.h"
+ #  include "PortalLocationProvider.h"
+ #  include "mozilla/WidgetUtilsGtk.h"
+ #endif
+ 
++#if defined(MOZ_ENABLE_DBUS) && defined(MOZ_WIDGET_QT)
++#  include "GeoclueLocationProviderQt.h"
++#  include "PortalLocationProviderQt.h"
++#  include "mozilla/widget/PortalUtils.h"
++#endif
++
+ #ifdef MOZ_WIDGET_COCOA
+ #  include "CoreLocationLocationProvider.h"
+ #endif
+@@ -743,8 +749,7 @@ nsresult nsGeolocationService::Init() {
+   mProvider = new AndroidLocationProvider();
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
+-#  ifdef MOZ_ENABLE_DBUS
++#if defined(MOZ_WIDGET_GTK) && defined(MOZ_ENABLE_DBUS)
+   if (!mProvider && widget::ShouldUsePortal(widget::PortalKind::Location)) {
+     mProvider = new PortalLocationProvider();
+     MOZ_LOG(gGeolocationLog, LogLevel::Debug,
+@@ -769,7 +774,34 @@ nsresult nsGeolocationService::Init() {
+           .Set(true);
+     }
+   }
+-#  endif
++#endif
++
++#if defined(MOZ_WIDGET_QT) && defined(MOZ_ENABLE_DBUS)
++  if (!mProvider &&
++      widget::ShouldUsePortal(widget::PortalKind::Location)) {
++    mProvider = new widget::PortalLocationProviderQt();
++    MOZ_LOG(gGeolocationLog, LogLevel::Debug,
++            ("Selected PortalLocationProviderQt"));
++    glean::geolocation::linux_provider
++        .EnumGet(glean::geolocation::LinuxProviderLabel::ePortal)
++        .Set(true);
++  }
++
++  if (!mProvider && StaticPrefs::geo_provider_use_geoclue()) {
++    nsCOMPtr<nsIGeolocationProvider> gcProvider =
++        new widget::GeoclueLocationProviderQt();
++    MOZ_LOG(gGeolocationLog, LogLevel::Debug,
++            ("Checking GeoclueLocationProviderQt"));
++    if (NS_SUCCEEDED(gcProvider->Startup())) {
++      gcProvider->Shutdown();
++      mProvider = std::move(gcProvider);
++      MOZ_LOG(gGeolocationLog, LogLevel::Debug,
++              ("Selected GeoclueLocationProviderQt"));
++      glean::geolocation::linux_provider
++          .EnumGet(glean::geolocation::LinuxProviderLabel::eGeoclue)
++          .Set(true);
++    }
++  }
+ #endif
+ 
+ #ifdef MOZ_WIDGET_COCOA
+diff --git a/dom/geolocation/moz.build b/dom/geolocation/moz.build
+index 63dddd4de9e2..611f09338fe7 100644
+--- a/dom/geolocation/moz.build
++++ b/dom/geolocation/moz.build
+@@ -85,6 +85,13 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     if CONFIG["MOZ_ENABLE_DBUS"]:
+         LOCAL_INCLUDES += ["/dom/system/linux"]
+         CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    if CONFIG["MOZ_ENABLE_DBUS"]:
++        LOCAL_INCLUDES += [
++            "/dom/geolocation",
++            "/widget/qt",
++        ]
++        CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
+ 
+ BROWSER_CHROME_MANIFESTS += ["test/browser/browser.toml"]
+ MOCHITEST_CHROME_MANIFESTS += ["test/chrome/chrome.toml"]
+diff --git a/dom/ipc/ContentParent.cpp b/dom/ipc/ContentParent.cpp
+index c9af3b237e21..2348b4d71cf6 100644
+--- a/dom/ipc/ContentParent.cpp
++++ b/dom/ipc/ContentParent.cpp
+@@ -235,7 +235,7 @@
+ #include "nsIWebBrowserChrome.h"
+ #include "nsIXULRuntime.h"
+ #include "nsPIDNSService.h"
+-#if defined(MOZ_WIDGET_GTK) || defined(XP_WIN)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT) || defined(XP_WIN)
+ #  include "nsIconChannel.h"
+ #endif
+ #include "XPCSelfHostedShmem.h"
+@@ -7958,7 +7958,7 @@ IPCResult ContentParent::RecvGetSystemIcon(nsIURI* aURI,
+     return IPC_OK();
+   }
+ 
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   Maybe<ByteBuf> bytebuf = Some(ByteBuf{});
+   nsresult rv = nsIconChannel::GetIcon(aURI, bytebuf.ptr());
+   if (NS_WARN_IF(NS_FAILED(rv))) {
+@@ -7980,7 +7980,7 @@ IPCResult ContentParent::RecvGetSystemIcon(nsIURI* aURI,
+   return IPC_OK();
+ #else
+   MOZ_CRASH(
+-      "This message is currently implemented only on GTK and Windows "
++      "This message is currently implemented only on GTK, Qt, and Windows "
+       "platforms");
+ #endif
+ }
+diff --git a/dom/ipc/PContent.ipdl b/dom/ipc/PContent.ipdl
+index c298d3e834e7..4d0b858ecb4c 100644
+--- a/dom/ipc/PContent.ipdl
++++ b/dom/ipc/PContent.ipdl
+@@ -235,7 +235,7 @@ struct SystemFontListEntry {
+ };
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ struct SystemFontOptions {
+     int32_t antialias; // cairo_antialias_t
+     int32_t subpixelOrder; // cairo_subpixel_order_t
+@@ -246,7 +246,7 @@ struct SystemFontOptions {
+ 
+ struct SystemFontList {
+     SystemFontListEntry[] entries;
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     SystemFontOptions options;
+ #endif
+ };
+diff --git a/dom/media/platforms/ffmpeg/FFmpegDecoderModule.h b/dom/media/platforms/ffmpeg/FFmpegDecoderModule.h
+index 9110e3953bcd..42e15fed5da9 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegDecoderModule.h
++++ b/dom/media/platforms/ffmpeg/FFmpegDecoderModule.h
+@@ -35,7 +35,7 @@ class FFmpegDecoderModule : public PlatformDecoderModule {
+ #endif
+   }
+   static void Init(const FFmpegLibWrapper* aLib) {
+-#if (defined(XP_WIN) || defined(MOZ_WIDGET_GTK) || \
++#if (defined(XP_WIN) || (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) || \
+      defined(MOZ_WIDGET_ANDROID)) &&               \
+     defined(MOZ_USE_HWDECODE) && !defined(MOZ_FFVPX_AUDIOONLY)
+ #  ifdef XP_WIN
+@@ -61,10 +61,11 @@ class FFmpegDecoderModule : public PlatformDecoderModule {
+ #  ifdef XP_WIN
+         AV_HWDEVICE_TYPE_D3D11VA,
+ #  endif
+-#  ifdef MOZ_WIDGET_GTK
++#  if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #    if LIBAVCODEC_VERSION_MAJOR >= 60
+         AV_HWDEVICE_TYPE_VULKAN,
+ #    endif
++
+         AV_HWDEVICE_TYPE_VAAPI,
+         AV_HWDEVICE_TYPE_NONE,  // Placeholder for V4L2.
+ #  endif
+@@ -88,12 +89,12 @@ class FFmpegDecoderModule : public PlatformDecoderModule {
+ #  if LIBAVCODEC_VERSION_MAJOR >= 55
+         {AV_CODEC_ID_VP9, gfx::gfxVars::UseVP9HwDecode()},
+ #  endif
+-#  if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_ANDROID)) && \
++#  if ((defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) || defined(MOZ_WIDGET_ANDROID)) && \
+       LIBAVCODEC_VERSION_MAJOR >= 54
+         {AV_CODEC_ID_VP8, gfx::gfxVars::UseVP8HwDecode()},
+ #  endif
+ 
+-#  if defined(MOZ_WIDGET_GTK) && !defined(FFVPX_VERSION)
++#  if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) && !defined(FFVPX_VERSION)
+     // These proprietary video codecs can only be decoded via hardware by using
+     // the system ffmpeg, not supported by ffvpx.
+ #    if LIBAVCODEC_VERSION_MAJOR >= 55
+@@ -142,7 +143,7 @@ class FFmpegDecoderModule : public PlatformDecoderModule {
+                     AVCodecToString(entry.mId));
+       }
+     }
+-#endif  // (XP_WIN || MOZ_WIDGET_GTK || MOZ_WIDGET_ANDROID) && MOZ_USE_HWDECODE
++#endif  // (XP_WIN || MOZ_WIDGET_GTK || MOZ_WIDGET_QT || MOZ_WIDGET_ANDROID) && MOZ_USE_HWDECODE
+         // && !MOZ_FFVPX_AUDIOONLY
+   }
+ 
+diff --git a/dom/media/platforms/ffmpeg/FFmpegEncoderModule.cpp b/dom/media/platforms/ffmpeg/FFmpegEncoderModule.cpp
+index 5e5c154ad914..e07f5b8898d1 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegEncoderModule.cpp
++++ b/dom/media/platforms/ffmpeg/FFmpegEncoderModule.cpp
+@@ -28,7 +28,7 @@ namespace mozilla {
+ 
+ template <int V>
+ /* static */ void FFmpegEncoderModule<V>::Init(const FFmpegLibWrapper* aLib) {
+-#if (defined(XP_WIN) || defined(MOZ_WIDGET_GTK) ||                \
++#if (defined(XP_WIN) || (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) ||                \
+      defined(MOZ_WIDGET_ANDROID)) &&                              \
+     defined(MOZ_USE_HWDECODE) && !defined(MOZ_FFVPX_AUDIOONLY) && \
+     LIBAVCODEC_VERSION_MAJOR >= 58
+@@ -61,11 +61,11 @@ template <int V>
+       {AV_CODEC_ID_AV1, gfx::gfxVars::UseAV1HwEncode()},
+ #  endif
+       {AV_CODEC_ID_VP9, gfx::gfxVars::UseVP9HwEncode()},
+-#  if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_ANDROID)
++#  if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) || defined(MOZ_WIDGET_ANDROID)
+       {AV_CODEC_ID_VP8, gfx::gfxVars::UseVP8HwEncode()},
+ #  endif
+ 
+-#  if defined(MOZ_WIDGET_GTK) && !defined(FFVPX_VERSION)
++#  if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) && !defined(FFVPX_VERSION)
+       // These proprietary video codecs can only be encoded via hardware by
+       // using the system ffmpeg, not supported by ffvpx.
+       {AV_CODEC_ID_HEVC, gfx::gfxVars::UseHEVCHwEncode()},
+@@ -102,7 +102,7 @@ template <int V>
+     MOZ_LOG_FMT(sPEMLog, LogLevel::Debug, "Support {} for hw encoding",
+                 AVCodecToString(entry.mId));
+   }
+-#endif  // (XP_WIN || MOZ_WIDGET_GTK || MOZ_WIDGET_ANDROID) && MOZ_USE_HWDECODE
++#endif  // (XP_WIN || MOZ_WIDGET_GTK || MOZ_WIDGET_QT || MOZ_WIDGET_ANDROID) && MOZ_USE_HWDECODE
+         // && !MOZ_FFVPX_AUDIOONLY && LIBAVCODEC_VERSION_MAJOR >= 58
+ }  // namespace mozilla
+ 
+diff --git a/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp b/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp
+index 0534f73428ce..9a721fcc85f2 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp
++++ b/dom/media/platforms/ffmpeg/FFmpegLibWrapper.cpp
+@@ -11,7 +11,7 @@
+ #endif
+ #include "PlatformDecoderModule.h"
+ #include "prlink.h"
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "VALibWrapper.h"
+ #  include "mozilla/gfx/gfxVars.h"
+ #  include "mozilla/widget/DMABufDevice.h"
+@@ -331,7 +331,7 @@ FFmpegLibWrapper::LinkResult FFmpegLibWrapper::Link() {
+       avcodec_get_hw_frames_parameters,
+       AV_FUNC_58 | AV_FUNC_59 | AV_FUNC_60 | AV_FUNC_61 | AV_FUNC_62)
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   AV_FUNC_OPTION_SILENT(av_hwdevice_hwconfig_alloc, AV_FUNC_58 | AV_FUNC_59 |
+                                                         AV_FUNC_60 |
+                                                         AV_FUNC_61 | AV_FUNC_62)
+@@ -472,7 +472,7 @@ void FFmpegLibWrapper::UpdateLogLevel() {
+   }
+ }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ bool FFmpegLibWrapper::IsVAAPIAvailable() const {
+ #  define VA_FUNC_LOADED(func) ((func) != nullptr)
+   return VA_FUNC_LOADED(avcodec_get_hw_config) &&
+diff --git a/dom/media/platforms/ffmpeg/FFmpegLibWrapper.h b/dom/media/platforms/ffmpeg/FFmpegLibWrapper.h
+index e2579c0fdaac..df8ad26c95dc 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegLibWrapper.h
++++ b/dom/media/platforms/ffmpeg/FFmpegLibWrapper.h
+@@ -28,7 +28,7 @@ struct AVCodecParserContext;
+ struct PRLibrary;
+ struct AVChannelLayout;
+ struct AVCodecHWConfig;
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ struct AVVAAPIHWConfig;
+ struct AVHWFramesConstraints;
+ #endif
+@@ -63,7 +63,7 @@ struct MOZ_ONLY_USED_TO_AVOID_STATIC_CONSTRUCTORS FFmpegLibWrapper {
+   // Reset the wrapper and unlink all attached libraries.
+   void Unlink();
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // Check if libva and libva-drm are available and we can use HW decode.
+   bool IsVAAPIAvailable() const;
+ #endif
+@@ -199,7 +199,7 @@ struct MOZ_ONLY_USED_TO_AVOID_STATIC_CONSTRUCTORS FFmpegLibWrapper {
+   AVBufferRef* (*av_buffer_ref)(AVBufferRef* buf);
+   void (*av_buffer_unref)(AVBufferRef** buf);
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   AVVAAPIHWConfig* (*av_hwdevice_hwconfig_alloc)(AVBufferRef* device_ctx);
+   AVHWFramesConstraints* (*av_hwdevice_get_hwframe_constraints)(
+       AVBufferRef* ref, const void* hwconfig);
+diff --git a/dom/media/platforms/ffmpeg/FFmpegLibs.h b/dom/media/platforms/ffmpeg/FFmpegLibs.h
+index d42be9985b78..31bd2e90623a 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegLibs.h
++++ b/dom/media/platforms/ffmpeg/FFmpegLibs.h
+@@ -12,7 +12,7 @@ extern "C" {
+ #include "libavcodec/avcodec.h"
+ #include "libavutil/avutil.h"
+ #include "libavutil/mem.h"
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ #  include "libavutil/hwcontext_drm.h"
+ #  include "libavutil/hwcontext_vaapi.h"
+ #  if LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+diff --git a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp
+index dd8c81bbf7e6..13540efa0a0c 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp
++++ b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.cpp
+@@ -48,7 +48,7 @@
+ #  include "H264.h"
+ #  include "H265.h"
+ #endif
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ #  if LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+ // DMABufDevice defines its own version of this which collides with the
+ // official version in drm_fourcc.h
+@@ -61,6 +61,7 @@
+ #    endif
+ #  endif
+ 
++
+ #  include "FFmpegVideoFramePool.h"
+ #  include "mozilla/layers/DMABUFSurfaceImage.h"
+ #  include "va/va.h"
+@@ -121,7 +122,7 @@
+ #  include "mozilla/MediaDrmRemoteCDMParent.h"
+ #endif
+ 
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ // Forward declare from va.h
+ typedef int VAStatus;
+ #  define VA_EXPORT_SURFACE_READ_ONLY 0x0001
+@@ -146,7 +147,7 @@ typedef mozilla::layers::BufferRecycleBin BufferRecycleBin;
+ 
+ namespace mozilla {
+ 
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ constinit nsTArray<AVCodecID>
+     FFmpegVideoDecoder<LIBAV_VER>::mAcceleratedFormats;
+ #endif
+@@ -309,7 +310,7 @@ static AVPixelFormat ChooseMediaCodecPixelFormat(
+ }
+ #endif
+ 
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ static void VAAPIDisplayReleaseCallback(struct AVHWDeviceContext* hwctx) {
+   auto displayHolder = static_cast<VADisplayHolder*>(hwctx->user_opaque);
+   displayHolder->Release();
+@@ -833,7 +834,7 @@ bool FFmpegVideoDecoder<LIBAV_VER>::ShouldDisableHWDecoding(
+   }
+ #  endif
+ 
+-#  if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_ANDROID)
++#  if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) || defined(MOZ_WIDGET_ANDROID)
+   bool supported = false;
+   switch (mCodecID) {
+     case AV_CODEC_ID_H264:
+@@ -864,7 +865,7 @@ bool FFmpegVideoDecoder<LIBAV_VER>::ShouldDisableHWDecoding(
+   }
+ #  endif
+ 
+-#  ifdef MOZ_WIDGET_GTK
++#  if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   bool isHardwareWebRenderUsed = mImageAllocator &&
+                                  (mImageAllocator->GetCompositorBackendType() ==
+                                   layers::LayersBackend::LAYERS_WR) &&
+@@ -878,7 +879,7 @@ bool FFmpegVideoDecoder<LIBAV_VER>::ShouldDisableHWDecoding(
+ }
+ #endif
+ 
+-#if defined(MOZ_WIDGET_GTK) && defined(MOZ_USE_HWDECODE)
++#if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) && defined(MOZ_USE_HWDECODE)
+ bool FFmpegVideoDecoder<LIBAV_VER>::UploadSWDecodeToDMABuf() const {
+   // Use direct DMABuf upload for GL backend Wayland compositor only.
+   return mImageAllocator && (mImageAllocator->GetCompositorBackendType() ==
+@@ -912,7 +913,7 @@ FFmpegVideoDecoder<LIBAV_VER>::FFmpegVideoDecoder(
+   // initialization.
+   mExtraData = new MediaByteBuffer;
+   mExtraData->AppendElements(*aConfig.mExtraData);
+-#if defined(MOZ_WIDGET_GTK) && defined(MOZ_USE_HWDECODE)
++#if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) && defined(MOZ_USE_HWDECODE)
+   mUploadSWDecodeToDMABuf = UploadSWDecodeToDMABuf();
+ #endif
+ #ifdef MOZ_USE_HWDECODE
+@@ -1079,7 +1080,7 @@ static bool IsYUV420Sampling(const AVPixelFormat& aFormat) {
+          aFormat == AV_PIX_FMT_YUV420P10LE || aFormat == AV_PIX_FMT_YUV420P12LE;
+ }
+ 
+-#  if defined(MOZ_WIDGET_GTK)
++#  if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ bool FFmpegVideoDecoder<LIBAV_VER>::IsLinuxHDR() const {
+   if (!mInfo.mColorPrimaries || !mInfo.mTransferFunction) {
+     return false;
+@@ -1200,7 +1201,7 @@ int FFmpegVideoDecoder<LIBAV_VER>::GetVideoBuffer(
+     return AVERROR(EINVAL);
+   }
+ 
+-#  if defined(MOZ_WIDGET_GTK) && defined(MOZ_USE_HWDECODE)
++#  if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) && defined(MOZ_USE_HWDECODE)
+   if (mUploadSWDecodeToDMABuf) {
+     FFMPEG_LOG("DMABuf upload doesn't use shm buffers");
+     return AVERROR(EINVAL);
+@@ -1620,7 +1621,7 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::DoDecode(
+       return MediaResult(NS_ERROR_OUT_OF_MEMORY, __func__);
+     }
+ 
+-#  if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#  if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+     // Release unused VA-API surfaces before avcodec_receive_frame() as
+     // ffmpeg recycles VASurface for HW decoding.
+     if (mVideoFramePool) {
+@@ -1658,7 +1659,7 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::DoDecode(
+     MediaResult rv;
+ #  ifdef MOZ_USE_HWDECODE
+     if (IsHardwareAccelerated()) {
+-#    ifdef MOZ_WIDGET_GTK
++#    if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+       mDecodeStats.UpdateDecodeTimes(Duration(mFrame));
+       if (mDecodeStats.IsDecodingSlow() &&
+           !StaticPrefs::media_ffmpeg_disable_software_fallback()) {
+@@ -1951,7 +1952,7 @@ gfx::SurfaceFormat FFmpegVideoDecoder<LIBAV_VER>::GetSurfaceFormat() const {
+   }
+ }
+ 
+-#if defined(MOZ_WIDGET_GTK) && defined(MOZ_USE_HWDECODE)
++#if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) && defined(MOZ_USE_HWDECODE)
+ // Convert AVChromaLocation to
+ // wp_color_representation_surface_v1_chroma_location
+ static uint32_t AVChromaLocationToWPChromaLocation(uint32_t aAVChromaLocation) {
+@@ -2028,7 +2029,7 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::CreateImage(
+         IsKeyFrame(mFrame), TimeUnit::FromMicroseconds(-1));
+   }
+ #endif
+-#if defined(MOZ_WIDGET_GTK) && defined(MOZ_USE_HWDECODE)
++#if (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)) && defined(MOZ_USE_HWDECODE)
+   if (mUploadSWDecodeToDMABuf) {
+     MOZ_DIAGNOSTIC_ASSERT(!v);
+     if (!mVideoFramePool) {
+@@ -2097,7 +2098,7 @@ MediaResult FFmpegVideoDecoder<LIBAV_VER>::CreateImage(
+   return NS_OK;
+ }
+ 
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ bool FFmpegVideoDecoder<LIBAV_VER>::GetVAAPISurfaceDescriptor(
+     VADRMPRIMESurfaceDescriptor* aVaDesc) {
+   VASurfaceID surface_id = (VASurfaceID)(uintptr_t)mFrame->data[3];
+@@ -2437,7 +2438,7 @@ FFmpegVideoDecoder<LIBAV_VER>::ProcessFlush() {
+ #ifdef MOZ_FFMPEG_USE_DURATION_MAP
+   mDurationMap.Clear();
+ #endif
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   if (mVideoFramePool) {
+     mVideoFramePool->FlushFFmpegFrames();
+   }
+@@ -2526,8 +2527,7 @@ void FFmpegVideoDecoder<LIBAV_VER>::ProcessShutdown() {
+     mLib->av_buffer_unref(&mMediaCodecDeviceContext);
+   }
+ #endif
+-
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   mVideoFramePool = nullptr;
+ #endif
+   // Shutdown order for Vulkan hw decode:
+@@ -2540,7 +2540,7 @@ void FFmpegVideoDecoder<LIBAV_VER>::ProcessShutdown() {
+   // 3. av_buffer_unref(&mVulkanDeviceContext) — may be the last ref and call
+   //    vkDestroyDevice, so it must come after Cleanup().
+   FFmpegDataDecoder<LIBAV_VER>::ProcessShutdown();
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   if (IsHardwareAccelerated()) {
+ #  if LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+     if (mVulkanDecoder.mDevice) {
+@@ -2566,8 +2566,9 @@ void FFmpegVideoDecoder<LIBAV_VER>::ProcessShutdown() {
+ 
+ bool FFmpegVideoDecoder<LIBAV_VER>::IsHardwareAccelerated(
+     nsACString& aFailureReason) const {
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   return mUsingV4L2 || !!mVAAPIDeviceContext || !!mVulkanDeviceContext;
++
+ #elif defined(MOZ_ENABLE_D3D11VA)
+   return !!mD3D11VADeviceContext;
+ #elif defined(MOZ_WIDGET_ANDROID)
+@@ -2577,7 +2578,7 @@ bool FFmpegVideoDecoder<LIBAV_VER>::IsHardwareAccelerated(
+ #endif
+ }
+ 
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ bool FFmpegVideoDecoder<LIBAV_VER>::IsFormatAccelerated(
+     AVCodecID aCodecID) const {
+   for (const auto& format : mAcceleratedFormats) {
+@@ -3278,7 +3279,7 @@ void FFmpegVideoDecoder<LIBAV_VER>::ReleaseFramesMediaCodec() {
+ /* static */ AVCodec* FFmpegVideoDecoder<LIBAV_VER>::FindVideoHardwareAVCodec(
+     const FFmpegLibWrapper* aLib, AVCodecID aCodec,
+     AVHWDeviceType aDeviceType) {
+-#  ifdef MOZ_WIDGET_GTK
++#  if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (aDeviceType == AV_HWDEVICE_TYPE_NONE) {
+     switch (aCodec) {
+       case AV_CODEC_ID_H264:
+diff --git a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h
+index 4e2a2be263de..b8d533bbd8af 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h
++++ b/dom/media/platforms/ffmpeg/FFmpegVideoDecoder.h
+@@ -14,7 +14,12 @@
+ #include "PerformanceRecorder.h"
+ #include "SimpleMap.h"
+ #include "nsTHashMap.h"
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if LIBAVCODEC_VERSION_MAJOR >= 57 && LIBAVUTIL_VERSION_MAJOR >= 56
++#  include "mozilla/DataMutex.h"
++#  include "mozilla/layers/TextureClient.h"
++#endif
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
++
+ #  include "FFmpegVideoFramePool.h"
+ #  if LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+ #    include "VulkanDeviceHolder.h"
+@@ -248,7 +253,7 @@ class FFmpegVideoDecoder<LIBAV_VER>
+   SimpleMap<void*, AVFrame*, ThreadSafePolicy> mFrameMap;
+ #endif
+ 
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   bool UploadSWDecodeToDMABuf() const;
+   bool IsLinuxHDR() const;
+   MediaResult InitVAAPIDecoder();
+diff --git a/dom/media/platforms/ffmpeg/FFmpegVulkanVideoDecoder.cpp b/dom/media/platforms/ffmpeg/FFmpegVulkanVideoDecoder.cpp
+index dfb8017cfd9c..29ab531a7999 100644
+--- a/dom/media/platforms/ffmpeg/FFmpegVulkanVideoDecoder.cpp
++++ b/dom/media/platforms/ffmpeg/FFmpegVulkanVideoDecoder.cpp
+@@ -10,7 +10,7 @@
+ #include "mozilla/ScopeExit.h"
+ #include "nsPrintfCString.h"
+ #if LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+-#  if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#  if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ #    include <dlfcn.h>
+ #    include <errno.h>
+ // mozilla/widget/DMABufFormats.h (via FFmpegVideoDecoder.h -> DMABufDevice.h)
+@@ -42,12 +42,12 @@
+ #    elif defined(XP_FREEBSD) || defined(XP_OPENBSD) || defined(XP_NETBSD)
+ #      include <sys/types.h>  // major(), minor() for st_rdev (BSD)
+ #    endif
+-#  endif  // MOZ_USE_HWDECODE && MOZ_WIDGET_GTK
++#  endif  // MOZ_USE_HWDECODE && (MOZ_WIDGET_GTK || MOZ_WIDGET_QT)
+ #endif    // LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+ 
+ namespace mozilla {
+ 
+-#if defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ #  if LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+ 
+ FFmpegVideoDecoder<
+@@ -484,7 +484,7 @@ bool FFmpegVideoDecoder<LIBAV_VER>::FFmpegVulkanVideoDecoder::
+     SelectVulkanDecoderPhysicalDevice(const StaticMutexAutoLock& aProofOfLock,
+                                       const nsCString& aRendererNode) {
+   uint32_t rendererDrmMajor = 0, rendererDrmMinor = 0;
+-#    if defined(MOZ_WIDGET_GTK)
++#    if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   if (!aRendererNode.IsEmpty()) {
+     struct stat st = {};
+     if (stat(aRendererNode.get(), &st) == 0) {
+@@ -1371,6 +1371,6 @@ FFmpegVideoDecoder<LIBAV_VER>::FFmpegVulkanVideoDecoder::PrepareImageToDRM(
+ }
+ 
+ #  endif  // LIBAVCODEC_VERSION_MAJOR >= 60 && !defined(FFVPX_VERSION)
+-#endif    // defined(MOZ_USE_HWDECODE) && defined(MOZ_WIDGET_GTK)
++#endif    // defined(MOZ_USE_HWDECODE) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ 
+ }  // namespace mozilla
+diff --git a/dom/media/platforms/ffmpeg/VALibWrapper.h b/dom/media/platforms/ffmpeg/VALibWrapper.h
+index 5c34ded4d6d5..d8b6bc93d8cb 100644
+--- a/dom/media/platforms/ffmpeg/VALibWrapper.h
++++ b/dom/media/platforms/ffmpeg/VALibWrapper.h
+@@ -12,7 +12,7 @@
+ 
+ struct PRLibrary;
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ 
+ // Forward declare from va.h
+ typedef void* VADisplay;
+@@ -81,6 +81,6 @@ class VADisplayHolder final
+ };
+ 
+ }  // namespace mozilla
+-#endif  // MOZ_WIDGET_GTK
++#endif  // MOZ_WIDGET_GTK || MOZ_WIDGET_QT
+ 
+ #endif  // DOM_MEDIA_PLATFORMS_FFMPEG_VALIBWRAPPER_H_
+diff --git a/dom/media/platforms/ffmpeg/moz.build b/dom/media/platforms/ffmpeg/moz.build
+index 48baf252f1ba..4cfc914f05fd 100644
+--- a/dom/media/platforms/ffmpeg/moz.build
++++ b/dom/media/platforms/ffmpeg/moz.build
+@@ -20,7 +20,7 @@ DIRS += [
+ 
+ UNIFIED_SOURCES += ["FFmpegRuntimeLinker.cpp"]
+ 
+-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+     include("/ipc/chromium/chromium-config.mozbuild")
+     UNIFIED_SOURCES += ["VALibWrapper.cpp"]
+     if CONFIG["MOZ_ENABLE_VULKAN_VIDEO"]:
+diff --git a/dom/media/systemservices/moz.build b/dom/media/systemservices/moz.build
+index f0d6241a8e83..7e322e6ad823 100644
+--- a/dom/media/systemservices/moz.build
++++ b/dom/media/systemservices/moz.build
+@@ -68,7 +68,16 @@ if CONFIG["MOZ_WEBRTC"]:
+         UNIFIED_SOURCES += [
+             "video_engine/placeholder_device_info.cc",
+         ]
+-        CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++        if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++            CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++        elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++            # Camera presence via QtDBus; GLib still needed to pump the
++            # third-party libwebrtc portal (GIO) main context.
++            CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
++            if CONFIG["GLIB_CFLAGS"]:
++                CXXFLAGS += CONFIG["GLIB_CFLAGS"]
++            # Qt headers conflict with -fvisibility=hidden wrappers.
++            NoVisibilityFlags()
+ 
+ if CONFIG["OS_TARGET"] == "Android":
+     DEFINES["WEBRTC_ANDROID"] = True
+diff --git a/dom/media/systemservices/video_engine/desktop_capture_impl.cc b/dom/media/systemservices/video_engine/desktop_capture_impl.cc
+index 9e1086527c29..d34d80aee748 100644
+--- a/dom/media/systemservices/video_engine/desktop_capture_impl.cc
++++ b/dom/media/systemservices/video_engine/desktop_capture_impl.cc
+@@ -38,6 +38,10 @@
+ #  include "modules/desktop_capture/mac/screen_capturer_sck.h"
+ #endif
+ 
++#if defined(WEBRTC_USE_PIPEWIRE)
++#  include <glib.h>
++#endif
++
+ using mozilla::NewRunnableMethod;
+ using mozilla::TabCapturerWebrtc;
+ using mozilla::TimeDuration;
+@@ -105,9 +109,11 @@ static DesktopCaptureOptions CreateDesktopCaptureOptions() {
+ #endif
+ 
+ #if defined(WEBRTC_USE_PIPEWIRE)
++  // Portal + PipeWire works on Wayland and X11 when a session portal backend
++  // is present (e.g. xdg-desktop-portal-kde / -gnome). X11 capturers remain
++  // the factory fallback when allow_pipewire is false or PW is unavailable.
+   options.set_allow_pipewire(
+-      mozilla::StaticPrefs::media_webrtc_capture_allow_pipewire() &&
+-      webrtc::DesktopCapturer::IsRunningUnderWayland());
++      mozilla::StaticPrefs::media_webrtc_capture_allow_pipewire());
+ #endif
+ 
+   return options;
+@@ -527,7 +533,15 @@ void DesktopCaptureImpl::InitOnThread(
+   mCapturer = std::move(aCapturer);
+ 
+   // We need to call Start on the same thread we call CaptureFrame on.
++  // For PipeWire this opens the xdg-desktop-portal ScreenCast dialog (async
++  // GDBus). Pump GLib so the portal can make progress without waiting for
++  // the UI thread's event loop alone.
+   mCapturer->Start(this);
++#if defined(WEBRTC_USE_PIPEWIRE)
++  while (g_main_context_pending(nullptr)) {
++    g_main_context_iteration(nullptr, FALSE);
++  }
++#endif
+ 
+   mCaptureTimer = NS_NewTimer();
+   mRequestedCaptureInterval = mozilla::Some(
+@@ -564,6 +578,15 @@ void DesktopCaptureImpl::ShutdownOnThread() {
+ void DesktopCaptureImpl::CaptureFrameOnThread() {
+   RTC_DCHECK_RUN_ON(&mCaptureThreadChecker);
+ 
++#if defined(WEBRTC_USE_PIPEWIRE)
++  // Portal / GDBus responses attach to the default GMainContext; keep them
++  // moving while we poll frames (important on Qt where the UI loop may not
++  // share GLib integration as tightly as GTK).
++  while (g_main_context_pending(nullptr)) {
++    g_main_context_iteration(nullptr, FALSE);
++  }
++#endif
++
+   auto start = mozilla::TimeStamp::Now();
+   mCapturer->CaptureFrame();
+ 
+diff --git a/dom/media/systemservices/video_engine/video_capture_factory.cc b/dom/media/systemservices/video_engine/video_capture_factory.cc
+index f6a0ee670715..5800a5d019eb 100644
+--- a/dom/media/systemservices/video_engine/video_capture_factory.cc
++++ b/dom/media/systemservices/video_engine/video_capture_factory.cc
+@@ -15,10 +15,20 @@
+ #  include "video_engine/placeholder_device_info.h"
+ #endif
+ 
+-#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS)
++#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS) && \
++    defined(MOZ_WIDGET_GTK)
+ #  include "mozilla/widget/AsyncDBus.h"
+ #endif
+ 
++#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS) && \
++    defined(MOZ_WIDGET_QT)
++#  pragma GCC visibility push(default)
++#  include <QtDBus/QDBusConnection>
++#  include <QtDBus/QDBusMessage>
++#  include <QtDBus/QDBusVariant>
++#  pragma GCC visibility pop
++#endif
++
+ #include <memory>
+ 
+ namespace mozilla {
+@@ -168,45 +178,76 @@ auto VideoCaptureFactory::InitCameraBackend()
+ 
+ auto VideoCaptureFactory::HasCameraDevice()
+     -> RefPtr<VideoCaptureFactory::HasCameraDevicePromise> {
+-#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS)
+-  if (mVideoCaptureOptions && mVideoCaptureOptions->allow_pipewire()) {
+-    return widget::CreateDBusProxyForBus(
+-               G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+-               /* aInterfaceInfo = */ nullptr, "org.freedesktop.portal.Desktop",
+-               "/org/freedesktop/portal/desktop",
+-               "org.freedesktop.portal.Camera")
+-        ->Then(
+-            GetCurrentSerialEventTarget(), __func__,
+-            [](RefPtr<GDBusProxy>&& aProxy) {
+-              GVariant* variant =
+-                  g_dbus_proxy_get_cached_property(aProxy, "IsCameraPresent");
+-              if (!variant) {
+-                return HasCameraDevicePromise::CreateAndReject(
+-                    NS_ERROR_NO_INTERFACE,
+-                    "VideoCaptureFactory::HasCameraDevice Reject");
+-              }
+-
+-              if (!g_variant_is_of_type(variant, G_VARIANT_TYPE_BOOLEAN)) {
+-                return HasCameraDevicePromise::CreateAndReject(
+-                    NS_ERROR_UNEXPECTED,
+-                    "VideoCaptureFactory::HasCameraDevice Reject");
+-              }
++  if (!mVideoCaptureOptions || !mVideoCaptureOptions->allow_pipewire()) {
++    return HasCameraDevicePromise::CreateAndReject(
++        NS_ERROR_NOT_IMPLEMENTED,
++        "VideoCaptureFactory::HasCameraDevice Reject");
++  }
+ 
+-              const bool hasCamera = g_variant_get_boolean(variant);
+-              g_variant_unref(variant);
+-              return HasCameraDevicePromise::CreateAndResolve(
+-                  hasCamera ? Available : NotAvailable,
+-                  "VideoCaptureFactory::HasCameraDevice Resolve");
+-            },
+-            [](GUniquePtr<GError>&& aError) {
++#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS) && \
++    defined(MOZ_WIDGET_QT)
++  // QtDBus — no GIO.
++  QDBusMessage msg = QDBusMessage::createMethodCall(
++      QStringLiteral("org.freedesktop.portal.Desktop"),
++      QStringLiteral("/org/freedesktop/portal/desktop"),
++      QStringLiteral("org.freedesktop.DBus.Properties"),
++      QStringLiteral("Get"));
++  msg << QStringLiteral("org.freedesktop.portal.Camera")
++      << QStringLiteral("IsCameraPresent");
++  const QDBusMessage reply =
++      QDBusConnection::sessionBus().call(msg, QDBus::Block, 2000);
++  if (reply.type() != QDBusMessage::ReplyMessage ||
++      reply.arguments().isEmpty()) {
++    return HasCameraDevicePromise::CreateAndReject(
++        NS_ERROR_NO_INTERFACE, "VideoCaptureFactory::HasCameraDevice Reject");
++  }
++  QVariant value = reply.arguments().at(0);
++  if (value.userType() == qMetaTypeId<QDBusVariant>()) {
++    value = value.value<QDBusVariant>().variant();
++  }
++  const bool hasCamera = value.toBool();
++  return HasCameraDevicePromise::CreateAndResolve(
++      hasCamera ? Available : NotAvailable,
++      "VideoCaptureFactory::HasCameraDevice Resolve");
++#elif defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS) && \
++    defined(MOZ_WIDGET_GTK)
++  return widget::CreateDBusProxyForBus(
++             G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
++             /* aInterfaceInfo = */ nullptr, "org.freedesktop.portal.Desktop",
++             "/org/freedesktop/portal/desktop",
++             "org.freedesktop.portal.Camera")
++      ->Then(
++          GetCurrentSerialEventTarget(), __func__,
++          [](RefPtr<GDBusProxy>&& aProxy) {
++            GVariant* variant =
++                g_dbus_proxy_get_cached_property(aProxy, "IsCameraPresent");
++            if (!variant) {
+               return HasCameraDevicePromise::CreateAndReject(
+                   NS_ERROR_NO_INTERFACE,
+                   "VideoCaptureFactory::HasCameraDevice Reject");
+-            });
+-  }
+-#endif
++            }
++
++            if (!g_variant_is_of_type(variant, G_VARIANT_TYPE_BOOLEAN)) {
++              return HasCameraDevicePromise::CreateAndReject(
++                  NS_ERROR_UNEXPECTED,
++                  "VideoCaptureFactory::HasCameraDevice Reject");
++            }
++
++            const bool hasCamera = g_variant_get_boolean(variant);
++            g_variant_unref(variant);
++            return HasCameraDevicePromise::CreateAndResolve(
++                hasCamera ? Available : NotAvailable,
++                "VideoCaptureFactory::HasCameraDevice Resolve");
++          },
++          [](GUniquePtr<GError>&& aError) {
++            return HasCameraDevicePromise::CreateAndReject(
++                NS_ERROR_NO_INTERFACE,
++                "VideoCaptureFactory::HasCameraDevice Reject");
++          });
++#else
+   return HasCameraDevicePromise::CreateAndReject(
+       NS_ERROR_NOT_IMPLEMENTED, "VideoCaptureFactory::HasCameraDevice Reject");
++#endif
+ }
+ 
+ auto VideoCaptureFactory::UpdateCameraAvailability()
+diff --git a/dom/media/webrtc/MediaEngineWebRTC.cpp b/dom/media/webrtc/MediaEngineWebRTC.cpp
+index d915abb45daf..0a6d983608e7 100644
+--- a/dom/media/webrtc/MediaEngineWebRTC.cpp
++++ b/dom/media/webrtc/MediaEngineWebRTC.cpp
+@@ -10,9 +10,8 @@
+ #include "MediaManager.h"
+ #include "mozilla/Logging.h"
+ 
+-// Pipewire detection support
++// PipeWire / xdg-desktop-portal ScreenCast support (GTK + Qt Linux).
+ #if defined(WEBRTC_USE_PIPEWIRE)
+-#  include "modules/desktop_capture/desktop_capturer.h"
+ #  include "mozilla/StaticPrefs_media.h"
+ #endif
+ 
+@@ -66,10 +65,13 @@ void MediaEngineWebRTC::EnumerateVideoDevices(
+                      aMediaSource == MediaSourceEnum::Screen ||
+                      aMediaSource == MediaSourceEnum::Window;
+   (void)desktopKind;  // Suppress "unused variable" on Windows and Android.
+-#if defined(WEBRTC_USE_PIPEWIRE)
++#if defined(WEBRTC_USE_PIPEWIRE) && \
++    (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
++  // OS-level portal picker (xdg-desktop-portal ScreenCast + PipeWire).
++  // Capturer creation still validates PipeWire via BaseCapturerPipeWire.
++  // Works on Wayland and X11 when a portal backend is available.
+   bool canRequestOsLevelPrompt =
+-      mozilla::StaticPrefs::media_webrtc_capture_allow_pipewire() &&
+-      webrtc::DesktopCapturer::IsRunningUnderWayland() && desktopKind;
++      mozilla::StaticPrefs::media_webrtc_capture_allow_pipewire() && desktopKind;
+ #elif defined(WEBRTC_MAC)
+   bool canRequestOsLevelPrompt =
+       mozilla::StaticPrefs::
+diff --git a/dom/media/webrtc/moz.build b/dom/media/webrtc/moz.build
+index a40204e47539..32b6bedea2fd 100644
+--- a/dom/media/webrtc/moz.build
++++ b/dom/media/webrtc/moz.build
+@@ -88,7 +88,7 @@ if CONFIG["MOZ_WEBRTC_SIGNALING"]:
+         "/third_party/libwebrtc",
+     ]
+ 
+-    if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++    if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt"):
+         DIRS += [
+             "/third_party/drm/libdrm",
+             "/third_party/libepoxy/",
+diff --git a/dom/webgpu/SharedTexture.cpp b/dom/webgpu/SharedTexture.cpp
+index 713308a31da5..59ca04921998 100644
+--- a/dom/webgpu/SharedTexture.cpp
++++ b/dom/webgpu/SharedTexture.cpp
+@@ -10,7 +10,7 @@
+ #  include "mozilla/webgpu/SharedTextureD3D11.h"
+ #endif
+ 
+-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
++#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ #  include "mozilla/webgpu/SharedTextureDMABuf.h"
+ #endif
+ 
+@@ -32,7 +32,7 @@ UniquePtr<SharedTexture> SharedTexture::Create(
+ #ifdef XP_WIN
+   texture = SharedTextureD3D11::Create(aParent, aDeviceId, aWidth, aHeight,
+                                        aFormat, aUsage);
+-#elif defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
++#elif defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+   texture = SharedTextureDMABuf::Create(aParent, aDeviceId, aWidth, aHeight,
+                                         aFormat, aUsage);
+ #elif defined(XP_MACOSX)
+diff --git a/dom/webgpu/ipc/WebGPUParent.cpp b/dom/webgpu/ipc/WebGPUParent.cpp
+index fc07e7ec7f18..7fbaf0fea622 100644
+--- a/dom/webgpu/ipc/WebGPUParent.cpp
++++ b/dom/webgpu/ipc/WebGPUParent.cpp
+@@ -25,7 +25,7 @@
+ #  include "mozilla/webgpu/SharedTextureD3D11.h"
+ #endif
+ 
+-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
++#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ #  include "mozilla/webgpu/SharedTextureDMABuf.h"
+ #endif
+ 
+@@ -104,7 +104,7 @@ extern void* wgpu_server_get_shared_texture_handle(WGPUWebGPUParentPtr aParent,
+ }
+ #endif
+ 
+-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
++#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ extern int32_t wgpu_server_get_dma_buf_fd(WGPUWebGPUParentPtr aParent,
+                                           WGPUTextureId aId) {
+   auto* parent = static_cast<WebGPUParent*>(aParent);
+@@ -147,7 +147,7 @@ extern "C" bool wgpu_server_get_linux_dmabuf_modifiers(
+ }
+ #endif
+ 
+-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
++#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID) && (defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT))
+ extern const WGPUVkImageHandle* wgpu_server_get_vk_image_handle(
+     WGPUWebGPUParentPtr aParent, WGPUTextureId aId) {
+   auto* parent = static_cast<WebGPUParent*>(aParent);
+diff --git a/dom/webgpu/moz.build b/dom/webgpu/moz.build
+index 9c05835bc8d9..7e0921736b21 100644
+--- a/dom/webgpu/moz.build
++++ b/dom/webgpu/moz.build
+@@ -84,7 +84,11 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
+         "SharedTextureD3D11.cpp",
+     ]
+ 
+-if CONFIG["OS_TARGET"] == "Linux":
++# SharedTextureDMABuf depends on widget/gtk DMABuf helpers.
++if CONFIG["OS_TARGET"] == "Linux" and CONFIG["MOZ_WIDGET_TOOLKIT"] in (
++    "gtk",
++    "qt",
++):
+     EXPORTS.mozilla.webgpu += [
+         "SharedTextureDMABuf.h",
+     ]
+diff --git a/layout/base/nsLayoutUtils.cpp b/layout/base/nsLayoutUtils.cpp
+index 2f3f25e6a01c..f345e0761e3d 100644
+--- a/layout/base/nsLayoutUtils.cpp
++++ b/layout/base/nsLayoutUtils.cpp
+@@ -9816,7 +9816,7 @@ static void GetSpoofedSystemFontForRFP(LookAndFeel::FontID aFontID,
+   // Keep consistency with nsLookAndFeel::NativeGetFont.
+   aName = u"Roboto"_ns;
+   aStyle.size = 12;
+-#elif defined(MOZ_WIDGET_GTK)
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   // On Linux, there is not a default. For example, GNOME on Debian uses
+   // Cantarell, 14.667px. Ubuntu Mate uses the Ubuntu font, but also 14.667px.
+   // Fedora with KDE uses Noto Sans, 13.3333px, but it uses Noto Sans on
+diff --git a/layout/style/nsMediaFeatures.cpp b/layout/style/nsMediaFeatures.cpp
+index 1f9613b8cd93..7661db0fd79e 100644
+--- a/layout/style/nsMediaFeatures.cpp
++++ b/layout/style/nsMediaFeatures.cpp
+@@ -256,7 +256,7 @@ bool Gecko_MediaFeatures_MatchesPlatform(StylePlatform aPlatform) {
+ #elif defined(ANDROID)
+     case StylePlatform::Android:
+       return true;
+-#elif defined(MOZ_WIDGET_GTK)
++#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     case StylePlatform::Linux:
+       return true;
+ #elif defined(XP_MACOSX)
+diff --git a/third_party/libwebrtc/modules/desktop_capture/desktop_capture_gn/moz.build b/third_party/libwebrtc/modules/desktop_capture/desktop_capture_gn/moz.build
+index 50039442b036..886ba721942e 100644
+--- a/third_party/libwebrtc/modules/desktop_capture/desktop_capture_gn/moz.build
++++ b/third_party/libwebrtc/modules/desktop_capture/desktop_capture_gn/moz.build
+@@ -7,6 +7,8 @@
+   ### DO NOT edit it by hand.                                       ###
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    CXXFLAGS += CONFIG["GLIB_CFLAGS"]
+ CXXFLAGS += CONFIG["MOZ_GBM_CFLAGS"]
+ if not CONFIG["MOZ_SYSTEM_GBM"]:
+     LOCAL_INCLUDES += [ "/third_party/gbm/gbm/" ]
+diff --git a/third_party/libwebrtc/modules/desktop_capture/desktop_capturer.cc b/third_party/libwebrtc/modules/desktop_capture/desktop_capturer.cc
+index 243919ba101c..c1597ee84a3a 100644
+--- a/third_party/libwebrtc/modules/desktop_capture/desktop_capturer.cc
++++ b/third_party/libwebrtc/modules/desktop_capture/desktop_capturer.cc
+@@ -138,7 +138,7 @@ std::unique_ptr<DesktopCapturer> DesktopCapturer::CreateGenericCapturer(
+   std::unique_ptr<DesktopCapturer> capturer;
+ 
+ #if defined(WEBRTC_USE_PIPEWIRE)
+-  if (options.allow_pipewire() && DesktopCapturer::IsRunningUnderWayland()) {
++  if (options.allow_pipewire() && BaseCapturerPipeWire::IsSupported()) {
+     capturer = std::make_unique<BaseCapturerPipeWire>(
+         options, CaptureType::kAnyScreenContent);
+   }
+diff --git a/third_party/libwebrtc/modules/desktop_capture/linux/wayland/base_capturer_pipewire.cc b/third_party/libwebrtc/modules/desktop_capture/linux/wayland/base_capturer_pipewire.cc
+index 7e64c86d8428..a33a58669b1e 100644
+--- a/third_party/libwebrtc/modules/desktop_capture/linux/wayland/base_capturer_pipewire.cc
++++ b/third_party/libwebrtc/modules/desktop_capture/linux/wayland/base_capturer_pipewire.cc
+@@ -49,8 +49,10 @@ bool BaseCapturerPipeWire::IsSupported() {
+   // InitializePipeWire should prevent us from repeatedly initializing PipeWire,
+   // but we also don't really expect support to change without the application
+   // restarting.
+-  static bool supported =
+-      DesktopCapturer::IsRunningUnderWayland() && InitializePipeWire();
++  //
++  // Available on both Wayland and X11: capture goes through
++  // xdg-desktop-portal ScreenCast + a PipeWire stream (not a Wayland protocol).
++  static bool supported = InitializePipeWire();
+   return supported;
+ }
+ 
+diff --git a/third_party/libwebrtc/modules/desktop_capture/linux/wayland/egl_dmabuf.cc b/third_party/libwebrtc/modules/desktop_capture/linux/wayland/egl_dmabuf.cc
+index c8653928d9e9..19ccc2703de9 100644
+--- a/third_party/libwebrtc/modules/desktop_capture/linux/wayland/egl_dmabuf.cc
++++ b/third_party/libwebrtc/modules/desktop_capture/linux/wayland/egl_dmabuf.cc
+@@ -19,7 +19,7 @@
+ #include <dlfcn.h>
+ #include <fcntl.h>
+ #include <gbm.h>
+-#include <gdk/gdk.h>
++#include <glib-object.h>
+ #include <libdrm/drm_fourcc.h>
+ #include <spa/param/video/raw.h>
+ #include <sys/stat.h>
+@@ -31,6 +31,7 @@
+ #include <algorithm>
+ #include <cerrno>
+ #include <cstdint>
++#include <cstdlib>
+ #include <cstring>
+ #include <optional>
+ #include <string>
+@@ -240,24 +241,43 @@ static void CloseLibrary(void* library) {
+   }
+ }
+ 
++static gpointer GdkDisplayGetDefault() {
++  static auto sGdkDisplayGetDefault =
++      (gpointer (*)(void))dlsym(RTLD_DEFAULT, "gdk_display_get_default");
++  if (!sGdkDisplayGetDefault) {
++    return nullptr;
++  }
++  return sGdkDisplayGetDefault();
++}
++
++// Prefer GDK when linked (GTK Firefox). Fall back to session environment so
++// Qt/QPA builds (no libgdk) still get a platform EGL display for DMA-BUF.
+ static bool IsWaylandDisplay() {
+   static auto sGdkWaylandDisplayGetType =
+-    (GType (*)(void))dlsym(RTLD_DEFAULT, "gdk_wayland_display_get_type");
+-  if (!sGdkWaylandDisplayGetType) {
++      (GType (*)(void))dlsym(RTLD_DEFAULT, "gdk_wayland_display_get_type");
++  gpointer display = GdkDisplayGetDefault();
++  if (sGdkWaylandDisplayGetType && display) {
++    return G_TYPE_CHECK_INSTANCE_TYPE(display, sGdkWaylandDisplayGetType());
++  }
++  const char* xdg_session_type = getenv("XDG_SESSION_TYPE");
++  if (!xdg_session_type || strncmp(xdg_session_type, "wayland", 7) != 0) {
+     return false;
+   }
+-  return (G_TYPE_CHECK_INSTANCE_TYPE ((gdk_display_get_default()),
+-                                      sGdkWaylandDisplayGetType()));
++  return getenv("WAYLAND_DISPLAY") != nullptr;
+ }
+ 
+ static bool IsX11Display() {
+   static auto sGdkX11DisplayGetType =
+-    (GType (*)(void))dlsym(RTLD_DEFAULT, "gdk_x11_display_get_type");
+-  if (!sGdkX11DisplayGetType) {
++      (GType (*)(void))dlsym(RTLD_DEFAULT, "gdk_x11_display_get_type");
++  gpointer display = GdkDisplayGetDefault();
++  if (sGdkX11DisplayGetType && display) {
++    return G_TYPE_CHECK_INSTANCE_TYPE(display, sGdkX11DisplayGetType());
++  }
++  // Prefer Wayland when both DISPLAY and WAYLAND_DISPLAY are set (XWayland).
++  if (IsWaylandDisplay()) {
+     return false;
+   }
+-  return (G_TYPE_CHECK_INSTANCE_TYPE ((gdk_display_get_default()),
+-                                      sGdkX11DisplayGetType()));
++  return getenv("DISPLAY") != nullptr;
+ }
+ 
+ RTC_NO_SANITIZE("cfi-icall")
+diff --git a/third_party/libwebrtc/modules/desktop_capture/mouse_cursor_monitor_linux.cc b/third_party/libwebrtc/modules/desktop_capture/mouse_cursor_monitor_linux.cc
+index c6e8da6c32bf..e593801a9a49 100644
+--- a/third_party/libwebrtc/modules/desktop_capture/mouse_cursor_monitor_linux.cc
++++ b/third_party/libwebrtc/modules/desktop_capture/mouse_cursor_monitor_linux.cc
+@@ -50,8 +50,9 @@ MouseCursorMonitor* MouseCursorMonitor::CreateForScreen(
+ std::unique_ptr<MouseCursorMonitor> MouseCursorMonitor::Create(
+     const DesktopCaptureOptions& options) {
+ #if defined(WEBRTC_USE_PIPEWIRE)
+-  if (options.allow_pipewire() && DesktopCapturer::IsRunningUnderWayland() &&
+-      options.screencast_stream()) {
++  // Shared PipeWire screencast stream supplies cursor metadata on both
++  // Wayland and X11 when the portal path is active.
++  if (options.allow_pipewire() && options.screencast_stream()) {
+     return std::make_unique<MouseCursorMonitorPipeWire>(options);
+   }
+ #endif  // defined(WEBRTC_USE_PIPEWIRE)
+diff --git a/third_party/libwebrtc/modules/portal/portal_gn/moz.build b/third_party/libwebrtc/modules/portal/portal_gn/moz.build
+index b666153b7c22..1253fecebb8b 100644
+--- a/third_party/libwebrtc/modules/portal/portal_gn/moz.build
++++ b/third_party/libwebrtc/modules/portal/portal_gn/moz.build
+@@ -7,6 +7,8 @@
+   ### DO NOT edit it by hand.                                       ###
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    CXXFLAGS += CONFIG["GLIB_CFLAGS"]
+ CXXFLAGS += CONFIG["MOZ_GBM_CFLAGS"]
+ if not CONFIG["MOZ_SYSTEM_GBM"]:
+     LOCAL_INCLUDES += [ "/third_party/gbm/gbm/" ]
+diff --git a/third_party/libwebrtc/modules/video_capture/video_capture_internal_impl_gn/moz.build b/third_party/libwebrtc/modules/video_capture/video_capture_internal_impl_gn/moz.build
+index b3eb0b5c7e52..e12642340586 100644
+--- a/third_party/libwebrtc/modules/video_capture/video_capture_internal_impl_gn/moz.build
++++ b/third_party/libwebrtc/modules/video_capture/video_capture_internal_impl_gn/moz.build
+@@ -7,6 +7,8 @@
+   ### DO NOT edit it by hand.                                       ###
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    CXXFLAGS += CONFIG["GLIB_CFLAGS"]
+ CXXFLAGS += CONFIG["MOZ_PIPEWIRE_CFLAGS"]
+ if not CONFIG["MOZ_SYSTEM_PIPEWIRE"]:
+     LOCAL_INCLUDES += [ "/third_party/pipewire/" ]
+diff --git a/third_party/pipewire/libpipewire/moz.build b/third_party/pipewire/libpipewire/moz.build
+index 745fcdf13174..16540474035c 100644
+--- a/third_party/pipewire/libpipewire/moz.build
++++ b/third_party/pipewire/libpipewire/moz.build
+@@ -6,6 +6,8 @@
+ 
+ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+     CXXFLAGS += CONFIG['MOZ_GTK3_CFLAGS']
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    CXXFLAGS += CONFIG["GLIB_CFLAGS"]
+ 
+ SOURCES += ['mozgio.cpp']
+ if CONFIG["MOZ_SYSTEM_PIPEWIRE"]:
+-- 
+2.55.0
+

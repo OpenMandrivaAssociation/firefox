@@ -1,0 +1,78 @@
+From a03e5dea38862382ea0fda1aad27b0cd06fb55d9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:37 +0200
+Subject: [PATCH 10/10] Bug 2054387 - sandbox and misc: Qt support cleanups.
+ r?gcp
+
+Allow fstatfs in Socket/Utility sandboxes (fontconfig/GIO) and land
+remaining XPCOM/local-file touch-ups needed by the Qt Linux build.
+
+Differential Revision: https://phabricator.services.mozilla.com/D311744
+---
+ security/sandbox/linux/SandboxFilter.cpp | 8 ++++++++
+ xpcom/io/nsLocalFileUnix.cpp             | 8 +++++---
+ 2 files changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/security/sandbox/linux/SandboxFilter.cpp b/security/sandbox/linux/SandboxFilter.cpp
+index 61d0acf6a865..6a8ac93cdc8c 100644
+--- a/security/sandbox/linux/SandboxFilter.cpp
++++ b/security/sandbox/linux/SandboxFilter.cpp
+@@ -2287,6 +2287,10 @@ class SocketProcessSandboxPolicy final : public SandboxPolicyCommon {
+       case __NR_getrusage:
+         return Allow();
+ 
++      // fontconfig / GIO probe filesystem type (see content/RDD policies).
++      CASES_FOR_fstatfs:
++        return Allow();
++
+       case __NR_ioctl: {
+         Arg<unsigned long> request(1);
+         auto shifted_type = request & kIoctlTypeMask;
+@@ -2391,6 +2395,10 @@ class UtilitySandboxPolicy : public SandboxPolicyCommon {
+       case __NR_getrusage:
+         return Allow();
+ 
++      // fontconfig / GIO / media stacks probe FS type (same as content/RDD).
++      CASES_FOR_fstatfs:
++        return Allow();
++
+       // Required by FFmpeg
+       case __NR_get_mempolicy:
+         return Allow();
+diff --git a/xpcom/io/nsLocalFileUnix.cpp b/xpcom/io/nsLocalFileUnix.cpp
+index 77ada6c087a2..7ef2dbd2d6d1 100644
+--- a/xpcom/io/nsLocalFileUnix.cpp
++++ b/xpcom/io/nsLocalFileUnix.cpp
+@@ -47,8 +47,10 @@
+ #include "private/pprio.h"
+ #include "prlink.h"
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "nsIGIOService.h"
++#endif
++#ifdef MOZ_WIDGET_GTK
+ #  ifdef MOZ_ENABLE_DBUS
+ #    include "mozilla/widget/AsyncDBus.h"
+ #    include "mozilla/WidgetUtilsGtk.h"
+@@ -2333,7 +2335,7 @@ nsLocalFile::Reveal() {
+     return NS_ERROR_FILE_ACCESS_DENIED;
+   }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   nsCOMPtr<nsIGIOService> giovfs = do_GetService(NS_GIOSERVICE_CONTRACTID);
+   if (!giovfs) {
+     return NS_ERROR_FAILURE;
+@@ -2358,7 +2360,7 @@ nsLocalFile::Launch() {
+     return NS_ERROR_FILE_ACCESS_DENIED;
+   }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   nsCOMPtr<nsIGIOService> giovfs = do_GetService(NS_GIOSERVICE_CONTRACTID);
+   if (!giovfs) {
+     return NS_ERROR_FAILURE;
+-- 
+2.55.0
+

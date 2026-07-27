@@ -1,0 +1,12 @@
+--- a/gfx/harfbuzz/src/hb.hh
++++ b/gfx/harfbuzz/src/hb.hh
+@@ -91,6 +91,9 @@
+ #pragma GCC diagnostic error   "-Wtautological-overlap-compare"
+ #pragma GCC diagnostic error   "-Wunneeded-internal-declaration"
+ #pragma GCC diagnostic error   "-Wunused"
++/* Clang 23 treats -Wunused-template as part of -Wunused; those templates are
++ * intentional SFINAE/overload helpers and trip on in-tree HarfBuzz builds. */
++#pragma GCC diagnostic ignored "-Wunused-template"
+ #pragma GCC diagnostic error   "-Wunused-local-typedefs"
+ #pragma GCC diagnostic error   "-Wunused-value"
+ #pragma GCC diagnostic error   "-Wunused-variable"

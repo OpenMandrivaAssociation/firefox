@@ -1,0 +1,361 @@
+diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFontList.cpp
+--- a/gfx/thebes/gfxFcPlatformFontList.cpp
++++ b/gfx/thebes/gfxFcPlatformFontList.cpp
+@@ -909,11 +909,11 @@
+     cairo_ft_font_options_substitute(options, aPattern);
+     cairo_font_options_destroy(options);
+     FcPatternAddBool(aPattern, PRINTING_FC_PROPERTY, FcTrue);
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   } else {
+     gfxFcPlatformFontList::PlatformFontList()->SubstituteSystemFontOptions(
+         aPattern);
+-#endif  // MOZ_WIDGET_GTK
++#endif  // MOZ_WIDGET_GTK || MOZ_WIDGET_QT
+   }
+ 
+   FcDefaultSubstitute(aPattern);
+@@ -1526,7 +1526,7 @@
+     mCheckFontUpdatesTimer->Cancel();
+     mCheckFontUpdatesTimer = nullptr;
+   }
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   ClearSystemFontOptions();
+ #endif
+ }
+@@ -1708,7 +1708,7 @@
+     // or in an UpdateFontList message.
+     auto& fontList = dom::ContentChild::GetSingleton()->SystemFontList();
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     UpdateSystemFontOptionsFromIpc(fontList.options());
+ #endif
+ 
+@@ -1796,7 +1796,7 @@
+   // Fontconfig versions below 2.9 drop the FC_FILE element in FcNameUnparse
+   // (see https://bugs.freedesktop.org/show_bug.cgi?id=26718), so when using
+   // an older version, we manually append it to the unparsed pattern.
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   SystemFontOptionsToIpc(retValue->options());
+ #endif
+ 
+@@ -1874,7 +1874,7 @@
+   mLastConfig = FcConfigGetCurrent();
+ 
+   if (!XRE_IsParentProcess()) {
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+     auto& fontList = dom::ContentChild::GetSingleton()->SystemFontList();
+     UpdateSystemFontOptionsFromIpc(fontList.options());
+ #endif
+@@ -1884,7 +1884,7 @@
+     return;
+   }
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+   UpdateSystemFontOptions();
+ #endif
+ 
+@@ -3075,7 +3075,7 @@
+ }
+ #endif
+ 
+-#ifdef MOZ_WIDGET_GTK
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ /***************************************************************************
+  *
+  * These functions must be last in the file because it uses the system cairo
+@@ -3101,7 +3101,7 @@
+ #  undef cairo_font_options_set_subpixel_order
+ 
+ // The system cairo functions are not declared because the include paths cause
+-// the gdk headers to pick up the tree cairo.h.
++// toolkit headers to pick up the tree cairo.h.
+ extern "C" {
+ NS_VISIBILITY_DEFAULT void cairo_ft_font_options_substitute(
+     const cairo_font_options_t* options, FcPattern* pattern);
+@@ -3156,6 +3156,7 @@
+   Factory::SetSubpixelOrder(subpixelOrder);
+ }
+ 
++#ifdef MOZ_WIDGET_GTK
+ bool gfxFcPlatformFontList::UpdateSystemFontOptions() {
+   MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
+ 
+@@ -3197,6 +3198,225 @@
+   mSystemFontOptions = newOptions;
+   return true;
+ }
++#endif  // MOZ_WIDGET_GTK
++
++#ifdef MOZ_WIDGET_QT
++// Qt headers must not be included under tree-cairo macro pollution above.
++#pragma GCC visibility push(default)
++#include <QGuiApplication>
++#include <QFont>
++#include <QtGui/qguiapplication_platform.h>
++#pragma GCC visibility pop
++
++// GTK uses gdk_screen_get_font_options() which follows Xft/XSETTINGS. Qt has
++// no equivalent; fontconfig alone often disagrees (e.g. distro
++// 10-sub-pixel-none.conf while the DE wrote Xft.rgba:rgb). Prefer Xft when an
++// X11/XWayland display is available, without requiring MOZ_X11 for the tree.
++static bool QtGetXftValue(const char* aName, int* aResult) {
++  if (!qGuiApp || !aResult) {
++    return false;
++  }
++  auto* x11App =
++      qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
++  if (!x11App) {
++    return false;
++  }
++  void* dpy = x11App->display();
++  if (!dpy) {
++    return false;
++  }
++
++  using XGetDefaultFn = char* (*)(void*, const char*, const char*);
++  static XGetDefaultFn sXGetDefault = nullptr;
++  static bool sTried = false;
++  if (!sTried) {
++    sTried = true;
++    // libX11 is optional for pure-Wayland sessions.
++    if (void* handle = dlopen("libX11.so.6", RTLD_LAZY | RTLD_LOCAL)) {
++      sXGetDefault = reinterpret_cast<XGetDefaultFn>(
++          dlsym(handle, "XGetDefault"));
++    }
++  }
++  if (!sXGetDefault) {
++    return false;
++  }
++
++  char* value = sXGetDefault(dpy, "Xft", aName);
++  if (!value) {
++    return false;
++  }
++  if (FcNameConstant(reinterpret_cast<FcChar8*>(value), aResult)) {
++    return true;
++  }
++  char* end = nullptr;
++  long parsed = strtol(value, &end, 0);
++  if (end != value) {
++    *aResult = int(parsed);
++    return true;
++  }
++  return false;
++}
++
++bool gfxFcPlatformFontList::UpdateSystemFontOptions() {
++  MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
++
++  if (gfxPlatform::IsHeadless()) {
++    return false;
++  }
++
++  // Start from fontconfig (matched face so target="font" rules apply), then
++  // let Xft override — matching what GTK/GDK effectively does on X11.
++  FcPattern* query = FcPatternCreate();
++  if (!query) {
++    return false;
++  }
++  FcPatternAddString(query, FC_FAMILY,
++                     reinterpret_cast<const FcChar8*>("sans-serif"));
++  FcConfigSubstitute(nullptr, query, FcMatchPattern);
++  FcDefaultSubstitute(query);
++
++  FcResult matchResult = FcResultNoMatch;
++  FcPattern* pattern = FcFontMatch(nullptr, query, &matchResult);
++  FcPatternDestroy(query);
++  if (!pattern) {
++    return false;
++  }
++
++  cairo_font_options_t* newOptions = cairo_font_options_create();
++
++  FcBool antialias = FcTrue;
++  (void)FcPatternGetBool(pattern, FC_ANTIALIAS, 0, &antialias);
++
++  int rgba = FC_RGBA_UNKNOWN;
++  (void)FcPatternGetInteger(pattern, FC_RGBA, 0, &rgba);
++
++  FcBool hinting = FcTrue;
++  (void)FcPatternGetBool(pattern, FC_HINTING, 0, &hinting);
++
++  int hintstyle = FC_HINT_FULL;
++  (void)FcPatternGetInteger(pattern, FC_HINT_STYLE, 0, &hintstyle);
++
++  int lcdfilter = -1;
++  if (FcPatternGetInteger(pattern, FC_LCD_FILTER, 0, &lcdfilter) ==
++      FcResultMatch) {
++    mFreetypeLcdSetting = lcdfilter;
++  }
++
++  // Xft/XSETTINGS are the desktop truth GTK uses; override fontconfig when set.
++  {
++    int xftVal = 0;
++    if (QtGetXftValue("antialias", &xftVal)) {
++      antialias = xftVal ? FcTrue : FcFalse;
++    }
++    if (QtGetXftValue("rgba", &xftVal)) {
++      rgba = xftVal;
++    }
++    if (QtGetXftValue("hinting", &xftVal)) {
++      hinting = xftVal ? FcTrue : FcFalse;
++    }
++    if (QtGetXftValue("hintstyle", &xftVal)) {
++      hintstyle = xftVal;
++    }
++    if (QtGetXftValue("lcdfilter", &xftVal)) {
++      mFreetypeLcdSetting = xftVal;
++    }
++  }
++
++  if (!antialias) {
++    cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_NONE);
++  } else if (rgba == FC_RGBA_RGB || rgba == FC_RGBA_BGR ||
++             rgba == FC_RGBA_VRGB || rgba == FC_RGBA_VBGR) {
++    cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_SUBPIXEL);
++  } else if (rgba == FC_RGBA_NONE) {
++    cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_GRAY);
++  } else {
++    // UNKNOWN: leave cairo default; FreeType/fontconfig decide per glyph.
++    cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_DEFAULT);
++  }
++
++  switch (rgba) {
++    case FC_RGBA_RGB:
++      cairo_font_options_set_subpixel_order(newOptions,
++                                            CAIRO_SUBPIXEL_ORDER_RGB);
++      break;
++    case FC_RGBA_BGR:
++      cairo_font_options_set_subpixel_order(newOptions,
++                                            CAIRO_SUBPIXEL_ORDER_BGR);
++      break;
++    case FC_RGBA_VRGB:
++      cairo_font_options_set_subpixel_order(newOptions,
++                                            CAIRO_SUBPIXEL_ORDER_VRGB);
++      break;
++    case FC_RGBA_VBGR:
++      cairo_font_options_set_subpixel_order(newOptions,
++                                            CAIRO_SUBPIXEL_ORDER_VBGR);
++      break;
++    default:
++      break;
++  }
++
++  if (!hinting) {
++    cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_NONE);
++  } else {
++    switch (hintstyle) {
++      case FC_HINT_NONE:
++        cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_NONE);
++        break;
++      case FC_HINT_SLIGHT:
++        cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_SLIGHT);
++        break;
++      case FC_HINT_MEDIUM:
++        cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_MEDIUM);
++        break;
++      case FC_HINT_FULL:
++      default:
++        cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_FULL);
++        break;
++    }
++  }
++
++  // Refine with Qt application font when the user tightened AA/hinting in the
++  // DE font settings that only surface through QFont.
++  if (qGuiApp) {
++    const QFont appFont = QGuiApplication::font();
++    if (appFont.styleStrategy() & QFont::NoAntialias) {
++      cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_NONE);
++    } else if (appFont.styleStrategy() & QFont::NoSubpixelAntialias) {
++      if (cairo_font_options_get_antialias(newOptions) ==
++          CAIRO_ANTIALIAS_SUBPIXEL) {
++        cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_GRAY);
++      }
++    }
++    switch (appFont.hintingPreference()) {
++      case QFont::PreferNoHinting:
++        cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_NONE);
++        break;
++      case QFont::PreferVerticalHinting:
++        cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_SLIGHT);
++        break;
++      case QFont::PreferFullHinting:
++        cairo_font_options_set_hint_style(newOptions, CAIRO_HINT_STYLE_FULL);
++        break;
++      case QFont::PreferDefaultHinting:
++      default:
++        break;
++    }
++  }
++
++  FcPatternDestroy(pattern);
++
++  if (mSystemFontOptions &&
++      cairo_font_options_equal(mSystemFontOptions, newOptions)) {
++    cairo_font_options_destroy(newOptions);
++    return false;
++  }
++
++  SetSubpixelOrderFromCairo(newOptions);
++  ClearSystemFontOptions();
++  mSystemFontOptions = newOptions;
++  return true;
++}
++#endif  // MOZ_WIDGET_QT
+ 
+ void gfxFcPlatformFontList::SystemFontOptionsToIpc(
+     dom::SystemFontOptions& aOptions) {
+@@ -3240,45 +3460,4 @@
+   }
+ }
+ 
+-#endif  // MOZ_WIDGET_GTK
+-
+-#ifdef MOZ_WIDGET_QT
+-void gfxFcPlatformFontList::ClearSystemFontOptions() {
+-  if (mSystemFontOptions) {
+-    cairo_font_options_destroy(mSystemFontOptions);
+-    mSystemFontOptions = nullptr;
+-  }
+-}
+-
+-bool gfxFcPlatformFontList::UpdateSystemFontOptions() {
+-  // Qt look-and-feel font options can be wired via QFont later.
+-  return false;
+-}
+-
+-void gfxFcPlatformFontList::SystemFontOptionsToIpc(
+-    dom::SystemFontOptions& aOptions) {
+-  aOptions.antialias() = CAIRO_ANTIALIAS_DEFAULT;
+-  aOptions.subpixelOrder() = CAIRO_SUBPIXEL_ORDER_DEFAULT;
+-  aOptions.hintStyle() = CAIRO_HINT_STYLE_DEFAULT;
+-  aOptions.lcdFilter() = mFreetypeLcdSetting;
+-}
+-
+-void gfxFcPlatformFontList::UpdateSystemFontOptionsFromIpc(
+-    const dom::SystemFontOptions& aOptions) {
+-  ClearSystemFontOptions();
+-  mSystemFontOptions = cairo_font_options_create();
+-  cairo_font_options_set_antialias(mSystemFontOptions,
+-                                   cairo_antialias_t(aOptions.antialias()));
+-  cairo_font_options_set_hint_style(mSystemFontOptions,
+-                                    cairo_hint_style_t(aOptions.hintStyle()));
+-  cairo_font_options_set_subpixel_order(
+-      mSystemFontOptions, cairo_subpixel_order_t(aOptions.subpixelOrder()));
+-  mFreetypeLcdSetting = aOptions.lcdFilter();
+-}
+-
+-void gfxFcPlatformFontList::SubstituteSystemFontOptions(FcPattern* aPattern) {
+-  if (mSystemFontOptions) {
+-    cairo_ft_font_options_substitute(mSystemFontOptions, aPattern);
+-  }
+-}
+-#endif  // MOZ_WIDGET_QT
++#endif  // MOZ_WIDGET_GTK || MOZ_WIDGET_QT
