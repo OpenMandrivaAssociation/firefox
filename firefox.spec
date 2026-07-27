@@ -404,7 +404,7 @@ BuildRequires:	pkgconfig(Qt6PrintSupport)
 BuildRequires:	pkgconfig(cairo)
 %endif
 %if !0%{?use_bundled_cbindgen}
-BuildRequires:	cbindgen >= 0.29.1
+BuildRequires:	cbindgen >= 0.29.4
 %endif
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel

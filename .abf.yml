@@ -1,6 +1,4 @@
 sources:
-  cbindgen-vendor.tar.xz: 4b873d426278cd9193c38a8a1f8434d3910b3619
-  firefox-153.0.source.tar.xz: 0cc1360637dd3e35110c66d53950198b2f5bde72
   af.xpi: fdde9475669b2dcfc492f612803150311476fe08
   ar.xpi: 1df26fba850e324347d43f786bf7b86dce19026c
   ast.xpi: 174245b0b002963069148e789871a1b39f1d9bf2
@@ -9,6 +7,7 @@ sources:
   br.xpi: 3015f0547161c79bd389f6944f86feb325e5c0a7
   bs.xpi: 130a459164d293a621e2cb7f3970cd431ef80cfb
   ca.xpi: 12b3c240e39e56fcbac54005ac3259cb2de83fb3
+  cbindgen-vendor.tar.xz: 232cf2a099af430b26004d0cc5b0b41ace1edc99
   cs.xpi: 86dfd2349dc3b17c1353ca126c6193fbe70a1590
   cy.xpi: d222392c5b032e4a55bd6f9f2bc032e711827d83
   da.xpi: 34c018445f9f75eb43e05aca56dc22641cd89201
@@ -24,6 +23,7 @@ sources:
   eu.xpi: 5054527aabdcab3d21713666dcd8e89369c70b36
   fa.xpi: 6f341014c1ac217834eced76d81f8c1139b9f3ec
   fi.xpi: 227c9f27bd1a529b6b56fe071fe1923d88462f9a
+  firefox-153.0.source.tar.xz: 0cc1360637dd3e35110c66d53950198b2f5bde72
   fr.xpi: e33084c8c7400cbfb2ab95abe77ed2bf1f4fafc1
   fy-NL.xpi: 9bf207452ea4f0a448af0840b344ef8e545f5034
   ga-IE.xpi: 5a90aefc8f95f280a3315e1e8ebd616efcc91fa8
