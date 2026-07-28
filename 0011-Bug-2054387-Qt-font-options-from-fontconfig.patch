@@ -1,4 +1,11 @@
-diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFontList.cpp
+From: OpenMandriva
+Subject: [PATCH] Bug 2054387 - Qt font options from Xft (desktop AA/hinting)
+
+Wire MOZ_WIDGET_QT system font options like GTK: prefer Xft via Qt xcb or
+DISPLAY/XWayland, enable CAIRO_HINT_METRICS_ON for crisp stems, and avoid
+seeding from fontconfig weak rgba=none (distro 10-sub-pixel-none) which made
+text look washed-out/thin.
+
 --- a/gfx/thebes/gfxFcPlatformFontList.cpp
 +++ b/gfx/thebes/gfxFcPlatformFontList.cpp
 @@ -909,11 +909,11 @@
@@ -69,8 +76,11 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
  /***************************************************************************
   *
   * These functions must be last in the file because it uses the system cairo
-@@ -3101,7 +3101,7 @@
+@@ -3099,9 +3099,10 @@
+ #  undef cairo_font_options_set_lcd_filter
+ #  undef cairo_font_options_get_subpixel_order
  #  undef cairo_font_options_set_subpixel_order
++#  undef cairo_font_options_set_hint_metrics
  
  // The system cairo functions are not declared because the include paths cause
 -// the gdk headers to pick up the tree cairo.h.
@@ -78,7 +88,16 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
  extern "C" {
  NS_VISIBILITY_DEFAULT void cairo_ft_font_options_substitute(
      const cairo_font_options_t* options, FcPattern* pattern);
-@@ -3156,6 +3156,7 @@
+@@ -3125,6 +3126,8 @@
+ cairo_font_options_get_subpixel_order(const cairo_font_options_t*);
+ NS_VISIBILITY_DEFAULT void cairo_font_options_set_subpixel_order(
+     cairo_font_options_t*, cairo_subpixel_order_t);
++NS_VISIBILITY_DEFAULT void cairo_font_options_set_hint_metrics(
++    cairo_font_options_t*, cairo_hint_metrics_t);
+ }
+ 
+ void gfxFcPlatformFontList::ClearSystemFontOptions() {
+@@ -3156,6 +3159,7 @@
    Factory::SetSubpixelOrder(subpixelOrder);
  }
  
@@ -86,7 +105,7 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
  bool gfxFcPlatformFontList::UpdateSystemFontOptions() {
    MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
  
-@@ -3197,6 +3198,225 @@
+@@ -3197,6 +3201,247 @@
    mSystemFontOptions = newOptions;
    return true;
  }
@@ -100,53 +119,71 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
 +#include <QtGui/qguiapplication_platform.h>
 +#pragma GCC visibility pop
 +
-+// GTK uses gdk_screen_get_font_options() which follows Xft/XSETTINGS. Qt has
-+// no equivalent; fontconfig alone often disagrees (e.g. distro
-+// 10-sub-pixel-none.conf while the DE wrote Xft.rgba:rgb). Prefer Xft when an
-+// X11/XWayland display is available, without requiring MOZ_X11 for the tree.
++// Prefer Xft (same source GDK uses) via Qt xcb or DISPLAY/XWayland.
 +static bool QtGetXftValue(const char* aName, int* aResult) {
-+  if (!qGuiApp || !aResult) {
-+    return false;
-+  }
-+  auto* x11App =
-+      qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
-+  if (!x11App) {
-+    return false;
-+  }
-+  void* dpy = x11App->display();
-+  if (!dpy) {
++  if (!aResult) {
 +    return false;
 +  }
 +
 +  using XGetDefaultFn = char* (*)(void*, const char*, const char*);
++  using XOpenDisplayFn = void* (*)(const char*);
++  using XCloseDisplayFn = int (*)(void*);
 +  static XGetDefaultFn sXGetDefault = nullptr;
++  static XOpenDisplayFn sXOpenDisplay = nullptr;
++  static XCloseDisplayFn sXCloseDisplay = nullptr;
 +  static bool sTried = false;
 +  if (!sTried) {
 +    sTried = true;
-+    // libX11 is optional for pure-Wayland sessions.
 +    if (void* handle = dlopen("libX11.so.6", RTLD_LAZY | RTLD_LOCAL)) {
 +      sXGetDefault = reinterpret_cast<XGetDefaultFn>(
 +          dlsym(handle, "XGetDefault"));
++      sXOpenDisplay = reinterpret_cast<XOpenDisplayFn>(
++          dlsym(handle, "XOpenDisplay"));
++      sXCloseDisplay = reinterpret_cast<XCloseDisplayFn>(
++          dlsym(handle, "XCloseDisplay"));
 +    }
 +  }
 +  if (!sXGetDefault) {
 +    return false;
 +  }
 +
-+  char* value = sXGetDefault(dpy, "Xft", aName);
-+  if (!value) {
++  void* dpy = nullptr;
++  bool closeDpy = false;
++  if (qGuiApp) {
++    if (auto* x11App =
++            qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
++      dpy = x11App->display();
++    }
++  }
++  if (!dpy && sXOpenDisplay) {
++    const char* displayName = getenv("DISPLAY");
++    if (displayName && *displayName) {
++      dpy = sXOpenDisplay(displayName);
++      closeDpy = dpy != nullptr;
++    }
++  }
++  if (!dpy) {
 +    return false;
 +  }
-+  if (FcNameConstant(reinterpret_cast<FcChar8*>(value), aResult)) {
-+    return true;
++
++  char* value = sXGetDefault(dpy, "Xft", aName);
++  bool ok = false;
++  if (value) {
++    if (FcNameConstant(reinterpret_cast<FcChar8*>(value), aResult)) {
++      ok = true;
++    } else {
++      char* endp = nullptr;
++      long parsed = strtol(value, &endp, 0);
++      if (endp != value) {
++        *aResult = int(parsed);
++        ok = true;
++      }
++    }
 +  }
-+  char* end = nullptr;
-+  long parsed = strtol(value, &end, 0);
-+  if (end != value) {
-+    *aResult = int(parsed);
-+    return true;
++  if (closeDpy && sXCloseDisplay) {
++    sXCloseDisplay(dpy);
 +  }
-+  return false;
++  return ok;
 +}
 +
 +bool gfxFcPlatformFontList::UpdateSystemFontOptions() {
@@ -156,61 +193,70 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
 +    return false;
 +  }
 +
-+  // Start from fontconfig (matched face so target="font" rules apply), then
-+  // let Xft override — matching what GTK/GDK effectively does on X11.
-+  FcPattern* query = FcPatternCreate();
-+  if (!query) {
-+    return false;
-+  }
-+  FcPatternAddString(query, FC_FAMILY,
-+                     reinterpret_cast<const FcChar8*>("sans-serif"));
-+  FcConfigSubstitute(nullptr, query, FcMatchPattern);
-+  FcDefaultSubstitute(query);
-+
-+  FcResult matchResult = FcResultNoMatch;
-+  FcPattern* pattern = FcFontMatch(nullptr, query, &matchResult);
-+  FcPatternDestroy(query);
-+  if (!pattern) {
-+    return false;
-+  }
-+
++  // Build options from Xft first (desktop truth). Do not seed from an
++  // FcFontMatch pattern: distro 10-sub-pixel-none sets weak rgba=none which is
++  // not what Plasma/GTK users see, and fighting that made fonts washed-out.
 +  cairo_font_options_t* newOptions = cairo_font_options_create();
++  // Integer metrics keep stems aligned to the pixel grid (crisper text).
++  cairo_font_options_set_hint_metrics(newOptions, CAIRO_HINT_METRICS_ON);
 +
 +  FcBool antialias = FcTrue;
-+  (void)FcPatternGetBool(pattern, FC_ANTIALIAS, 0, &antialias);
-+
-+  int rgba = FC_RGBA_UNKNOWN;
-+  (void)FcPatternGetInteger(pattern, FC_RGBA, 0, &rgba);
-+
++  int rgba = FC_RGBA_RGB;  // LCD default if DE does not say otherwise
 +  FcBool hinting = FcTrue;
-+  (void)FcPatternGetBool(pattern, FC_HINTING, 0, &hinting);
++  int hintstyle = FC_HINT_SLIGHT;  // common desktop default
++  bool gotXft = false;
 +
-+  int hintstyle = FC_HINT_FULL;
-+  (void)FcPatternGetInteger(pattern, FC_HINT_STYLE, 0, &hintstyle);
-+
-+  int lcdfilter = -1;
-+  if (FcPatternGetInteger(pattern, FC_LCD_FILTER, 0, &lcdfilter) ==
-+      FcResultMatch) {
-+    mFreetypeLcdSetting = lcdfilter;
++  int xftVal = 0;
++  if (QtGetXftValue("antialias", &xftVal)) {
++    antialias = xftVal ? FcTrue : FcFalse;
++    gotXft = true;
++  }
++  if (QtGetXftValue("rgba", &xftVal)) {
++    rgba = xftVal;
++    gotXft = true;
++  }
++  if (QtGetXftValue("hinting", &xftVal)) {
++    hinting = xftVal ? FcTrue : FcFalse;
++    gotXft = true;
++  }
++  if (QtGetXftValue("hintstyle", &xftVal)) {
++    hintstyle = xftVal;
++    gotXft = true;
++  }
++  if (QtGetXftValue("lcdfilter", &xftVal)) {
++    mFreetypeLcdSetting = xftVal;
 +  }
 +
-+  // Xft/XSETTINGS are the desktop truth GTK uses; override fontconfig when set.
-+  {
-+    int xftVal = 0;
-+    if (QtGetXftValue("antialias", &xftVal)) {
-+      antialias = xftVal ? FcTrue : FcFalse;
-+    }
-+    if (QtGetXftValue("rgba", &xftVal)) {
-+      rgba = xftVal;
-+    }
-+    if (QtGetXftValue("hinting", &xftVal)) {
-+      hinting = xftVal ? FcTrue : FcFalse;
-+    }
-+    if (QtGetXftValue("hintstyle", &xftVal)) {
-+      hintstyle = xftVal;
-+    }
-+    if (QtGetXftValue("lcdfilter", &xftVal)) {
-+      mFreetypeLcdSetting = xftVal;
++  // Optional fontconfig fallback only when Xft is completely unavailable.
++  if (!gotXft) {
++    FcPattern* query = FcPatternCreate();
++    if (query) {
++      FcConfigSubstitute(nullptr, query, FcMatchPattern);
++      FcDefaultSubstitute(query);
++      FcBool aa = FcTrue;
++      if (FcPatternGetBool(query, FC_ANTIALIAS, 0, &aa) == FcResultMatch) {
++        antialias = aa;
++      }
++      int hs = FC_HINT_SLIGHT;
++      if (FcPatternGetInteger(query, FC_HINT_STYLE, 0, &hs) == FcResultMatch) {
++        hintstyle = hs;
++      }
++      FcBool hi = FcTrue;
++      if (FcPatternGetBool(query, FC_HINTING, 0, &hi) == FcResultMatch) {
++        hinting = hi;
++      }
++      // Ignore FC_RGBA_NONE from weak distro defaults — keep LCD RGB.
++      int r = FC_RGBA_UNKNOWN;
++      if (FcPatternGetInteger(query, FC_RGBA, 0, &r) == FcResultMatch &&
++          (r == FC_RGBA_RGB || r == FC_RGBA_BGR || r == FC_RGBA_VRGB ||
++           r == FC_RGBA_VBGR)) {
++        rgba = r;
++      }
++      int lcd = -1;
++      if (FcPatternGetInteger(query, FC_LCD_FILTER, 0, &lcd) == FcResultMatch) {
++        mFreetypeLcdSetting = lcd;
++      }
++      FcPatternDestroy(query);
 +    }
 +  }
 +
@@ -222,7 +268,6 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
 +  } else if (rgba == FC_RGBA_NONE) {
 +    cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_GRAY);
 +  } else {
-+    // UNKNOWN: leave cairo default; FreeType/fontconfig decide per glyph.
 +    cairo_font_options_set_antialias(newOptions, CAIRO_ANTIALIAS_DEFAULT);
 +  }
 +
@@ -267,8 +312,6 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
 +    }
 +  }
 +
-+  // Refine with Qt application font when the user tightened AA/hinting in the
-+  // DE font settings that only surface through QFont.
 +  if (qGuiApp) {
 +    const QFont appFont = QGuiApplication::font();
 +    if (appFont.styleStrategy() & QFont::NoAntialias) {
@@ -295,8 +338,6 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
 +    }
 +  }
 +
-+  FcPatternDestroy(pattern);
-+
 +  if (mSystemFontOptions &&
 +      cairo_font_options_equal(mSystemFontOptions, newOptions)) {
 +    cairo_font_options_destroy(newOptions);
@@ -312,7 +353,7 @@ diff --git a/gfx/thebes/gfxFcPlatformFontList.cpp b/gfx/thebes/gfxFcPlatformFont
  
  void gfxFcPlatformFontList::SystemFontOptionsToIpc(
      dom::SystemFontOptions& aOptions) {
-@@ -3240,45 +3460,4 @@
+@@ -3240,45 +3485,4 @@
    }
  }
  

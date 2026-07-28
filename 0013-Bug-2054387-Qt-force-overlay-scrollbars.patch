@@ -1,0 +1,39 @@
+From: OpenMandriva
+Subject: [PATCH] Bug 2054387 - Qt: overlay scrollbars + skip identical compositor size
+
+1) Force overlay scrollbars so ad-driven overflow toggles do not reflow the
+   page when a classic scrollbar appears/disappears.
+2) No-op NotifyClientSizeChanged when the size is unchanged to avoid extra
+   Wayland EGL resizes during heavy animation/compositing.
+
+--- a/widget/qt/nsLookAndFeel.cpp
++++ b/widget/qt/nsLookAndFeel.cpp
+@@ -631,10 +631,14 @@
+       aResult = 1;
+       return NS_OK;
+     case IntID::UseOverlayScrollbars:
+-      aResult = StyleHint(QStyle::SH_ScrollBar_Transient, 0) ? 1 : 0;
++      // Always overlay on desktop Qt. Classic scrollbars take layout width and
++      // appear/disappear when ads/reflows cross the overflow threshold, which
++      // shifts the whole page by ~scrollbar width (or 1 CSS px under scale).
++      // GTK/Firefox-gtk effectively use overlay on modern desktops; match that.
++      aResult = 1;
+       return NS_OK;
+     case IntID::AllowOverlayScrollbarsOverlap:
+-      aResult = 0;
++      aResult = 1;
+       return NS_OK;
+     case IntID::SkipNavigatingDisabledMenuItem:
+       aResult = 1;
+--- a/widget/qt/QtCompositorWidget.cpp
++++ b/widget/qt/QtCompositorWidget.cpp
+@@ -334,6 +334,9 @@
+     const LayoutDeviceIntSize& aClientSize) {
+   {
+     auto size = mClientSize.Lock();
++    if (*size == aClientSize) {
++      return;
++    }
+     *size = aClientSize;
+   }
+   // Keep Wayland wl_egl_window in sync for EGL window surfaces.

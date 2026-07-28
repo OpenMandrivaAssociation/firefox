@@ -33,8 +33,17 @@
 # currently enabled as updating all rust deps would take eons
 %global use_bundled_cbindgen  1
 
+# Dual toolkit by default. For faster local Qt-only iteration use a single
+# rpm define (abb treats a bare "gtk" argument as a project name to clone):
+#   abb build --define=_without_gtk=1
+#   rpmbuild -bb --without gtk …   # also fine with plain rpmbuild
+# Same with --define=_without_qt=1 / --without qt for GTK-only.
 %bcond_without gtk
 %bcond_without qt
+
+%if !%{with gtk} && !%{with qt}
+%{error:Need at least one of --with gtk or --with qt}
+%endif
 
 # Toolkit builds install to separate trees (toolkit is compiled into libxul).
 %define mozillalibdir_qt  %{_libdir}/%{name}-qt-%{version}
@@ -313,6 +322,14 @@ Patch108:	0009-Bug-2054387-toolkit-FreeDesktop-services-and-portals.patch
 Patch109:	0010-Bug-2054387-sandbox-and-misc-Qt-support-cleanups.-r-.patch
 # Wire real fontconfig/Qt font options (AA, hinting, subpixel); 0004 left stubs.
 Patch110:	0011-Bug-2054387-Qt-font-options-from-fontconfig.patch
+# Fractional DPR: keep stable device size so pages do not 1px-shake on reflow.
+Patch111:	0012-Bug-2054387-Qt-stabilize-DPR-size-round-trip.patch
+# Overlay scrollbars: avoid layout shift when ads cross overflow threshold.
+Patch112:	0013-Bug-2054387-Qt-force-overlay-scrollbars.patch
+# Wayland HiDPI: re-read devicePixelRatio after map; notify Gecko on scale change.
+Patch113:	0014-Bug-2054387-Qt-handle-devicePixelRatio-scale-changes.patch
+# Content sandbox: writable user fontconfig cache (fixes "No writable cache dirs").
+Patch114:	0015-Bug-2054387-sandbox-writable-user-fontconfig-cache.patch
 
 BuildRequires:	doxygen
 BuildRequires:	makedepend
