@@ -1,0 +1,37 @@
+From: OpenMandriva
+Subject: [PATCH] Bug 2054387 - Qt: clear WindowTransparentForInput on Enable(true)
+
+AppWindow::ShowModal disables the parent with Enable(false), which set
+Qt::WindowTransparentForInput. Enable(true) only did `flags | Qt::WindowFlags()`
+and never cleared the bit, so after the first modal (Thunderbird system
+integration dialog shown when finishing account setup) the main window
+ignored all pointer input permanently — including the window close button.
+
+--- a/widget/qt/nsWindow.cpp
++++ b/widget/qt/nsWindow.cpp
+@@ -577,10 +577,22 @@
+ 
+ void nsWindow::Enable(bool aState) {
+   mEnabled = aState;
+-  if (mQtWindow) {
+-    mQtWindow->setFlags(mQtWindow->flags() |
+-                        (aState ? Qt::WindowFlags() : Qt::WindowTransparentForInput));
++  if (!mQtWindow) {
++    return;
+   }
++  // EnableParent(false) during AppWindow::ShowModal sets
++  // WindowTransparentForInput so the parent ignores clicks while a modal
++  // (e.g. TB system-integration after account Finish) is up.
++  // The old code only ORed the flag on and never cleared it on Enable(true),
++  // so after the modal closed the main window stayed permanently
++  // input-transparent — no clicks, not even the close button.
++  Qt::WindowFlags flags = mQtWindow->flags();
++  if (aState) {
++    flags &= ~Qt::WindowTransparentForInput;
++  } else {
++    flags |= Qt::WindowTransparentForInput;
++  }
++  mQtWindow->setFlags(flags);
+ }
+ 
+ bool nsWindow::IsEnabled() const { return mEnabled; }

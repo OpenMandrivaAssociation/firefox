@@ -330,6 +330,18 @@ Patch112:	0013-Bug-2054387-Qt-force-overlay-scrollbars.patch
 Patch113:	0014-Bug-2054387-Qt-handle-devicePixelRatio-scale-changes.patch
 # Content sandbox: writable user fontconfig cache (fixes "No writable cache dirs").
 Patch114:	0015-Bug-2054387-sandbox-writable-user-fontconfig-cache.patch
+# Wayland activation reclaim series (shared with Thunderbird toolkit patches;
+# numbering matches TB 0017–0024 — skip 0016 which is TB-only mail shell).
+Patch115:	0017-Bug-2054387-Qt-keep-chrome-active-with-nofocus-popups.patch
+Patch116:	0018-Bug-2054387-Qt-reclaim-activation-after-nofocus-popups.patch
+Patch117:	0019-Bug-2054387-Qt-reclaim-after-dialog-idle-activation.patch
+Patch118:	0020-Bug-2054387-Qt-stop-activation-reclaim-input-thrash.patch
+Patch119:	0021-Bug-2054387-Qt-never-reclaim-activation-from-focus-handlers.patch
+Patch120:	0022-Bug-2054387-Qt-clear-WindowTransparentForInput-on-Enable.patch
+Patch121:	0023-Bug-2054387-Qt-safe-stacking-reclaim-without-focus-loops.patch
+# Modal/dialog present, secondary top-level SW present, theme/tooltip paint,
+# geometry deadband, mouse button state (from TB in-tree validation).
+Patch122:	0024-Bug-2054387-Qt-modal-compose-theme-and-geometry-stabilization.patch
 
 BuildRequires:	doxygen
 BuildRequires:	gtar
@@ -721,7 +733,10 @@ for MOZCONFIG in $MOZCONFIGS; do
 	%endif
 
 	%if %{with pgo}
-		QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat - || exit 1
+		# pipefail: without it, "| cat -" makes the pipeline always succeed and
+		# rpm proceeds to %install with a half-built tree (ABF build 629385).
+		set -o pipefail
+		QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
 	%else
 		%build_py ./mach build -v
 	%endif
