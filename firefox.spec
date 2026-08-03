@@ -332,6 +332,7 @@ Patch113:	0014-Bug-2054387-Qt-handle-devicePixelRatio-scale-changes.patch
 Patch114:	0015-Bug-2054387-sandbox-writable-user-fontconfig-cache.patch
 
 BuildRequires:	doxygen
+BuildRequires:	gtar
 BuildRequires:	makedepend
 BuildRequires:	make
 BuildRequires:	glibc-static-devel
@@ -569,6 +570,7 @@ mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 export MOZ_MAKE_FLAGS="$SMP_FLAGS"
 export MOZ_SERVICES_SYNC=1
+export TAR=gtar
 export PYTHON3=%build_py
 ac_add_options --with-mozilla-api-keyfile=$(pwd)/mozilla-api-key
 ac_add_options --with-google-location-service-api-keyfile=$(pwd)/google-api-key
