@@ -344,7 +344,7 @@ Patch121:	0023-Bug-2054387-Qt-safe-stacking-reclaim-without-focus-loops.patch
 Patch122:	0024-Bug-2054387-Qt-modal-compose-theme-and-geometry-stabilization.patch
 
 BuildRequires:	doxygen
-BuildRequires:	gtar
+BuildRequires:	gnutar
 BuildRequires:	makedepend
 BuildRequires:	make
 BuildRequires:	glibc-static-devel
