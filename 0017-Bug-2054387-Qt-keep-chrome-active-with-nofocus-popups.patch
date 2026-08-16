@@ -1,0 +1,65 @@
+From: OpenMandriva
+Subject: [PATCH] Bug 2054387 - Qt: keep chrome active with no-focus popups; raise dialogs
+
+On KDE/Wayland, showing Qt::Popup windows with WindowDoesNotAcceptFocus
+(doorhangers, tooltips, many Thunderbird chrome menus) causes the parent
+QWindow to lose focus without the popup becoming focusWindow(). Gecko then
+dispatches WindowDeactivated, chrome matches :-moz-window-inactive, and UI
+actions (e.g. Settings) appear to send the app to the background.
+
+- When showing no-focus popups, re-activate the transient parent (like alerts).
+- When showing dialogs/top-levels, raise + requestActivate after map.
+- On focus-out with no focusWindow, skip deactivation if a transient popup
+  of this window is still visible.
+
+diff --git a/widget/qt/nsWindow.cpp b/widget/qt/nsWindow.cpp
+--- a/widget/qt/nsWindow.cpp	2026-07-28 21:55:32.843145982 +0200
++++ b/widget/qt/nsWindow.cpp	2026-07-28 21:55:57.051006716 +0200
+@@ -472,11 +472,24 @@
+     // Match GTK/Windows: always-on-top Media PiP / alerts must not steal
+     // activation. If they do, the originating tab goes inactive, media can
+     // pause, and PiP videocontrols stay on the main page.
++    // Also: Qt::Popup panels with WindowDoesNotAcceptFocus (doorhangers,
++    // tooltips, many TB chrome menus) still cause the parent to lose focus on
++    // KDE/Wayland. Without re-activating the parent, chrome goes inactive
++    // (:-moz-window-inactive) and UI like settings/tabs stops responding while
++    // the window drops behind.
++    const bool isNoFocusPopup =
++        IsPopup() && (mQtWindow->flags() & Qt::WindowDoesNotAcceptFocus);
+     const bool noStealFocus =
+-        mIsAlert || (mAlwaysOnTop && mPiPType != PiPType::DocumentPiP);
++        mIsAlert || isNoFocusPopup ||
++        (mAlwaysOnTop && mPiPType != PiPType::DocumentPiP);
+     if (noStealFocus && mTransientParentWidget &&
+         mTransientParentWidget->mQtWindow) {
+       mTransientParentWidget->mQtWindow->requestActivate();
++    } else if (!IsPopup() && !mIsAlert && ShouldAcceptActivate()) {
++      // New dialogs / top-levels opened from a click must raise on Wayland
++      // (xdg-activation via Qt) or they map behind the parent.
++      mQtWindow->raise();
++      mQtWindow->requestActivate();
+     }
+ #ifdef ACCESSIBILITY
+     if (a11y::ShouldA11yBeEnabled()) {
+@@ -1881,6 +1894,21 @@
+         if (nsWindow* w = bridge->GetWidget()) {
+           if (w->IsPopup() && w->mTransientParentWidget == this) {
+             return;
++          }
++        }
++      }
++    } else {
++      // No Qt focus window: often a Qt::WindowDoesNotAcceptFocus popup took
++      // the surface without becoming focusWindow (common on KDE Wayland).
++      // Keep this chrome window active while any of our popups is visible.
++      for (QWindow* win : QGuiApplication::allWindows()) {
++        auto* bridge = qobject_cast<QtWindowBridge*>(win);
++        if (!bridge || !win->isVisible()) {
++          continue;
++        }
++        if (nsWindow* w = bridge->GetWidget()) {
++          if (w->IsPopup() && w->mTransientParentWidget == this) {
++            return;
+           }
+         }
+       }

@@ -20,8 +20,8 @@ index 0180f6bcfa998..8d7a542ff11f0 100644
  This file adds the necessary compatibility tricks to avoid symbols with
  version GLIBCXX_3.4.20 and bigger, keeping binary compatibility with
 @@ -69,6 +70,19 @@ void __attribute__((weak)) __throw_bad_array_new_length() { MOZ_CRASH(); }
- }  // namespace std
- #endif
+ }
+ #  endif
  
 +#if _GLIBCXX_RELEASE >= 12
 +namespace std {

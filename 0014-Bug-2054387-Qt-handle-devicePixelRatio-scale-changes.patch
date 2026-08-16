@@ -1,0 +1,316 @@
+From: OpenMandriva
+Subject: [PATCH] Bug 2054387 - Qt: handle late devicePixelRatio / HiDPI scale
+
+On Wayland, QScreen/QWindow often report devicePixelRatio()==1 at startup
+and only update after the surface is configured. ScreenHelperQt only
+refreshed on screen add/remove, and nsWindow never notified Gecko of scale
+changes (GTK has OnScaleEvent → BackingScaleFactorChanged).
+
+Result: intermittent half-size, blurry fonts/content that looks fine only
+when DPR was ready before first layout. good.png (DPR 2) vs bad.png (stuck
+at 1): same browser chrome size, ~2x smaller web content / fuzzy text.
+
+- Listen for QScreen geometry/DPI signals; RequestRefreshScreens() API
+- Handle QEvent::DevicePixelRatioChange; re-check on expose/move/resize
+- Refresh ScreenManager + PresShell::BackingScaleFactorChanged on change
+
+diff -u -N -r /tmp/ff-0014-regen-old/widget/qt/QtWindowBridge.cpp /tmp/ff-0014-regen-new/widget/qt/QtWindowBridge.cpp
+--- a/widget/qt/QtWindowBridge.cpp
++++ b/widget/qt/QtWindowBridge.cpp
+@@ -190,6 +190,12 @@
+                                     int(windowState()));
+       return handled;
+     }
++    case QEvent::DevicePixelRatioChange:
++      // Qt 6: fired when Wayland/X11 buffer scale for this window changes.
++      // Without this, Gecko keeps the startup scale (often 1.0) and pages
++      // render half-size and blurry on HiDPI.
++      mWidget->OnScalePossiblyChanged();
++      return QWindow::event(aEvent);
+     default:
+       break;
+   }
+diff -u -N -r /tmp/ff-0014-regen-old/widget/qt/ScreenHelperQt.cpp /tmp/ff-0014-regen-new/widget/qt/ScreenHelperQt.cpp
+--- a/widget/qt/ScreenHelperQt.cpp
++++ b/widget/qt/ScreenHelperQt.cpp
+@@ -75,24 +75,78 @@
+   return best;
+ }
+ 
++ScreenHelperQt* ScreenHelperQt::sInstance = nullptr;
++
+ ScreenHelperQt::ScreenHelperQt() {
++  sInstance = this;
+   if (auto* app = qGuiApp) {
+     connect(app, &QGuiApplication::screenAdded, this,
+-            &ScreenHelperQt::RefreshScreens);
++            &ScreenHelperQt::OnScreenAdded);
+     connect(app, &QGuiApplication::screenRemoved, this,
+-            &ScreenHelperQt::RefreshScreens);
++            &ScreenHelperQt::OnScreenRemoved);
+     connect(app, &QGuiApplication::primaryScreenChanged, this,
+             &ScreenHelperQt::RefreshScreens);
++    for (QScreen* qs : app->screens()) {
++      ConnectScreen(qs);
++    }
+   }
+   RefreshScreens();
+ }
+ 
+ ScreenHelperQt::~ScreenHelperQt() {
++  if (sInstance == this) {
++    sInstance = nullptr;
++  }
+   if (auto* app = qGuiApp) {
++    for (QScreen* qs : app->screens()) {
++      DisconnectScreen(qs);
++    }
+     disconnect(app, nullptr, this, nullptr);
+   }
+ }
+ 
++/* static */
++void ScreenHelperQt::RequestRefreshScreens() {
++  if (sInstance) {
++    sInstance->RefreshScreens();
++  }
++}
++
++void ScreenHelperQt::ConnectScreen(QScreen* aScreen) {
++  if (!aScreen) {
++    return;
++  }
++  // geometry / DPI signals are the closest thing Qt offers to "scale may have
++  // changed" for QScreen; window-level DevicePixelRatioChange is handled in
++  // nsWindow. Disconnect first so re-connect on screenAdded is idempotent.
++  DisconnectScreen(aScreen);
++  connect(aScreen, &QScreen::geometryChanged, this,
++          &ScreenHelperQt::RefreshScreens);
++  connect(aScreen, &QScreen::availableGeometryChanged, this,
++          &ScreenHelperQt::RefreshScreens);
++  connect(aScreen, &QScreen::physicalDotsPerInchChanged, this,
++          &ScreenHelperQt::RefreshScreens);
++  connect(aScreen, &QScreen::logicalDotsPerInchChanged, this,
++          &ScreenHelperQt::RefreshScreens);
++}
++
++void ScreenHelperQt::DisconnectScreen(QScreen* aScreen) {
++  if (!aScreen) {
++    return;
++  }
++  disconnect(aScreen, nullptr, this, nullptr);
++}
++
++void ScreenHelperQt::OnScreenAdded(QScreen* aScreen) {
++  ConnectScreen(aScreen);
++  RefreshScreens();
++}
++
++void ScreenHelperQt::OnScreenRemoved(QScreen* aScreen) {
++  DisconnectScreen(aScreen);
++  RefreshScreens();
++}
++
+ void ScreenHelperQt::RefreshScreens() {
+   AutoTArray<RefPtr<Screen>, 4> screens;
+   const bool isWayland = QGuiApplication::platformName().contains(
+diff -u -N -r /tmp/ff-0014-regen-old/widget/qt/ScreenHelperQt.h /tmp/ff-0014-regen-new/widget/qt/ScreenHelperQt.h
+--- a/widget/qt/ScreenHelperQt.h
++++ b/widget/qt/ScreenHelperQt.h
+@@ -24,8 +24,21 @@
+   ScreenHelperQt();
+   ~ScreenHelperQt() override;
+ 
++  // Rebuild Gecko's screen list from live QScreen metrics. Safe to call when
++  // a window's devicePixelRatio becomes known after Wayland configure (startup
++  // often samples DPR=1 before the compositor reports the real scale).
++  static void RequestRefreshScreens();
++
+  private Q_SLOTS:
+   void RefreshScreens();
++  void OnScreenAdded(QScreen* aScreen);
++  void OnScreenRemoved(QScreen* aScreen);
++
++ private:
++  void ConnectScreen(QScreen* aScreen);
++  void DisconnectScreen(QScreen* aScreen);
++
++  static ScreenHelperQt* sInstance;
+ };
+ 
+ }  // namespace mozilla::widget
+diff -u -N -r /tmp/ff-0014-regen-old/widget/qt/nsWindow.cpp /tmp/ff-0014-regen-new/widget/qt/nsWindow.cpp
+--- a/widget/qt/nsWindow.cpp
++++ b/widget/qt/nsWindow.cpp
+@@ -20,6 +20,7 @@
+ #include "mozilla/widget/PlatformWidgetTypes.h"
+ #include "mozilla/EventForwards.h"
+ #include "mozilla/MouseEvents.h"
++#include "mozilla/PresShell.h"
+ #include "mozilla/TextEventDispatcher.h"
+ #include "mozilla/TextEvents.h"
+ #include "mozilla/TimeStamp.h"
+@@ -1616,7 +1617,55 @@
+ 
+ double nsWindow::GetDefaultScaleInternal() { return DevicePixelRatio(); }
+ 
++void nsWindow::OnScalePossiblyChanged() {
++  // Popups inherit the transient parent's scale (see DevicePixelRatio()); the
++  // top-level owns scale notifications — same model as GTK OnScaleEvent.
++  if (IsPopup() || mIsDestroyed) {
++    return;
++  }
++
++  const double dpr = DevicePixelRatio();
++  if (mLastDevicePixelRatio > 0.0 &&
++      std::fabs(mLastDevicePixelRatio - dpr) < 1e-6) {
++    return;
++  }
++
++  const double oldDpr = mLastDevicePixelRatio;
++  mLastDevicePixelRatio = dpr;
++
++  // ScreenManager often sampled QScreen::devicePixelRatio()==1 at startup
++  // before Wayland buffer scale was known. Rebuild so content processes get
++  // the real CSS/desktop scale (half-size blurry pages when stuck at 1.0).
++  mozilla::widget::ScreenHelperQt::RequestRefreshScreens();
++
++  // Nothing to reflow yet (Create before AppShell chrome).
++  if (!GetPresShell()) {
++    return;
++  }
++
++  // First sample still at 1.0: common pre-map state; wait for the real scale
++  // instead of thrashing layout. First sample already >1, or any later change,
++  // must push UIResolutionChanged so content is not stuck half-size/blurry.
++  if (oldDpr <= 0.0 && dpr == 1.0) {
++    return;
++  }
++
++  NotifyAPZOfDPIChange();
++  if (PresShell* presShell = GetPresShell()) {
++    presShell->BackingScaleFactorChanged();
++  }
++
++  // Recompute device-pixel bounds under the new scale (DIP size usually
++  // unchanged when only buffer scale flips).
++  if (mQtWindow) {
++    OnResize(mQtWindow->width(), mQtWindow->height());
++  }
++}
++
+ void nsWindow::OnExpose() {
++  // Catch late Wayland scale after map when no resize was delivered.
++  OnScalePossiblyChanged();
++
+   // Hardware present: WebRender composites on vsync via EGL SwapBuffers.
+   if (mUseHardwarePresent) {
+     return;
+@@ -1637,7 +1686,21 @@
+   // Qt resize sizes are DIPs; store layout-device (physical) size for Gecko.
+   // Prefer live QWindow metrics so we never desync from the platform surface
+   // (session restore / maximize can otherwise leave a stale DPR-scaled size).
++  //
++  // Detect DPR changes here too (resize often accompanies Wayland scale
++  // updates). Do not recurse via OnScalePossiblyChanged→OnResize: track
++  // scale inline and notify Gecko after bounds are updated.
+   const double dpr = DevicePixelRatio();
++  const bool scaleChanged =
++      mLastDevicePixelRatio > 0.0 &&
++      std::fabs(mLastDevicePixelRatio - dpr) >= 1e-6;
++  if (mLastDevicePixelRatio <= 0.0 || scaleChanged) {
++    mLastDevicePixelRatio = dpr;
++    if (!IsPopup()) {
++      mozilla::widget::ScreenHelperQt::RequestRefreshScreens();
++    }
++  }
++
+   int dipW = aWidth;
+   int dipH = aHeight;
+   if (mQtWindow) {
+@@ -1648,13 +1711,14 @@
+   // Under fractional DPR, lround(lround(dev/dpr)*dpr) is not idempotent and
+   // can oscillate by 1 device pixel. If Gecko's current bounds already map to
+   // the DIPs Qt reports, keep those device pixels (matches GTK stability and
+-  // stops pages from "shaking" on reflow/compositor ticks).
++  // stops pages from "shaking" on reflow/compositor ticks). Always recompute
++  // when scale changed — old device bounds are in a different space.
+   auto dipsFromDev = [dpr](int32_t dev) {
+     return std::max(1, int(std::lround(double(dev) / dpr)));
+   };
+   int w;
+   int h;
+-  if (mBounds.width > 0 && mBounds.height > 0 &&
++  if (!scaleChanged && mBounds.width > 0 && mBounds.height > 0 &&
+       dipsFromDev(mBounds.width) == std::max(1, dipW) &&
+       dipsFromDev(mBounds.height) == std::max(1, dipH)) {
+     w = mBounds.width;
+@@ -1692,7 +1756,7 @@
+       const QPoint pos = mQtWindow->position();
+       const int curDipX = int(std::lround(double(oldBounds.x) / dpr));
+       const int curDipY = int(std::lround(double(oldBounds.y) / dpr));
+-      if (curDipX == pos.x() && curDipY == pos.y()) {
++      if (!scaleChanged && curDipX == pos.x() && curDipY == pos.y()) {
+         mBounds.MoveTo(oldBounds.TopLeft());
+       } else {
+         mBounds.MoveTo(int(std::lround(pos.x() * dpr)),
+@@ -1701,8 +1765,9 @@
+     }
+   }
+ 
+-  // Avoid re-entering layout/compositor when nothing actually changed.
+-  if (mBounds.IsEqualEdges(oldBounds)) {
++  // Avoid re-entering layout/compositor when nothing actually changed — but
++  // never skip when DPR changed (content must reflow at the new scale).
++  if (!scaleChanged && mBounds.IsEqualEdges(oldBounds)) {
+     return;
+   }
+ 
+@@ -1714,6 +1779,14 @@
+   if (mInputRegion.mMargin != 0 || mInputRegion.mFullyTransparent) {
+     ApplyInputRegionMask();
+   }
++
++  if (scaleChanged && !IsPopup()) {
++    NotifyAPZOfDPIChange();
++    if (PresShell* presShell = GetPresShell()) {
++      presShell->BackingScaleFactorChanged();
++    }
++  }
++
+   DispatchResizeEvent();
+ }
+ 
+@@ -1763,6 +1836,8 @@
+ }
+ 
+ void nsWindow::OnMove(int aX, int aY) {
++  // Moving across screens can change devicePixelRatio on multi-monitor.
++  OnScalePossiblyChanged();
+   LayoutDeviceIntPoint pos;
+   if (IsPopup() && IsWaylandPlatform() && mTransientParentWidget) {
+     // Event coords are parent-local on Wayland popups; store Gecko global.
+diff -u -N -r /tmp/ff-0014-regen-old/widget/qt/nsWindow.h /tmp/ff-0014-regen-new/widget/qt/nsWindow.h
+--- a/widget/qt/nsWindow.h
++++ b/widget/qt/nsWindow.h
+@@ -115,6 +115,10 @@
+   void OnExpose();
+   void OnResize(int aWidth, int aHeight);
+   void OnMove(int aX, int aY);
++  // Wayland/X11 HiDPI: QWindow devicePixelRatio often starts at 1.0 and jumps
++  // to the real scale after first map/configure. GTK has OnScaleEvent; call
++  // this from DevicePixelRatioChange / resize / expose so Gecko reflows.
++  void OnScalePossiblyChanged();
+   // aOldState / aNewState are Qt::WindowStates bitfields.
+   void OnWindowStateChanged(int aOldState, int aNewState);
+   void OnFocus(bool aFocus);
+@@ -208,6 +212,9 @@
+   // Non-owning; set for popups/dialogs with a widget parent (Wayland placement).
+   nsWindow* mTransientParentWidget = nullptr;
+   LayoutDeviceIntRect mBounds;
++  // Last observed QWindow/QScreen devicePixelRatio for this widget. 0 = unset.
++  // Used to fire BackingScaleFactorChanged when Wayland reports scale late.
++  double mLastDevicePixelRatio = 0.0;
+   // Last size Gecko requested via Resize (device pixels). Wayland xdg_popup
+   // configure can under-report size on first map; we never shrink below this.
+   LayoutDeviceIntSize mGeckoPopupSize;

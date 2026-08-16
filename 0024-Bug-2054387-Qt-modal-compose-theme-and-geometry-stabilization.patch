@@ -1,0 +1,1080 @@
+From: OpenMandriva <packager@openmandriva.org>
+Subject: [PATCH] Bug 2054387 - Qt: modal/compose, theme, tooltips, and geometry stabilization
+
+Toolkit-only (widget/qt). Safe to port to Firefox cairo-qt builds.
+
+- Dialogs: SW present, sane mins, WindowModal, clear TransparentForInput on Enable
+- Secondary top-levels (compose): SW present after first exclusive-EGL window
+- Activation: yield to other activatable windows; skip reclaim for tooltips
+- Geometry: +/-1 device-pixel deadband on resize/move under HiDPI
+- Mouse: set mButtons (and pressure) for correct click synthesis
+- LookAndFeel: system tip palette pairing for InfoBackground/InfoText
+- Native theme: checkbox/radio/tooltip via Theme; fix paint device/user coords
+
+
+diff -Naur a/widget/qt/QtWindowBridge.cpp b/widget/qt/QtWindowBridge.cpp
+--- a/widget/qt/QtWindowBridge.cpp	2026-08-03 23:47:12.005316680 +0200
++++ b/widget/qt/QtWindowBridge.cpp	2026-08-03 23:47:12.006293762 +0200
+@@ -27,6 +27,7 @@
+ #include <QRegion>
+ #include <QGuiApplication>
+ #include <QInputMethod>
++#include <QPalette>
+ #include <QWindowStateChangeEvent>
+ #include <QSurfaceFormat>
+ 
+@@ -225,6 +226,27 @@
+       }
+       mBackingStore->endPaint();
+       mBackingStore->flush(QRegion(0, 0, width(), height()));
++    } else if (!mBackingStoreValid) {
++      // Opaque chrome dialogs (commonDialog / "Authentication Required") can
++      // map and go modal before the first Gecko present. With no pixels
++      // flushed, Wayland shows an empty surface — Alt-Tab title only, parent
++      // blocked. Paint a solid window-color plate so the dialog is visible.
++      EnsureBackingStore();
++      mBackingStore->beginPaint(QRegion(0, 0, width(), height()));
++      {
++        QPainter painter(mBackingStore->paintDevice());
++        painter.setCompositionMode(QPainter::CompositionMode_Source);
++        QColor bg = QGuiApplication::palette().color(QPalette::Window);
++        if (!bg.isValid() || bg.alpha() == 0) {
++          bg = QColor(240, 240, 240);
++        }
++        painter.fillRect(QRectF(0, 0, width(), height()), bg);
++      }
++      mBackingStore->endPaint();
++      mBackingStore->flush(QRegion(0, 0, width(), height()));
++      mBackingStoreValid = true;
++    } else {
++      FlushBackingStore();
+     }
+   }
+   if (mWidget) {
+@@ -272,6 +294,9 @@
+ 
+ void QtWindowBridge::keyPressEvent(QKeyEvent* aEvent) {
+   if (mWidget) {
++    if (mWidget->ShouldAcceptActivate()) {
++      mWidget->NoteUserInput();
++    }
+     mWidget->OnKeyEvent(aEvent, true);
+   }
+   QWindow::keyPressEvent(aEvent);
+@@ -287,11 +312,19 @@
+ void QtWindowBridge::mousePressEvent(QMouseEvent* aEvent) {
+   // Activate only windows that should own chrome focus. Popups, Media PiP and
+   // alerts must not steal activation (tab goes inactive, media pauses, etc.).
+-  // raise() matters on KDE/Wayland: requestActivate alone often does not
+-  // restack after a no-focus menu demoted the surface.
+   if (mWidget && mWidget->ShouldAcceptActivate()) {
++    mWidget->NoteUserInput();
++    // Defensive: a stuck WindowTransparentForInput after a modal makes the
++    // whole surface (including CSD close) ignore pointer events.
++    if (flags() & Qt::WindowTransparentForInput) {
++      setFlag(Qt::WindowTransparentForInput, false);
++    }
++    // Prefer raise-only when already active: requestActivate() every click
++    // races KWin xdg-activation and can demote after a few folder clicks.
+     raise();
+-    requestActivate();
++    if (!isActive()) {
++      requestActivate();
++    }
+   }
+   if (mWidget) {
+     mWidget->OnMouseEvent(aEvent, true);
+diff -Naur a/widget/qt/nsLookAndFeel.cpp b/widget/qt/nsLookAndFeel.cpp
+--- a/widget/qt/nsLookAndFeel.cpp	2026-08-03 23:47:12.010973081 +0200
++++ b/widget/qt/nsLookAndFeel.cpp	2026-08-03 23:47:12.012215167 +0200
+@@ -317,6 +317,37 @@
+     aResult = GetStandinForNativeColor(aID, aScheme);
+     return NS_OK;
+   }
++
++  const QPalette pal = QApplication::palette();
++  auto color = [&](QPalette::ColorRole role,
++                   QPalette::ColorGroup group = QPalette::Active) {
++    return QColorToNscolor(pal.color(group, role));
++  };
++
++  // Tooltips: always pair with the *system* tip palette (Breeze/Oxygen paint
++  // PE_PanelTipLabel from QPalette, not document color-scheme). Light-scheme
++  // standin InfoText (black) over a dark system tip is unreadable black-on-
++  // black; resolve both colors together before the scheme mismatch early-out.
++  if (aID == ColorID::Infobackground || aID == ColorID::Infotext) {
++    nscolor bg = color(QPalette::ToolTipBase);
++    nscolor fg = color(QPalette::ToolTipText);
++    auto lum = [](nscolor c) {
++      return (2 * NS_GET_R(c) + 3 * NS_GET_G(c) + NS_GET_B(c)) / 6;
++    };
++    if (std::abs(int(lum(bg)) - int(lum(fg))) < 80) {
++      // Pathological palette (or monochrome tip roles): force readable pair.
++      if (SystemIsDark() || lum(bg) < 128) {
++        bg = NS_RGB(0x2b, 0x2a, 0x33);
++        fg = NS_RGB(0xfb, 0xfb, 0xfe);
++      } else {
++        bg = NS_RGB(0xf9, 0xf9, 0xfb);
++        fg = NS_RGB(0x15, 0x15, 0x1a);
++      }
++    }
++    aResult = (aID == ColorID::Infobackground) ? bg : fg;
++    return NS_OK;
++  }
++
+   // Qt only exposes the active system palette. For the opposite scheme, fall
+   // back to standins so light chrome is still usable on a dark desktop and
+   // vice versa.
+@@ -325,12 +356,6 @@
+     return NS_OK;
+   }
+ 
+-  const QPalette pal = QApplication::palette();
+-  auto color = [&](QPalette::ColorRole role,
+-                   QPalette::ColorGroup group = QPalette::Active) {
+-    return QColorToNscolor(pal.color(group, role));
+-  };
+-
+   // Slightly adjust a color toward another for hover/active variants when the
+   // style does not expose a dedicated role.
+   auto mix = [](nscolor a, nscolor b, float t) {
+@@ -356,8 +381,6 @@
+   const nscolor dark = color(QPalette::Dark);
+   const nscolor shadow = color(QPalette::Shadow);
+   const nscolor altBase = color(QPalette::AlternateBase);
+-  const nscolor tooltipBase = color(QPalette::ToolTipBase);
+-  const nscolor tooltipText = color(QPalette::ToolTipText);
+   const nscolor link = color(QPalette::Link);
+   const nscolor linkVisited = color(QPalette::LinkVisited);
+   nscolor accent = color(QPalette::Accent);
+@@ -536,23 +559,7 @@
+       aResult = disabledText;
+       return NS_OK;
+ 
+-    case ColorID::Infobackground:
+-    case ColorID::Infotext: {
+-      // Ensure readable contrast. Low-contrast ToolTipBase/Text becomes
+-      // white-on-white (or black-on-black) over video and bright surfaces.
+-      nscolor bg = tooltipBase;
+-      nscolor fg = tooltipText;
+-      const int baseL =
+-          QColor(NS_GET_R(bg), NS_GET_G(bg), NS_GET_B(bg)).lightness();
+-      const int textL =
+-          QColor(NS_GET_R(fg), NS_GET_G(fg), NS_GET_B(fg)).lightness();
+-      if (std::abs(baseL - textL) < 60) {
+-        bg = NS_RGB(0x2a, 0x2a, 0x2e);
+-        fg = NS_RGB(0xfb, 0xfb, 0xfe);
+-      }
+-      aResult = (aID == ColorID::Infobackground) ? bg : fg;
+-      return NS_OK;
+-    }
++    // Infobackground/Infotext handled above (system tip pair).
+ 
+     case ColorID::Menu:
+       aResult = window;
+diff -Naur a/widget/qt/nsNativeThemeQt.cpp b/widget/qt/nsNativeThemeQt.cpp
+--- a/widget/qt/nsNativeThemeQt.cpp	2026-08-03 23:47:12.016442790 +0200
++++ b/widget/qt/nsNativeThemeQt.cpp	2026-08-03 23:47:12.017587564 +0200
+@@ -22,6 +22,7 @@
+ #include <QAbstractSpinBox>
+ #include <QApplication>
+ #include <QPainter>
++#include <QPainterPath>
+ #include <QStyle>
+ #include <QStyleOption>
+ #include <QStyleOptionButton>
+@@ -133,6 +134,19 @@
+   if (IsWidgetStyled(aFrame->PresContext(), aFrame, aAppearance)) {
+     return PaintMode::FallbackTheme;
+   }
++  // Match GTK: checkbox/radio always use the shared Theme painter. That path
++  // is snap-correct under WebRender blob images and is what paints the
++  // commonDialog "remember password" indicator. QStyle PE_Indicator* is also
++  // unreliable off-screen under Breeze.
++  // Tooltips: Theme fill uses InfoBackground which we pair with InfoText from
++  // the system tip palette. PE_PanelTipLabel alone left light-scheme black
++  // text on a dark Breeze tip (black-on-black).
++  if (aAppearance == StyleAppearance::Checkbox ||
++      aAppearance == StyleAppearance::Radio ||
++      aAppearance == StyleAppearance::Tooltip ||
++      IsWidgetAlwaysNonNative(aFrame, aAppearance)) {
++    return PaintMode::FallbackTheme;
++  }
+   // Prefer QStyle when the frame's color-scheme matches the system. Forced
+   // light content on a dark Plasma session falls back to Theme so contrast
+   // stays correct.
+@@ -185,11 +199,10 @@
+     return;
+   }
+ 
+-  QImage converted = aImage;
+-  if (converted.format() != QImage::Format_ARGB32_Premultiplied &&
+-      converted.format() != QImage::Format_ARGB32) {
+-    converted = converted.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+-  }
++  // Moz2D B8G8R8A8 is non-premultiplied; un-premultiply Qt's ARGB32_Premultiplied
++  // so alpha-blended edges (and solid glyphs) stay visible instead of washed out.
++  QImage converted =
++      aImage.convertToFormat(QImage::Format_ARGB32);  // non-premultiplied
+ 
+   const IntSize size(converted.width(), converted.height());
+   RefPtr<DataSourceSurface> surface = Factory::CreateDataSourceSurface(
+@@ -211,8 +224,16 @@
+   }
+ 
+   DrawTarget* dt = aContext->GetDrawTarget();
+-  const Point dest = aSnapped ? Point(NS_lround(aDest.x), NS_lround(aDest.y))
+-                              : ToPoint(aDest);
++  // Match nsNativeThemeGTK: when snapped, aDest is device-space; DrawTarget is
++  // user-space, so undo the current translation + device offset. Without this,
++  // indicators paint outside the clip (invisible checkbox / radio / buttons).
++  Point dest;
++  if (aSnapped) {
++    dest = Point(NS_lround(aDest.x), NS_lround(aDest.y)) -
++           dt->GetTransform().GetTranslation() - aContext->GetDeviceOffset();
++  } else {
++    dest = ToPoint(aDest);
++  }
+   dt->DrawSurface(surface, Rect(dest, Size(size.width, size.height)),
+                   Rect(Point(), Size(size.width, size.height)));
+ }
+@@ -244,15 +265,15 @@
+   nsPresContext* pc = aFrame->PresContext();
+   const nscoord appUnitsPerDevPixel = pc->AppUnitsPerDevPixel();
+ 
+-  gfxRect gfxRectDev = pc->AppUnitsToGfxUnits(aRect);
+-  bool snapped = aContext->UserToDevicePixelSnapped(
+-      gfxRectDev, gfxContext::SnapOption::PrioritizeSize);
+-  if (!snapped) {
+-    gfxRectDev = aContext->UserToDevice(gfxRectDev);
+-  }
++  // Start in user space (app units → CSS/gfx units). UserToDevicePixelSnapped
++  // may rewrite the rect into device space when it returns true — same as GTK.
++  // Do NOT force UserToDevice when unsnapped: DrawTarget paints in user space.
++  gfxRect paintRect = pc->AppUnitsToGfxUnits(aRect);
++  const bool snapped = aContext->UserToDevicePixelSnapped(
++      paintRect, gfxContext::SnapOption::PrioritizeSize);
+ 
+-  const int width = std::max(1, NS_lround(gfxRectDev.Width()));
+-  const int height = std::max(1, NS_lround(gfxRectDev.Height()));
++  const int width = std::max(1, NS_lround(paintRect.Width()));
++  const int height = std::max(1, NS_lround(paintRect.Height()));
+   if (width > 4096 || height > 4096) {
+     return false;
+   }
+@@ -438,6 +459,11 @@
+     }
+     case StyleAppearance::Checkbox:
+     case StyleAppearance::Radio: {
++      // Gecko paints the XUL/HTML label; we only paint the indicator box.
++      // Breeze/Oxygen PE_Indicator* often emits empty pixels for indicator-only
++      // rects (host is off-screen). Filling Base first made ImageHasVisiblePixels
++      // always true so our fallback never ran — plain text, no checkbox box.
++      // Always draw a simple, high-contrast indicator ourselves.
+       QStyleOptionButton opt;
+       InitCommonOption(opt, host, widgetRect, qstate);
+       if (elementState.HasState(dom::ElementState::CHECKED)) {
+@@ -451,32 +477,83 @@
+           aAppearance == StyleAppearance::Checkbox) {
+         opt.state |= QStyle::State_NoChange;
+       }
+-      // Base plate: many styles sample the widget background under the mark.
+-      painter.fillRect(widgetRect, opt.palette.color(QPalette::Base));
++      opt.palette = QApplication::palette();
+ 
+-      const QStyle::ControlElement ce = aAppearance == StyleAppearance::Checkbox
+-                                            ? QStyle::CE_CheckBox
+-                                            : QStyle::CE_RadioButton;
+-      const QStyle::PrimitiveElement pe =
++      const QStyle::PixelMetric metricW =
+           aAppearance == StyleAppearance::Checkbox
+-              ? QStyle::PE_IndicatorCheckBox
+-              : QStyle::PE_IndicatorRadioButton;
+-      const QStyle::SubElement se = aAppearance == StyleAppearance::Checkbox
+-                                        ? QStyle::SE_CheckBoxIndicator
+-                                        : QStyle::SE_RadioButtonIndicator;
+-
+-      style->drawControl(ce, &opt, &painter, host);
+-      if (!ImageHasVisiblePixels(image)) {
+-        image.fill(Qt::transparent);
+-        painter.fillRect(widgetRect, opt.palette.color(QPalette::Base));
+-        QRect indicator = style->subElementRect(se, &opt, host);
+-        if (!indicator.isValid() || indicator.isEmpty()) {
+-          indicator = widgetRect;
++              ? QStyle::PM_IndicatorWidth
++              : QStyle::PM_ExclusiveIndicatorWidth;
++      const QStyle::PixelMetric metricH =
++          aAppearance == StyleAppearance::Checkbox
++              ? QStyle::PM_IndicatorHeight
++              : QStyle::PM_ExclusiveIndicatorHeight;
++      int iw = style->pixelMetric(metricW, &opt, host);
++      int ih = style->pixelMetric(metricH, &opt, host);
++      if (iw <= 0) {
++        iw = std::min(width, height);
++      }
++      if (ih <= 0) {
++        ih = std::min(width, height);
++      }
++      // Never request a side larger than the paint rect (old max(12, …) made
++      // 1×1/small rects paint empty after intersect + adjusted inset).
++      const int side = std::max(1, std::min({iw, ih, width, height}));
++      QRect indicator((width - side) / 2, (height - side) / 2, side, side);
++      indicator = indicator.intersected(widgetRect);
++      if (indicator.isEmpty()) {
++        indicator = widgetRect;
++      }
++
++      image.fill(Qt::transparent);
++      QColor border = opt.palette.color(QPalette::WindowText);
++      QColor fill = opt.palette.color(QPalette::Base);
++      // Force contrast — Breeze dark can make WindowText ≈ Base when sampled
++      // from an off-screen host.
++      auto lum = [](const QColor& c) {
++        return (2 * c.red() + 3 * c.green() + c.blue()) / 6;
++      };
++      if (std::abs(lum(border) - lum(fill)) < 48) {
++        if (lum(fill) > 128) {
++          border = QColor(32, 32, 32);
++          fill = QColor(250, 250, 250);
++        } else {
++          border = QColor(230, 230, 230);
++          fill = QColor(40, 40, 40);
++        }
++      }
++      painter.setRenderHint(QPainter::Antialiasing, true);
++      const int inset = side >= 6 ? 1 : 0;
++      painter.setPen(QPen(border, side >= 8 ? 1.5 : 1.0));
++      painter.setBrush(fill);
++      if (aAppearance == StyleAppearance::Checkbox) {
++        painter.drawRoundedRect(indicator.adjusted(inset, inset, -inset, -inset),
++                                2, 2);
++        if (opt.state & QStyle::State_On) {
++          QPen checkPen(border, std::max(1.5, side / 8.0), Qt::SolidLine,
++                        Qt::RoundCap, Qt::RoundJoin);
++          painter.setPen(checkPen);
++          painter.setBrush(Qt::NoBrush);
++          const qreal x = indicator.x();
++          const qreal y = indicator.y();
++          const qreal w = indicator.width();
++          const qreal h = indicator.height();
++          QPainterPath path;
++          path.moveTo(x + 0.22 * w, y + 0.50 * h);
++          path.lineTo(x + 0.42 * w, y + 0.72 * h);
++          path.lineTo(x + 0.80 * w, y + 0.28 * h);
++          painter.drawPath(path);
++        } else if (opt.state & QStyle::State_NoChange) {
++          painter.setPen(QPen(border, 2.0, Qt::SolidLine, Qt::RoundCap));
++          painter.drawLine(indicator.left() + 3, indicator.center().y(),
++                           indicator.right() - 3, indicator.center().y());
+         }
+-        opt.rect = indicator;
+-        style->drawPrimitive(pe, &opt, &painter, host);
+-        if (!ImageHasVisiblePixels(image)) {
+-          return false;
++      } else {
++        painter.drawEllipse(indicator.adjusted(inset, inset, -inset, -inset));
++        if (opt.state & QStyle::State_On) {
++          painter.setBrush(border);
++          painter.setPen(Qt::NoPen);
++          const int m = std::max(1, side / 4);
++          painter.drawEllipse(indicator.adjusted(m, m, -m, -m));
+         }
+       }
+       break;
+@@ -579,7 +656,7 @@
+     return false;
+   }
+ 
+-  DrawImageToContext(aContext, image, gfxRectDev.TopLeft(), snapped);
++  DrawImageToContext(aContext, image, paintRect.TopLeft(), snapped);
+   (void)appUnitsPerDevPixel;
+   return true;
+ }
+@@ -748,44 +825,10 @@
+   QStyle* style = QApplication::style();
+   QWidget* host = StylePaintHost();
+ 
++  // Checkbox/radio use Theme painting; keep sizes in sync with Theme.
+   if (aAppearance == StyleAppearance::Checkbox ||
+-      aAppearance == StyleAppearance::Radio) {
+-    if (style) {
+-      QStyleOptionButton opt;
+-      InitCommonOption(opt, host, QRect(0, 0, 16, 16), QStyle::State_Enabled);
+-      const QStyle::ContentsType ct =
+-          aAppearance == StyleAppearance::Checkbox ? QStyle::CT_CheckBox
+-                                                   : QStyle::CT_RadioButton;
+-      const QSize sz = style->sizeFromContents(ct, &opt, QSize(0, 0), host);
+-      if (sz.width() > 0 && sz.height() > 0) {
+-        LayoutDeviceIntSize result;
+-        result.SizeTo(sz.width(), sz.height());
+-        return result;
+-      }
+-      const QStyle::PixelMetric metricW =
+-          aAppearance == StyleAppearance::Checkbox
+-              ? QStyle::PM_IndicatorWidth
+-              : QStyle::PM_ExclusiveIndicatorWidth;
+-      const QStyle::PixelMetric metricH =
+-          aAppearance == StyleAppearance::Checkbox
+-              ? QStyle::PM_IndicatorHeight
+-              : QStyle::PM_ExclusiveIndicatorHeight;
+-      int w = style->pixelMetric(metricW, &opt, host);
+-      int h = style->pixelMetric(metricH, &opt, host);
+-      if (w > 0 && h > 0) {
+-        LayoutDeviceIntSize result;
+-        result.SizeTo(w, h);
+-        return result;
+-      }
+-    }
+-    const DPIRatio dpiRatio = GetDPIRatio(aFrame, aAppearance);
+-    const CSSCoord side = GetCheckboxRadioPrefSize();
+-    LayoutDeviceIntSize result;
+-    result.SizeTo((side * dpiRatio).Rounded(), (side * dpiRatio).Rounded());
+-    return result;
+-  }
+-
+-  if (ChoosePaintMode(aFrame, aAppearance) != PaintMode::QtStyle) {
++      aAppearance == StyleAppearance::Radio ||
++      ChoosePaintMode(aFrame, aAppearance) != PaintMode::QtStyle) {
+     return Theme::GetMinimumWidgetSize(aPresContext, aFrame, aAppearance);
+   }
+ 
+diff -Naur a/widget/qt/nsWindow.cpp b/widget/qt/nsWindow.cpp
+--- a/widget/qt/nsWindow.cpp	2026-08-03 23:47:11.995087002 +0200
++++ b/widget/qt/nsWindow.cpp	2026-08-03 23:47:11.996373038 +0200
+@@ -44,6 +44,13 @@
+   return !PR_GetEnv("MOZ_QT_SOFTWARE_PRESENT");
+ }
+ 
++// Exclusive EGL works for one opaque top-level (main 3pane) but a second
++// wl_egl_window (compose, …) often maps on KWin without ever presenting —
++// Reply/New Message appear to do nothing. Once any window claims exclusive
++// present, further top-levels stay on software present for the process
++// lifetime (do not re-enable after Abandon — that reintroduces the bug).
++static bool sExclusivePresentClaimed = false;
++
+ #ifdef ACCESSIBILITY
+ #  include "mozilla/a11y/LocalAccessible.h"
+ #  include "mozilla/a11y/Platform.h"
+@@ -210,9 +217,27 @@
+     return;
+   }
+ 
+-  const int x = int(std::lround(mBounds.x / dpr));
+-  const int y = int(std::lround(mBounds.y / dpr));
+-  mQtWindow->setGeometry(x, y, w, h);
++  // Wayland: position is compositor-owned. setGeometry(x,y,w,h) with global
++  // coords is wrong and can leave dialogs unmappable; resize only.
++  if (IsWaylandPlatform()) {
++    mQtWindow->resize(w, h);
++  } else {
++    const int x = int(std::lround(mBounds.x / dpr));
++    const int y = int(std::lround(mBounds.y / dpr));
++    mQtWindow->setGeometry(x, y, w, h);
++  }
++
++  // Dialogs: enforce a usable minimum only. Never pin maximum to the current
++  // size — that locked auth prompts at create-time 1×1. Gecko still sizes the
++  // content; the shell may grow slightly which is fine for commonDialog.
++  if (mWindowType == WindowType::Dialog) {
++    constexpr int kMinW = 320;
++    constexpr int kMinH = 180;
++    mQtWindow->setMinimumSize(QSize(kMinW, kMinH));
++    if (w < kMinW || h < kMinH) {
++      mQtWindow->resize(std::max(w, kMinW), std::max(h, kMinH));
++    }
++  }
+ }
+ 
+ nsresult nsWindow::Create(nsIWidget* aParent, const LayoutDeviceIntRect& aRect,
+@@ -226,15 +251,21 @@
+   mIsDragPopup = aInitData.mIsDragPopup;
+   mResizable = aInitData.mResizable;
+   mIsAnimationSuppressed = aInitData.mIsAnimationSuppressed;
+-  // Exclusive EGL for opaque non-popups. Popups/transparent keep SW present
+-  // (rounded alpha panels need QBackingStore). Media PiP is short-lived and
+-  // streams YUV; SW present avoids SWGL CompositeYUV UAF on unpip when the
+-  // exclusive-EGL path races compositor teardown. Escape: MOZ_QT_SOFTWARE_PRESENT=1.
+-  mUseHardwarePresent =
++  // Exclusive EGL for the *first* opaque top-level only. Popups/transparent
++  // keep SW present (rounded alpha panels need QBackingStore). Dialogs use SW
++  // (modal auth prompts). A second top-level with exclusive EGL (compose /
++  // New Message / standalone msg) maps but never presents on KWin/Wayland —
++  // Reply/Forward/New look like no-ops even though OpenWindow succeeds.
++  // Escape hatch: MOZ_QT_SOFTWARE_PRESENT=1 forces SW for everything.
++  const bool wantHardware =
+       QtHardwarePresentAllowed() &&
+-      aInitData.mWindowType != WindowType::Popup && !mIsDragPopup &&
++      aInitData.mWindowType == WindowType::TopLevel && !mIsDragPopup &&
+       aInitData.mTransparencyMode == TransparencyMode::Opaque &&
+       mPiPType != PiPType::MediaPiP;
++  mUseHardwarePresent = wantHardware && !sExclusivePresentClaimed;
++  if (mUseHardwarePresent) {
++    sExclusivePresentClaimed = true;
++  }
+ 
+   mQtWindow = mozilla::MakeUnique<QtWindowBridge>(this);
+   mQtWindow->setTitle(QStringLiteral("Mozilla Firefox"));
+@@ -272,7 +303,10 @@
+     }
+     mQtWindow->setFlags(flags);
+   } else if (aInitData.mWindowType == WindowType::Dialog) {
+-    Qt::WindowFlags flags = Qt::Dialog;
++    // Prefer Window over Dialog on Wayland: some compositors mishandle
++    // Qt::Dialog + modal + transient parent (invisible surface, title only).
++    Qt::WindowFlags flags =
++        IsWaylandPlatform() ? Qt::Window : Qt::Dialog;
+     // Media Picture-in-Picture: utility-style always-on-top chrome window.
+     if (mPiPType == PiPType::MediaPiP || mAlwaysOnTop) {
+       flags |= Qt::WindowStaysOnTopHint | Qt::Tool;
+@@ -391,6 +425,10 @@
+   }
+   mIsDestroyed = true;
+ 
++  // Leave sExclusivePresentClaimed set so a later compose window cannot
++  // re-take exclusive EGL after the main window is destroyed/recreated.
++  mUseHardwarePresent = false;
++
+ #ifdef ACCESSIBILITY
+   mRootAccessible = nullptr;
+ #endif
+@@ -455,6 +493,27 @@
+         mBounds.SizeTo(mGeckoPopupSize);
+       }
+       ApplyQtGeometryFromBounds();
++    } else if (mWindowType == WindowType::Dialog) {
++      // Auth / commonDialog: never map at 0×0 (invisible but still modal on
++      // KDE/Wayland). Prefer Gecko size; fall back to a sane minimum so the
++      // surface is visible until SizeShellTo arrives.
++      if (mBounds.width < 50 || mBounds.height < 50) {
++        const double dpr = DevicePixelRatio();
++        mBounds.width = std::max(mBounds.width, int32_t(std::lround(400 * dpr)));
++        mBounds.height =
++            std::max(mBounds.height, int32_t(std::lround(220 * dpr)));
++      }
++      {
++        constexpr int kUnconstrained = 16777215;
++        mQtWindow->setMinimumSize(QSize(320, 180));
++        mQtWindow->setMaximumSize(QSize(kUnconstrained, kUnconstrained));
++      }
++      ApplyQtGeometryFromBounds();
++      // Create the platform surface before show so expose can flush a
++      // placeholder plate (see QtWindowBridge::exposeEvent).
++      if (!mQtWindow->handle()) {
++        mQtWindow->create();
++      }
+     }
+     // Always push the current client size to the compositor before mapping.
+     // SWGL fails with "no dt" when InitialClientSize was still 0x0.
+@@ -467,6 +526,26 @@
+     } else {
+       mQtWindow->show();
+     }
++    // Dialogs must surface above the parent. Do not ScheduleChromeLifecycle
++    // reclaim on the dialog itself — delayed requestActivate after the modal
++    // closes races destruction and has crashed on dialog dismiss.
++    if (mWindowType == WindowType::Dialog && !mIsAlert) {
++      mQtWindow->raise();
++      mQtWindow->requestActivate();
++      mQtWindow->requestUpdate();
++      Invalidate(LayoutDeviceIntRect(0, 0, mBounds.width, mBounds.height));
++    } else if (mWindowType == WindowType::TopLevel && !mIsAlert &&
++               !mUseHardwarePresent) {
++      // Secondary top-levels (compose) use SW present: ensure platform surface
++      // + a first paint so they are not blank/invisible next to the main window.
++      if (!mQtWindow->handle()) {
++        mQtWindow->create();
++      }
++      mQtWindow->raise();
++      mQtWindow->requestActivate();
++      mQtWindow->requestUpdate();
++      Invalidate(LayoutDeviceIntRect(0, 0, mBounds.width, mBounds.height));
++    }
+     // Wayland often only exposes wl_surface after map; refresh EGL native.
+     if (mUseHardwarePresent) {
+       (void)EnsureEGLNativeWindow();
+@@ -484,9 +563,13 @@
+         mIsAlert || isNoFocusPopup ||
+         (mAlwaysOnTop && mPiPType != PiPType::DocumentPiP);
+     if (noStealFocus && mTransientParentWidget) {
+-      // Parent must stay in front of other apps while a no-focus menu is open.
+-      mTransientParentWidget->ReclaimActivation();
+-      mTransientParentWidget->ScheduleChromeLifecycleReclaim();
++      // Tooltips fire constantly over the message list. Raising/activating the
++      // parent on every tip map causes 1px Wayland configure thrash (rows
++      // appear to jitter). Menus/panels still need the parent reclaim.
++      if (GetPopupType() != PopupType::Tooltip) {
++        mTransientParentWidget->ReclaimActivation();
++        mTransientParentWidget->ScheduleChromeLifecycleReclaim();
++      }
+     } else if (!IsPopup() && !mIsAlert && ShouldAcceptActivate()) {
+       // Dialog/top-level: raise this window only (not parent).
+       ReclaimActivation();
+@@ -505,13 +588,18 @@
+     const bool isNoFocusPopup =
+         IsPopup() && mQtWindow &&
+         (mQtWindow->flags() & Qt::WindowDoesNotAcceptFocus);
++    // Skip tooltips — same thrash as Show (message-list hover tips).
+     const bool reclaimParentOnHide =
+-        mTransientParentWidget &&
++        mTransientParentWidget && GetPopupType() != PopupType::Tooltip &&
+         (isNoFocusPopup || mIsAlert || mWindowType == WindowType::Dialog);
+     mQtWindow->hide();
+-    if (reclaimParentOnHide) {
++    if (reclaimParentOnHide && mTransientParentWidget &&
++        mTransientParentWidget->mQtWindow) {
++      // Parent only, and only if still alive. Avoid delayed work on this
++      // dialog's QWindow (being torn down by modal close).
+       mTransientParentWidget->ReclaimActivation();
+-      mTransientParentWidget->ScheduleChromeLifecycleReclaim();
++      // Single deferred parent raise — not multi-shot on this object.
++      mTransientParentWidget->ScheduleReclaimActivation();
+     }
+   }
+ }
+@@ -580,25 +668,28 @@
+   if (!mQtWindow) {
+     return;
+   }
+-  // EnableParent(false) during AppWindow::ShowModal sets
+-  // WindowTransparentForInput so the parent ignores clicks while a modal
+-  // (e.g. TB system-integration after account Finish) is up.
+-  // The old code only ORed the flag on and never cleared it on Enable(true),
+-  // so after the modal closed the main window stayed permanently
+-  // input-transparent — no clicks, not even the close button.
+-  Qt::WindowFlags flags = mQtWindow->flags();
++  // AppWindow::ShowModal uses EnableParent(false/true). The disable path must
++  // make the parent ignore pointer events; the enable path MUST restore them.
++  // Use setFlag() (not setFlags()): setFlags() on a mapped QWindow can recreate
++  // the platform window and fail to clear WindowTransparentForInput on Wayland,
++  // leaving the main window permanently dead (no clicks, no close button) after
++  // the first modal — classic TB "Finish account setup" failure mode.
++  mQtWindow->setFlag(Qt::WindowTransparentForInput, !aState);
+   if (aState) {
+-    flags &= ~Qt::WindowTransparentForInput;
+-  } else {
+-    flags |= Qt::WindowTransparentForInput;
+-  }
+-  mQtWindow->setFlags(flags);
+-  // After a modal, KWin often leaves the parent stacked behind other apps.
+-  // One-shot reclaim is safe here (not in focus handlers): Enable(true) runs
+-  // once when the modal exits, with a fresh user-interaction context.
+-  if (aState && mIsVisible && ShouldAcceptActivate()) {
+-    ReclaimActivation();
+-    ScheduleReclaimActivation();
++    // Also re-apply the normal input region so a prior fully-transparent mask
++    // cannot keep the surface non-interactive.
++    if (!mInputRegion.mFullyTransparent) {
++      ApplyInputRegionMask();
++    } else {
++      // Explicit clear even when Gecko still thinks the region is transparent:
++      // after a modal, a stale flag is worse than a wrong mask.
++      mQtWindow->setFlag(Qt::WindowTransparentForInput, false);
++    }
++    // One-shot restack after modal (safe: not driven from focus handlers).
++    if (mIsVisible && ShouldAcceptActivate()) {
++      ReclaimActivation();
++      ScheduleReclaimActivation();
++    }
+   }
+ }
+ 
+@@ -854,8 +945,40 @@
+   if (!mQtWindow || mIsDestroyed || !mIsVisible || !ShouldAcceptActivate()) {
+     return;
+   }
++  // Never pull activation off compose / prefs / another messenger window.
++  // Reply/Forward open a new TopLevel right after a click on 3pane; the
++  // post-click demotion reclaim used to requestActivate(this) and bury
++  // compose (hover-only toolbar, “Reply does nothing”).
++  if (QWindow* focused = QGuiApplication::focusWindow()) {
++    if (auto* bridge = qobject_cast<QtWindowBridge*>(focused)) {
++      if (nsWindow* w = bridge->GetWidget()) {
++        if (w != this && w->ShouldAcceptActivate()) {
++          return;
++        }
++      }
++    }
++  }
++  for (QWindow* win : QGuiApplication::allWindows()) {
++    if (win == mQtWindow.get() || !win->isVisible() || !win->isActive()) {
++      continue;
++    }
++    auto* bridge = qobject_cast<QtWindowBridge*>(win);
++    if (!bridge) {
++      continue;
++    }
++    if (nsWindow* w = bridge->GetWidget()) {
++      if (w != this && w->ShouldAcceptActivate()) {
++        return;
++      }
++    }
++  }
++  // Always raise for stacking. Only requestActivate when inactive — calling
++  // requestActivate while already active can race KWin xdg-activation and
++  // demote the surface after a few clicks (TB folder tree).
+   mQtWindow->raise();
+-  mQtWindow->requestActivate();
++  if (!mQtWindow->isActive()) {
++    mQtWindow->requestActivate();
++  }
+ }
+ 
+ void nsWindow::ScheduleReclaimActivation() {
+@@ -885,6 +1008,16 @@
+   ScheduleReclaimActivationAfter(100);
+ }
+ 
++void nsWindow::NoteUserInput() {
++  mLastUserInputTime = mozilla::TimeStamp::Now();
++  mPostClickReclaimScheduled = false;
++}
++
++bool nsWindow::RecentlyHadUserInput(mozilla::TimeDuration aWithin) const {
++  return !mLastUserInputTime.IsNull() &&
++         (mozilla::TimeStamp::Now() - mLastUserInputTime) < aWithin;
++}
++
+ bool nsWindow::HasVisibleTransientChild(const nsWindow* aOther) const {
+   return aOther && aOther->mTransientParentWidget == this && aOther->mIsVisible;
+ }
+@@ -904,6 +1037,37 @@
+   return false;
+ }
+ 
++bool nsWindow::HasVisibleNoFocusPopupChild() const {
++  for (QWindow* win : QGuiApplication::allWindows()) {
++    auto* bridge = qobject_cast<QtWindowBridge*>(win);
++    if (!bridge || !win->isVisible()) {
++      continue;
++    }
++    if (nsWindow* w = bridge->GetWidget()) {
++      if (w->IsPopup() && w->mTransientParentWidget == this && w->mQtWindow &&
++          (w->mQtWindow->flags() & Qt::WindowDoesNotAcceptFocus)) {
++        return true;
++      }
++    }
++  }
++  return false;
++}
++
++bool nsWindow::OtherActivatableGeckoWindowVisible() const {
++  for (QWindow* win : QGuiApplication::allWindows()) {
++    auto* bridge = qobject_cast<QtWindowBridge*>(win);
++    if (!bridge || !win->isVisible()) {
++      continue;
++    }
++    if (nsWindow* w = bridge->GetWidget()) {
++      if (w != this && w->ShouldAcceptActivate()) {
++        return true;
++      }
++    }
++  }
++  return false;
++}
++
+ void nsWindow::ApplyWindowDecoration(BorderStyle aStyle) {
+   if (!mQtWindow || mWindowType == WindowType::Popup) {
+     return;
+@@ -943,7 +1107,14 @@
+ 
+   mQtWindow->setFlags(flags);
+ 
+-  if (!resizable && mBounds.width > 0 && mBounds.height > 0) {
++  constexpr int kUnconstrained = 16777215;
++  if (!resizable && mWindowType == WindowType::Dialog) {
++    // Do NOT lock min=max here from possibly-placeholder create sizes.
++    // ApplyQtGeometryFromBounds updates constraints once the real size is
++    // known (see comment there). Leaving max unconstrained avoids 1×1 lock.
++    mQtWindow->setMinimumSize(QSize(0, 0));
++    mQtWindow->setMaximumSize(QSize(kUnconstrained, kUnconstrained));
++  } else if (!resizable && mBounds.width > 0 && mBounds.height > 0) {
+     const double dpr = DevicePixelRatio();
+     const int w = std::max(1, int(std::lround(mBounds.width / dpr)));
+     const int h = std::max(1, int(std::lround(mBounds.height / dpr)));
+@@ -952,7 +1123,6 @@
+   } else if (resizable) {
+     // Restore unconstrained max when decorations allow resize; Gecko may
+     // re-apply SetSizeConstraints afterward.
+-    constexpr int kUnconstrained = 16777215;
+     if (mSizeConstraints.mMinSize.width > 0 ||
+         mSizeConstraints.mMinSize.height > 0) {
+       SetSizeConstraints(mSizeConstraints);
+@@ -980,7 +1150,15 @@
+   if (!mQtWindow) {
+     return;
+   }
+-  mQtWindow->setModality(aModal ? Qt::ApplicationModal : Qt::NonModal);
++  // Prefer WindowModal over ApplicationModal: if a dialog fails to map on
++  // Wayland (size 0 / off-screen), ApplicationModal can block the whole app
++  // with no visible dialog. WindowModal still blocks the parent transient
++  // group, which is what XUL modals need.
++  if (aModal) {
++    mQtWindow->setModality(Qt::WindowModal);
++  } else {
++    mQtWindow->setModality(Qt::NonModal);
++  }
+ }
+ 
+ void nsWindow::LockAspectRatio(bool aShouldLock) {
+@@ -1635,6 +1813,7 @@
+     return;
+   }
+   mUseHardwarePresent = false;
++  // Keep sExclusivePresentClaimed: secondaries must stay on SW present.
+   DestroyWaylandEglWindow();
+   if (mQtWindow) {
+     mQtWindow->AbandonHardwarePresent();
+@@ -1762,6 +1941,7 @@
+ 
+ void nsWindow::OnExpose() {
+   // Catch late Wayland scale after map when no resize was delivered.
++  // (Cheap when DPR is unchanged — early-outs inside OnScalePossiblyChanged.)
+   OnScalePossiblyChanged();
+ 
+   // Hardware present: WebRender composites on vsync via EGL SwapBuffers.
+@@ -1826,6 +2006,20 @@
+     h = std::max(1, int(std::lround(double(dipH) * dpr)));
+   }
+ 
++  // Deadband: absorb ±1 device-pixel size flips that keep the same DIP size.
++  // KWin/Qt occasionally reconfigure with a 1px device oscillation; that
++  // invalidates the thread-pane ResizeObserver and makes list rows bounce.
++  if (!scaleChanged && mBounds.width > 0 && mBounds.height > 0) {
++    if (std::abs(w - mBounds.width) <= 1 &&
++        dipsFromDev(w) == dipsFromDev(mBounds.width)) {
++      w = mBounds.width;
++    }
++    if (std::abs(h - mBounds.height) <= 1 &&
++        dipsFromDev(h) == dipsFromDev(mBounds.height)) {
++      h = mBounds.height;
++    }
++  }
++
+   const LayoutDeviceIntRect oldBounds = mBounds;
+ 
+   if (IsPopup()) {
+@@ -1857,8 +2051,17 @@
+       if (!scaleChanged && curDipX == pos.x() && curDipY == pos.y()) {
+         mBounds.MoveTo(oldBounds.TopLeft());
+       } else {
+-        mBounds.MoveTo(int(std::lround(pos.x() * dpr)),
+-                       int(std::lround(pos.y() * dpr)));
++        const int newX = int(std::lround(pos.x() * dpr));
++        const int newY = int(std::lround(pos.y() * dpr));
++        // Same 1px deadband for position — avoids content shift when the
++        // compositor reports floating-point global coords that round either
++        // side of a boundary.
++        if (!scaleChanged && std::abs(newX - oldBounds.x) <= 1 &&
++            std::abs(newY - oldBounds.y) <= 1) {
++          mBounds.MoveTo(oldBounds.TopLeft());
++        } else {
++          mBounds.MoveTo(newX, newY);
++        }
+       }
+     }
+   }
+@@ -1951,6 +2154,11 @@
+     pos = LayoutDeviceIntPoint(int(std::lround(aX * dpr)),
+                                int(std::lround(aY * dpr)));
+   }
++  // Ignore 1px position noise (same deadband as OnResize) so the message
++  // list is not reflowed when the compositor re-reports the same place.
++  if (std::abs(pos.x - mBounds.x) <= 1 && std::abs(pos.y - mBounds.y) <= 1) {
++    return;
++  }
+   mBounds.MoveTo(pos);
+   if (mWidgetListener) {
+     mWidgetListener->WindowMoved(this, pos,
+@@ -1973,33 +2181,30 @@
+ 
+   if (!aFocus) {
+     // Focus moved to one of our popups — do not deactivate the browser.
+-    // Important: only skip Gecko deactivation. Never raise/requestActivate
+-    // from here: on Wayland focusWindow() is often null and reclaim loops
+-    // forever, freezing all input (TB after account-hub Finish).
+     if (QWindow* focused = QGuiApplication::focusWindow()) {
+       if (auto* bridge = qobject_cast<QtWindowBridge*>(focused)) {
+         if (nsWindow* w = bridge->GetWidget()) {
+           if (w->IsPopup() && w->mTransientParentWidget == this) {
+             return;
+           }
+-          // Child dialog owns focus; leave parent Gecko-active state alone
+-          // for a11y/chrome styling only when it is a popup (above). Dialogs
+-          // should deactivate the parent normally.
+-        }
+-      }
+-    } else if (HasAnyVisibleTransientChild()) {
+-      // No-focus popup visible (WindowDoesNotAcceptFocus): keep chrome active.
+-      for (QWindow* win : QGuiApplication::allWindows()) {
+-        auto* bridge = qobject_cast<QtWindowBridge*>(win);
+-        if (!bridge || !win->isVisible()) {
+-          continue;
+-        }
+-        if (nsWindow* w = bridge->GetWidget()) {
+-          if (w->IsPopup() && w->mTransientParentWidget == this) {
+-            return;
++          // Focus moved to compose / another messenger window — yield.
++          if (w != this && w->ShouldAcceptActivate()) {
++            // Fall through to DispatchActivateEvent(false).
++          } else if (w != this && w->IsPopup()) {
++            // Unrelated popup; still check no-focus handling below.
+           }
+         }
+       }
++    } else {
++      // No focusWindow: no-focus popup, or Wayland transient focus glitch
++      // right after a click. Keep Gecko chrome active briefly so UI does not
++      // go :-moz-window-inactive mid-click — but NOT when another real window
++      // (compose after Reply) is opening; that would pin activeWindow on 3pane.
++      if (OtherActivatableGeckoWindowVisible()) {
++        // Fall through and deactivate.
++      } else if (HasVisibleNoFocusPopupChild() || RecentlyHadUserInput()) {
++        return;
++      }
+     }
+   }
+ 
+@@ -2017,15 +2222,31 @@
+ }
+ 
+ void nsWindow::OnWindowActivation(bool aActive) {
+-  // Track activation for Gecko only. Do not raise/requestActivate here —
+-  // that races the compositor and freezes input (see OnFocus).
+   if (IsPopup() || mIsAlert || !ShouldAcceptActivate()) {
+     return;
+   }
+   if (aActive) {
++    mPostClickReclaimScheduled = false;
+     DispatchActivateEvent(true);
++    return;
++  }
++  // Another TopLevel/Dialog is up (compose, account settings, …). Yield
++  // cleanly — do not treat this as KWin demotion after a folder click.
++  if (OtherActivatableGeckoWindowVisible()) {
++    mPostClickReclaimScheduled = false;
++    DispatchActivateEvent(false);
++    return;
++  }
++  // Demoted by compositor after a click (folder switch, no-focus menu).
++  // Schedule at most one reclaim burst per user input — never re-arm from
++  // reclaim-induced deactivation (that froze input in earlier patches).
++  if (RecentlyHadUserInput() && !mPostClickReclaimScheduled) {
++    mPostClickReclaimScheduled = true;
++    ScheduleReclaimActivationAfter(0);
++    ScheduleReclaimActivationAfter(80);
++    return;
+   }
+-  // On deactivate: let OnFocus(false) decide whether to DispatchDeactivate.
++  DispatchActivateEvent(false);
+ }
+ 
+ 
+@@ -2306,12 +2527,36 @@
+     mLastClickTime = now;
+   }
+ 
++  // Match GTK: mButtons is the set of currently pressed buttons *after*
++  // applying this event (down includes the button, up excludes it). Leaving
++  // mButtons at 0 breaks pointer conversion / click synthesis for chrome
++  // HTML buttons (Reply, Forward, New Message look hoverable but never fire).
++  int16_t buttons = 0;
++  const Qt::MouseButtons qButtons = aEvent->buttons();
++  if (qButtons & Qt::LeftButton) {
++    buttons |= MouseButtonsFlag::ePrimaryFlag;
++  }
++  if (qButtons & Qt::RightButton) {
++    buttons |= MouseButtonsFlag::eSecondaryFlag;
++  }
++  if (qButtons & Qt::MiddleButton) {
++    buttons |= MouseButtonsFlag::eMiddleFlag;
++  }
++  if (qButtons & Qt::BackButton) {
++    buttons |= MouseButtonsFlag::e4thFlag;
++  }
++  if (qButtons & Qt::ForwardButton) {
++    buttons |= MouseButtonsFlag::e5thFlag;
++  }
++
+   WidgetMouseEvent event(true, aDown ? eMouseDown : eMouseUp, this,
+                          WidgetMouseEvent::eReal);
+   event.mRefPoint = point;
+   event.mButton = button;
++  event.mButtons = buttons;
+   event.mModifiers = QtModifiers(aEvent->modifiers());
+   event.mClickCount = uint32_t(std::max(1, mClickCount));
++  event.mPressure = aDown ? 1.0f : 0.0f;
+   DispatchInputEvent(&event);
+ 
+   // Right-click (or Ctrl+click) context menu on press.
+@@ -2326,6 +2571,7 @@
+     WidgetMouseEvent context(true, eContextMenu, this, WidgetMouseEvent::eReal);
+     context.mRefPoint = point;
+     context.mButton = button;
++    context.mButtons = buttons;
+     context.mModifiers = QtModifiers(aEvent->modifiers());
+     context.mClickCount = 1;
+     if (button == MouseButton::ePrimary) {
+@@ -2352,8 +2598,21 @@
+     }
+   }
+ 
++  int16_t buttons = 0;
++  const Qt::MouseButtons qButtons = aEvent->buttons();
++  if (qButtons & Qt::LeftButton) {
++    buttons |= MouseButtonsFlag::ePrimaryFlag;
++  }
++  if (qButtons & Qt::RightButton) {
++    buttons |= MouseButtonsFlag::eSecondaryFlag;
++  }
++  if (qButtons & Qt::MiddleButton) {
++    buttons |= MouseButtonsFlag::eMiddleFlag;
++  }
++
+   WidgetMouseEvent event(true, eMouseMove, this, WidgetMouseEvent::eReal);
+   event.mRefPoint = point;
++  event.mButtons = buttons;
+   event.mModifiers = QtModifiers(aEvent->modifiers());
+   DispatchInputEvent(&event);
+ }
+diff -Naur a/widget/qt/nsWindow.h b/widget/qt/nsWindow.h
+--- a/widget/qt/nsWindow.h	2026-08-03 23:47:12.000258186 +0200
++++ b/widget/qt/nsWindow.h	2026-08-03 23:47:12.001262449 +0200
+@@ -112,16 +112,25 @@
+   // True when this window may become the active chrome window (not PiP/alert).
+   bool ShouldAcceptActivate() const;
+ 
+-  // One-shot raise+requestActivate. Only from Show/Hide/Enable/mouse —
+-  // never from focus/activation handlers (that loops on Wayland).
++  // One-shot raise+requestActivate. Focus handlers may schedule at most one
++  // post-click burst (guarded); they must not re-arm from reclaim itself.
+   void ReclaimActivation();
+   void ScheduleReclaimActivation();
+   void ScheduleReclaimActivationAfter(int aDelayMs);
+   // Fixed 0+100ms reclaim after popup/dialog lifecycle (not focus-driven).
+   void ScheduleChromeLifecycleReclaim();
++  // Record a real user pointer/key event (starts a short post-click window).
++  void NoteUserInput();
++  bool RecentlyHadUserInput(
++      mozilla::TimeDuration aWithin = mozilla::TimeDuration::FromMilliseconds(
++          400)) const;
+   // True if aOther is a visible transient child of this window.
+   bool HasVisibleTransientChild(const nsWindow* aOther) const;
+   bool HasAnyVisibleTransientChild() const;
++  bool HasVisibleNoFocusPopupChild() const;
++  // Another visible top-level/dialog that may own activation (compose, prefs).
++  // Used so post-click reclaim does not steal focus from newly opened windows.
++  bool OtherActivatableGeckoWindowVisible() const;
+ 
+   void OnExpose();
+   void OnResize(int aWidth, int aHeight);
+@@ -261,6 +270,10 @@
+   int32_t mClickCount = 0;
+   LayoutDeviceIntPoint mLastClickPoint;
+   mozilla::TimeStamp mLastClickTime;
++  // Last real user input (mouse/key). Used for a single post-click restack.
++  mozilla::TimeStamp mLastUserInputTime;
++  // Prevents OnWindowActivation(false) from scheduling reclaim forever.
++  bool mPostClickReclaimScheduled = false;
+ 
+ #ifdef ACCESSIBILITY
+   RefPtr<mozilla::a11y::LocalAccessible> mRootAccessible;

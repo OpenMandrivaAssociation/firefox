@@ -1,0 +1,189 @@
+From 1ecc68b32a6bf4ee33b7a0af2b561de165b83044 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:24 +0200
+Subject: [PATCH 03/10] Bug 2054387 - IPC: wire Chromium message pump for Qt.
+ r?#ipc-reviewers,nika
+
+Use the Qt event loop for Chromium IPC message pumping when building
+with MOZ_WIDGET_QT, avoiding busy 0ms timers that starve Gecko.
+
+Differential Revision: https://phabricator.services.mozilla.com/D311737
+---
+ ipc/chromium/src/base/message_loop.cc    |  2 ++
+ ipc/chromium/src/base/message_pump_qt.cc | 42 +++++++++++++++---------
+ ipc/chromium/src/base/message_pump_qt.h  |  2 ++
+ ipc/glue/GeckoChildProcessHost.cpp       |  8 +++--
+ 4 files changed, 35 insertions(+), 19 deletions(-)
+
+diff --git a/ipc/chromium/src/base/message_loop.cc b/ipc/chromium/src/base/message_loop.cc
+index a22d37212bbf..dc3c9fcd7489 100644
+--- a/ipc/chromium/src/base/message_loop.cc
++++ b/ipc/chromium/src/base/message_loop.cc
+@@ -30,6 +30,8 @@
+     defined(XP_NETBSD) || defined(XP_OPENBSD)
+ #  if defined(MOZ_WIDGET_GTK)
+ #    include "base/message_pump_glib.h"
++#  elif defined(MOZ_WIDGET_QT)
++#    include "base/message_pump_qt.h"
+ #  endif
+ #endif
+ #ifdef ANDROID
+diff --git a/ipc/chromium/src/base/message_pump_qt.cc b/ipc/chromium/src/base/message_pump_qt.cc
+index 06ed2beb6da6..fc222c258bc3 100644
+--- a/ipc/chromium/src/base/message_pump_qt.cc
++++ b/ipc/chromium/src/base/message_pump_qt.cc
+@@ -2,11 +2,13 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#pragma GCC visibility push(default)
+ #include <qabstracteventdispatcher.h>
+ #include <qevent.h>
+ #include <QCoreApplication>
+ #include <QThread>
+ #include <qtimer.h>
++#pragma GCC visibility pop
+ 
+ #include "base/message_pump_qt.h"
+ 
+@@ -52,6 +54,9 @@ bool MessagePumpQt::event(QEvent* e) {
+ void MessagePumpQt::scheduleDelayedIfNeeded(
+     const TimeTicks& delayed_work_time) {
+   if (delayed_work_time.is_null()) {
++    if (mTimer->isActive()) {
++      mTimer->stop();
++    }
+     return;
+   }
+ 
+@@ -62,10 +67,17 @@ void MessagePumpQt::scheduleDelayedIfNeeded(
+   TimeDelta later = delayed_work_time - TimeTicks::Now();
+   // later.InMilliseconds() returns an int64_t, QTimer only accepts int's for
+   // start(), std::min only works on exact same types.
+-  int laterMsecs = later.InMilliseconds() > std::numeric_limits<int>::max()
++  int64_t later64 = later.InMilliseconds();
++  if (later64 <= 0) {
++    // Overdue delayed work is handled by the Run() loop (DoDelayedWork sets
++    // more_work_is_plausible). Do not start a 0ms QTimer or ScheduleWork()
++    // here — both re-enter forever and peg the CPU.
++    return;
++  }
++  int laterMsecs = later64 > std::numeric_limits<int>::max()
+                        ? std::numeric_limits<int>::max()
+-                       : later.InMilliseconds();
+-  mTimer->start(laterMsecs > 0 ? laterMsecs : 0);
++                       : static_cast<int>(later64);
++  mTimer->start(laterMsecs);
+ }
+ 
+ void MessagePumpQt::dispatchDelayed() { pump.HandleDispatch(); }
+@@ -75,22 +87,16 @@ void MessagePumpForUI::Run(Delegate* delegate) {
+   state.delegate = delegate;
+   state.should_quit = false;
+   state.run_depth = state_ ? state_->run_depth + 1 : 1;
+-  // We really only do a single task for each iteration of the loop.  If we
+-  // have done something, assume there is likely something more to do.  This
+-  // will mean that we don't block on the message pump until there was nothing
+-  // more to do.  We also set this to true to make sure not to block on the
+-  // first iteration of the loop, so RunAllPending() works correctly.
++  // First iteration is non-blocking so RunAllPending() works. After that,
++  // only Gecko work (DoWork/DoDelayedWork/DoIdleWork) keeps us non-blocking.
++  // Do not treat processEvents()==true alone as more work — on Qt6 Wayland
++  // that can stay true forever and busy-spin the CPU.
+   bool more_work_is_plausible = true;
+ 
+   RunState* previous_state = state_;
+   state_ = &state;
+ 
+   for (;;) {
+-    QEventLoop::ProcessEventsFlags block = QEventLoop::AllEvents;
+-    if (!more_work_is_plausible) {
+-      block |= QEventLoop::WaitForMoreEvents;
+-    }
+-
+     QAbstractEventDispatcher* dispatcher =
+         QAbstractEventDispatcher::instance(QThread::currentThread());
+     // An assertion seems too much here, as during startup,
+@@ -99,14 +105,18 @@ void MessagePumpForUI::Run(Delegate* delegate) {
+       return;
+     }
+ 
+-    // processEvent's returns true if an event has been processed.
+-    more_work_is_plausible = dispatcher->processEvents(block);
++    QEventLoop::ProcessEventsFlags flags = QEventLoop::AllEvents;
++    if (!more_work_is_plausible) {
++      flags |= QEventLoop::WaitForMoreEvents;
++    }
++
++    dispatcher->processEvents(flags);
+ 
+     if (state_->should_quit) {
+       break;
+     }
+ 
+-    more_work_is_plausible |= state_->delegate->DoWork();
++    more_work_is_plausible = state_->delegate->DoWork();
+     if (state_->should_quit) {
+       break;
+     }
+diff --git a/ipc/chromium/src/base/message_pump_qt.h b/ipc/chromium/src/base/message_pump_qt.h
+index 30dea4946c50..3e812753eaab 100644
+--- a/ipc/chromium/src/base/message_pump_qt.h
++++ b/ipc/chromium/src/base/message_pump_qt.h
+@@ -5,7 +5,9 @@
+ #ifndef BASE_MESSAGE_PUMP_QT_H_
+ #define BASE_MESSAGE_PUMP_QT_H_
+ 
++#pragma GCC visibility push(default)
+ #include <qobject.h>
++#pragma GCC visibility pop
+ 
+ #include "base/message_pump.h"
+ #include "base/time.h"
+diff --git a/ipc/glue/GeckoChildProcessHost.cpp b/ipc/glue/GeckoChildProcessHost.cpp
+index 633fe51be100..8ef2d8e06cad 100644
+--- a/ipc/glue/GeckoChildProcessHost.cpp
++++ b/ipc/glue/GeckoChildProcessHost.cpp
+@@ -328,7 +328,7 @@ typedef AndroidProcessLauncher ProcessLauncher;
+ // orthogonal IPC machinery there. Conversely, there are tier-3 non-Linux
+ // platforms (BSD and Solaris) where we want the "linux" IPC machinery. So
+ // we use MOZ_WIDGET_* to choose the platform backend.
+-#  elif defined(MOZ_WIDGET_GTK)
++#  elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ class LinuxProcessLauncher : public PosixProcessLauncher {
+  public:
+   LinuxProcessLauncher(GeckoChildProcessHost* aHost,
+@@ -1163,7 +1163,7 @@ void BaseProcessLauncher::MapChildLogging() {
+   }
+ }
+ 
+-#if defined(MOZ_WIDGET_GTK)
++#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ Result<Ok, LaunchError> LinuxProcessLauncher::DoSetup() {
+   Result<Ok, LaunchError> aError = PosixProcessLauncher::DoSetup();
+   if (aError.isErr()) {
+@@ -1171,6 +1171,7 @@ Result<Ok, LaunchError> LinuxProcessLauncher::DoSetup() {
+   }
+ 
+   if (mProcessType == GeckoProcessType_Content) {
++#  if defined(MOZ_WIDGET_GTK)
+     // disable IM module to avoid sandbox violation
+     mLaunchOptions->env_map["GTK_IM_MODULE"] = "gtk-im-context-simple";
+ 
+@@ -1178,11 +1179,12 @@ Result<Ok, LaunchError> LinuxProcessLauncher::DoSetup() {
+     // with the sandbox, and we proxy that information through the main process
+     // anyway.
+     mLaunchOptions->env_map["NO_AT_BRIDGE"] = "1";
++#  endif
+   }
+ 
+   return Ok();
+ }
+-#endif  // MOZ_WIDGET_GTK
++#endif  // MOZ_WIDGET_GTK || MOZ_WIDGET_QT
+ 
+ #ifdef XP_UNIX
+ Result<Ok, LaunchError> PosixProcessLauncher::DoSetup() {
+-- 
+2.55.0
+

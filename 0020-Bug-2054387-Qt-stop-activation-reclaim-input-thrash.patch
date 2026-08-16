@@ -1,0 +1,189 @@
+From: OpenMandriva
+Subject: [PATCH] Bug 2054387 - Qt: stop activation-reclaim thrash that freezes input
+
+0019 kept the window stacked but multi-delay requestActivate after every
+mouse press/release (and on focus/activation churn) stole input for ~1–2s:
+clicks and even the close button did nothing.
+
+- Ordinary clicks only note a short interaction window + single activate
+- Multi-delay reclaim only on popup/dialog show/hide (chrome lifecycle)
+- Do not reclaim-spam on WindowActivate or every focus-out suppress
+
+--- a/widget/qt/nsWindow.h
++++ b/widget/qt/nsWindow.h
+@@ -118,11 +118,14 @@
+   void ReclaimActivation();
+   // Same, deferred to the next event-loop turn (after Wayland map/unmap).
+   void ScheduleReclaimActivation();
+-  // Several delayed reclaims: Wayland often restacks after map/unmap/idle.
++  // A few delayed reclaims only for chrome lifecycle (dialog/popup map), not
++  // for ordinary clicks (retries thrash focus and eat input).
+   void ScheduleReclaimActivationRetries();
+-  // Suppress Gecko deactivation + reclaim after recent user input / chrome
+-  // lifecycle (app menu, account-hub Finish, dialog open/close).
+-  void NotePopupInteraction();
++  // Brief suppress after user input; longer only for popup/dialog lifecycle.
++  void NoteUserInteraction();
++  void NoteChromeLifecycle();
++  // Back-compat alias used by older call sites in this series.
++  void NotePopupInteraction() { NoteChromeLifecycle(); }
+   bool ShouldSuppressDeactivation() const;
+   // True if `aOther` is a visible transient child of this window.
+   bool HasVisibleTransientChild(const nsWindow* aOther) const;
+--- a/widget/qt/nsWindow.cpp
++++ b/widget/qt/nsWindow.cpp
+@@ -882,29 +882,45 @@
+   if (!mQtWindow || mIsDestroyed || !ShouldAcceptActivate()) {
+     return;
+   }
+-  // TB Finish → idle showSystemIntegrationDialog, HTML <dialog> close, and
+-  // KWin restack often happen tens–hundreds of ms after the click. One
+-  // singleShot(0) is not enough for a valid xdg-activation reclaim.
++  // Only for dialog/popup map-unmap (not ordinary clicks). Keep the set
++  // small so we do not thrash focus and block input delivery.
+   QPointer<QtWindowBridge> weak = mQtWindow.get();
+-  for (int delayMs : {0, 50, 150, 400, 800}) {
++  for (int delayMs : {0, 100, 350}) {
+     QTimer::singleShot(delayMs, mQtWindow.get(), [weak]() {
+       if (!weak) {
+         return;
+       }
+       if (nsWindow* w = weak->GetWidget()) {
++        // Stop retrying once another of our windows holds focus, or this
++        // window is no longer supposed to accept activation.
++        if (QWindow* focused = QGuiApplication::focusWindow()) {
++          if (focused != weak.data()) {
++            auto* bridge = qobject_cast<QtWindowBridge*>(focused);
++            if (bridge && bridge->GetWidget() &&
++                bridge->GetWidget()->ShouldAcceptActivate()) {
++              return;
++            }
++          }
++        }
+         w->ReclaimActivation();
+       }
+     });
+   }
+ }
+ 
+-void nsWindow::NotePopupInteraction() {
+-  // Cover app-menu → Settings, account-hub Finish → system-integration dialog
+-  // (opened via requestIdleCallback), and dialog open/close stacking races.
+-  // Still short enough that a deliberate switch to another app is not held
+-  // forever.
++void nsWindow::NoteUserInteraction() {
++  // Short: only bridges the immediate focus-out after a click into chrome.
++  const auto until =
++      mozilla::TimeStamp::Now() + mozilla::TimeDuration::FromMilliseconds(400);
++  if (mIgnoreDeactivationUntil.IsNull() || mIgnoreDeactivationUntil < until) {
++    mIgnoreDeactivationUntil = until;
++  }
++}
++
++void nsWindow::NoteChromeLifecycle() {
++  // Longer: popup/dialog show-hide and idle-opened dialogs (TB Finish).
+   mIgnoreDeactivationUntil =
+-      mozilla::TimeStamp::Now() + mozilla::TimeDuration::FromMilliseconds(2000);
++      mozilla::TimeStamp::Now() + mozilla::TimeDuration::FromMilliseconds(1200);
+ }
+ 
+ bool nsWindow::ShouldSuppressDeactivation() const {
+@@ -2004,10 +2020,10 @@
+   if (!aFocus) {
+     auto keepActiveAndReclaim = [this]() {
+       // Skipping WindowDeactivated alone leaves the surface demoted on KWin;
+-      // actively reclaim stacking/activation for the chrome window.
+-      NotePopupInteraction();
++      // reclaim once (+ next tick). Multi-retries here eat subsequent clicks.
++      NoteChromeLifecycle();
+       ReclaimActivation();
+-      ScheduleReclaimActivationRetries();
++      ScheduleReclaimActivation();
+     };
+ 
+     // Focus moved to one of our transient children (popup or dialog) —
+@@ -2023,15 +2039,13 @@
+               keepActiveAndReclaim();
+               return;
+             }
+-            NotePopupInteraction();
+-            // Raise dialog (focused), keep parent noted for reclaim on close.
+-            w->ReclaimActivation();
+-            w->ScheduleReclaimActivationRetries();
++            NoteChromeLifecycle();
++            // Dialog owns focus; do not spam reclaim (blocks input).
+             return;
+           }
+           // Focus moved to another of our top-level windows (not our child).
+           if (w != this && w->ShouldAcceptActivate()) {
+-            NotePopupInteraction();
++            NoteUserInteraction();
+             return;
+           }
+         }
+@@ -2046,10 +2060,7 @@
+       }
+     }
+   } else {
+-    // Gained focus: ensure we are not still stacked behind other apps.
+-    if (ShouldSuppressDeactivation() || HasAnyVisibleTransientChild()) {
+-      ReclaimActivation();
+-    }
++    // Gained focus already implies activation; avoid extra raise() spam.
+   }
+ 
+   DispatchActivateEvent(aFocus);
+@@ -2074,12 +2085,13 @@
+   }
+   if (aActive) {
+     DispatchActivateEvent(true);
+-    ReclaimActivation();
+     return;
+   }
++  // Demotion during chrome lifecycle (popup/dialog): reclaim lightly.
++  // Never multi-retry from here — that fights the user and freezes input.
+   if (ShouldSuppressDeactivation() || HasAnyVisibleTransientChild()) {
+     ReclaimActivation();
+-    ScheduleReclaimActivationRetries();
++    ScheduleReclaimActivation();
+     return;
+   }
+ }
+--- a/widget/qt/QtWindowBridge.cpp
++++ b/widget/qt/QtWindowBridge.cpp
+@@ -273,7 +273,7 @@
+ void QtWindowBridge::keyPressEvent(QKeyEvent* aEvent) {
+   if (mWidget) {
+     if (mWidget->ShouldAcceptActivate()) {
+-      mWidget->NotePopupInteraction();
++      mWidget->NoteUserInteraction();
+     }
+     mWidget->OnKeyEvent(aEvent, true);
+   }
+@@ -290,11 +290,11 @@
+ void QtWindowBridge::mousePressEvent(QMouseEvent* aEvent) {
+   // Activate only windows that should own chrome focus. Popups, Media PiP and
+   // alerts must not steal activation (tab goes inactive, media pauses, etc.).
++  // Do NOT schedule multi-delay reclaims here: that steals input for ~1s after
++  // every click (close button, chrome buttons appear dead).
+   if (mWidget && mWidget->ShouldAcceptActivate()) {
+-    mWidget->NotePopupInteraction();
++    mWidget->NoteUserInteraction();
+     requestActivate();
+-    // Retries cover TB Finish → idle dialog and KWin restack after the click.
+-    mWidget->ScheduleReclaimActivationRetries();
+   }
+   if (mWidget) {
+     mWidget->OnMouseEvent(aEvent, true);
+@@ -304,11 +304,6 @@
+ 
+ void QtWindowBridge::mouseReleaseEvent(QMouseEvent* aEvent) {
+   if (mWidget) {
+-    if (mWidget->ShouldAcceptActivate()) {
+-      // Finish/Settings clicks: demotion often races the release + dialog map.
+-      mWidget->NotePopupInteraction();
+-      mWidget->ScheduleReclaimActivationRetries();
+-    }
+     mWidget->OnMouseEvent(aEvent, false);
+   }
+   QWindow::mouseReleaseEvent(aEvent);

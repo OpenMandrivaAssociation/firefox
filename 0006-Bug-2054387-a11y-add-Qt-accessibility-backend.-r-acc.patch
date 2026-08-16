@@ -1,0 +1,2061 @@
+From eabfa72530e443848dc9f53616d48f0041195d6b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:34 +0200
+Subject: [PATCH 06/10] Bug 2054387 - a11y: add Qt accessibility backend.
+ r?#accessibility-platform-reviewers
+
+Implement platform accessibility for MOZ_WIDGET_QT using Qt's
+accessibility interfaces, paralleling other toolkit ports.
+
+Differential Revision: https://phabricator.services.mozilla.com/D311740
+---
+ accessible/aom/moz.build                  |    4 +
+ accessible/base/Platform.h                |    5 +-
+ accessible/base/moz.build                 |    4 +
+ accessible/generic/moz.build              |    4 +
+ accessible/html/moz.build                 |    4 +
+ accessible/ipc/moz.build                  |    4 +
+ accessible/moz.build                      |    2 +
+ accessible/other/Platform.cpp             |    4 +
+ accessible/qt/AccessibleWrap.cpp          |   66 ++
+ accessible/qt/AccessibleWrap.h            |   42 +
+ accessible/qt/ApplicationAccessibleWrap.h |   18 +
+ accessible/qt/DocAccessibleWrap.h         |   18 +
+ accessible/qt/Platform.cpp                |  315 ++++++
+ accessible/qt/QtAccessible.cpp            | 1141 +++++++++++++++++++++
+ accessible/qt/QtAccessible.h              |  159 +++
+ accessible/qt/RootAccessibleWrap.h        |   18 +
+ accessible/qt/moz.build                   |   37 +
+ accessible/xpcom/moz.build                |    4 +
+ accessible/xul/moz.build                  |    4 +
+ 19 files changed, 1851 insertions(+), 2 deletions(-)
+ create mode 100644 accessible/qt/AccessibleWrap.cpp
+ create mode 100644 accessible/qt/AccessibleWrap.h
+ create mode 100644 accessible/qt/ApplicationAccessibleWrap.h
+ create mode 100644 accessible/qt/DocAccessibleWrap.h
+ create mode 100644 accessible/qt/Platform.cpp
+ create mode 100644 accessible/qt/QtAccessible.cpp
+ create mode 100644 accessible/qt/QtAccessible.h
+ create mode 100644 accessible/qt/RootAccessibleWrap.h
+ create mode 100644 accessible/qt/moz.build
+
+diff --git a/accessible/aom/moz.build b/accessible/aom/moz.build
+index 31115a4540b5..16959eb1ef67 100644
+--- a/accessible/aom/moz.build
++++ b/accessible/aom/moz.build
+@@ -36,6 +36,10 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
+     LOCAL_INCLUDES += [
+         "/accessible/ios",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    LOCAL_INCLUDES += [
++        "/accessible/qt",
++    ]
+ else:
+     LOCAL_INCLUDES += [
+         "/accessible/other",
+diff --git a/accessible/base/Platform.h b/accessible/base/Platform.h
+index 014d1c8c369a..211b0f2f0323 100644
+--- a/accessible/base/Platform.h
++++ b/accessible/base/Platform.h
+@@ -44,10 +44,11 @@ EPlatformDisabledState PlatformDisabledState();
+ void PreInit();
+ #endif
+ 
+-#if defined(MOZ_ACCESSIBILITY_ATK) || defined(XP_DARWIN)
++#if defined(MOZ_ACCESSIBILITY_ATK) || defined(XP_DARWIN) || \
++    defined(MOZ_WIDGET_QT)
+ /**
+  * Is platform accessibility enabled.
+- * Only used on Linux, MacOS and iOS for now.
++ * Only used on Linux, MacOS and iOS for now (and Qt).
+  */
+ bool ShouldA11yBeEnabled();
+ #endif
+diff --git a/accessible/base/moz.build b/accessible/base/moz.build
+index 9ca1d3ab082e..68fa517cec2d 100644
+--- a/accessible/base/moz.build
++++ b/accessible/base/moz.build
+@@ -116,6 +116,10 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
+     LOCAL_INCLUDES += [
+         "/accessible/ios",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    LOCAL_INCLUDES += [
++        "/accessible/qt",
++    ]
+ else:
+     LOCAL_INCLUDES += [
+         "/accessible/other",
+diff --git a/accessible/generic/moz.build b/accessible/generic/moz.build
+index 0b55b93d5dad..e3019d556d50 100644
+--- a/accessible/generic/moz.build
++++ b/accessible/generic/moz.build
+@@ -55,6 +55,10 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
+     LOCAL_INCLUDES += [
+         "/accessible/ios",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    LOCAL_INCLUDES += [
++        "/accessible/qt",
++    ]
+ else:
+     LOCAL_INCLUDES += [
+         "/accessible/other",
+diff --git a/accessible/html/moz.build b/accessible/html/moz.build
+index 218f7d5a3a8f..4ce3a7b739b9 100644
+--- a/accessible/html/moz.build
++++ b/accessible/html/moz.build
+@@ -44,6 +44,10 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
+     LOCAL_INCLUDES += [
+         "/accessible/ios",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    LOCAL_INCLUDES += [
++        "/accessible/qt",
++    ]
+ else:
+     LOCAL_INCLUDES += [
+         "/accessible/other",
+diff --git a/accessible/ipc/moz.build b/accessible/ipc/moz.build
+index 4408e7e6a86b..9c13db6a95e7 100644
+--- a/accessible/ipc/moz.build
++++ b/accessible/ipc/moz.build
+@@ -20,6 +20,10 @@ else:
+         LOCAL_INCLUDES += [
+             "/accessible/ios",
+         ]
++    elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++        LOCAL_INCLUDES += [
++            "/accessible/qt",
++        ]
+     else:
+         LOCAL_INCLUDES += [
+             "/accessible/other",
+diff --git a/accessible/moz.build b/accessible/moz.build
+index 68dbc3c5d471..a432b40e255c 100644
+--- a/accessible/moz.build
++++ b/accessible/moz.build
+@@ -14,6 +14,8 @@ elif toolkit == "android":
+     DIRS += ["android"]
+ elif toolkit == "uikit":
+     DIRS += ["ios"]
++elif toolkit == "qt":
++    DIRS += ["qt"]
+ else:
+     DIRS += ["other"]
+ 
+diff --git a/accessible/other/Platform.cpp b/accessible/other/Platform.cpp
+index bbb60f5f49d8..0ee021016d06 100644
+--- a/accessible/other/Platform.cpp
++++ b/accessible/other/Platform.cpp
+@@ -36,4 +36,8 @@ void a11y::PlatformAnnouncementEvent(Accessible* aTarget,
+                                      const nsAString& aAnnouncement,
+                                      uint16_t aPriority) {}
+ 
++uint64_t a11y::GetCacheDomainsForKnownClients(uint64_t aCacheDomains) {
++  return aCacheDomains;
++}
++
+ void a11y::GetHumanReadableInstantiatorStr(nsAString& aResult) {}
+diff --git a/accessible/qt/AccessibleWrap.cpp b/accessible/qt/AccessibleWrap.cpp
+new file mode 100644
+index 000000000000..8eafeb11e41d
+--- /dev/null
++++ b/accessible/qt/AccessibleWrap.cpp
+@@ -0,0 +1,66 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "AccessibleWrap.h"
++#include "QtAccessible.h"
++
++#include "LocalAccessible-inl.h"
++
++#pragma GCC visibility push(default)
++#include <QAccessible>
++#pragma GCC visibility pop
++
++using namespace mozilla;
++using namespace mozilla::a11y;
++
++AccessibleWrap::AccessibleWrap(nsIContent* aContent, DocAccessible* aDoc)
++    : LocalAccessible(aContent, aDoc) {}
++
++AccessibleWrap::~AccessibleWrap() { MOZ_ASSERT(!mQtAccessible); }
++
++void AccessibleWrap::Shutdown() {
++  ShutdownQtAccessible();
++  LocalAccessible::Shutdown();
++}
++
++void AccessibleWrap::ShutdownQtAccessible() {
++  if (!mQtAccessible) {
++    return;
++  }
++  mQtAccessible->ClearAcc();
++  const QAccessible::Id id = QAccessible::uniqueId(mQtAccessible);
++  if (id) {
++    QAccessible::deleteAccessibleInterface(id);
++  }
++  mQtAccessible = nullptr;
++}
++
++void AccessibleWrap::AdoptQtAccessible(QtAccessible* aIface) {
++  MOZ_ASSERT(aIface);
++  MOZ_ASSERT(!mQtAccessible || mQtAccessible == aIface);
++  mQtAccessible = aIface;
++}
++
++void AccessibleWrap::GetNativeInterface(void** aOutAccessible) {
++  *aOutAccessible = nullptr;
++  if (IsDefunct()) {
++    return;
++  }
++
++  if (!mQtAccessible) {
++    QObject* obj = nullptr;
++    if (IsRoot()) {
++      if (QWindow* win = QtAccessible::WindowFor(this)) {
++        obj = win;
++        // May invoke the factory, which adopts into this wrap.
++        (void)QAccessible::queryAccessibleInterface(obj);
++      }
++    }
++    if (!mQtAccessible) {
++      mQtAccessible = new QtAccessible(this, obj);
++      QAccessible::registerAccessibleInterface(mQtAccessible);
++    }
++  }
++  *aOutAccessible = mQtAccessible;
++}
+diff --git a/accessible/qt/AccessibleWrap.h b/accessible/qt/AccessibleWrap.h
+new file mode 100644
+index 000000000000..fdb63cfdfd7c
+--- /dev/null
++++ b/accessible/qt/AccessibleWrap.h
+@@ -0,0 +1,42 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef mozilla_a11y_AccessibleWrap_h_
++#define mozilla_a11y_AccessibleWrap_h_
++
++#include "LocalAccessible.h"
++
++namespace mozilla {
++namespace a11y {
++
++class QtAccessible;
++
++/**
++ * Qt QAccessible-backed wrap for local accessibles.
++ * Native interface is a QtAccessible* (QAccessibleInterface).
++ */
++class AccessibleWrap : public LocalAccessible {
++ public:
++  AccessibleWrap(nsIContent* aContent, DocAccessible* aDoc);
++  virtual ~AccessibleWrap();
++
++  virtual void Shutdown() override;
++  virtual void GetNativeInterface(void** aOutAccessible) override;
++
++  QtAccessible* GetQtAccessible() const { return mQtAccessible; }
++
++  // Adopt an interface created by the QAccessible factory (not yet registered
++  // by us — Qt will register it).
++  void AdoptQtAccessible(QtAccessible* aIface);
++
++  void ShutdownQtAccessible();
++
++ private:
++  QtAccessible* mQtAccessible = nullptr;
++};
++
++}  // namespace a11y
++}  // namespace mozilla
++
++#endif
+diff --git a/accessible/qt/ApplicationAccessibleWrap.h b/accessible/qt/ApplicationAccessibleWrap.h
+new file mode 100644
+index 000000000000..f4b1cc23c3d6
+--- /dev/null
++++ b/accessible/qt/ApplicationAccessibleWrap.h
+@@ -0,0 +1,18 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef mozilla_a11y_ApplicationAccessibleWrap_h_
++#define mozilla_a11y_ApplicationAccessibleWrap_h_
++
++#include "ApplicationAccessible.h"
++
++namespace mozilla {
++namespace a11y {
++
++typedef ApplicationAccessible ApplicationAccessibleWrap;
++
++}  // namespace a11y
++}  // namespace mozilla
++
++#endif
+diff --git a/accessible/qt/DocAccessibleWrap.h b/accessible/qt/DocAccessibleWrap.h
+new file mode 100644
+index 000000000000..b87e87caa492
+--- /dev/null
++++ b/accessible/qt/DocAccessibleWrap.h
+@@ -0,0 +1,18 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef mozilla_a11y_DocAccessibleWrap_h_
++#define mozilla_a11y_DocAccessibleWrap_h_
++
++#include "DocAccessible.h"
++
++namespace mozilla {
++namespace a11y {
++
++typedef DocAccessible DocAccessibleWrap;
++
++}  // namespace a11y
++}  // namespace mozilla
++
++#endif
+diff --git a/accessible/qt/Platform.cpp b/accessible/qt/Platform.cpp
+new file mode 100644
+index 000000000000..af8d6c0438c9
+--- /dev/null
++++ b/accessible/qt/Platform.cpp
+@@ -0,0 +1,315 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "Platform.h"
++#include "QtAccessible.h"
++#include "AccessibleWrap.h"
++
++#include "nsIAccessibleEvent.h"
++#include "nsAccessibilityService.h"
++#include "States.h"
++#include "mozilla/a11y/RemoteAccessible.h"
++#include "prenv.h"
++
++#pragma GCC visibility push(default)
++#include <QAccessible>
++#include <QAccessibleEvent>
++#include <QGuiApplication>
++#include <QDBusConnection>
++#include <QDBusInterface>
++#include <QDBusReply>
++#include <QVariant>
++#pragma GCC visibility pop
++
++using namespace mozilla;
++using namespace mozilla::a11y;
++
++static bool sA11yEnabled = false;
++static bool sA11yCacheValid = false;
++
++static QAccessibleInterface* WrapperFor(Accessible* aAcc) {
++  return QtAccessible::InterfaceFor(aAcc);
++}
++
++void a11y::PlatformInit() {
++  InitQtAccessibility();
++  sA11yCacheValid = false;
++}
++
++void a11y::PlatformShutdown() {
++  ShutdownQtAccessibility();
++  sA11yCacheValid = false;
++}
++
++void a11y::ProxyCreated(RemoteAccessible* aProxy) {
++  MOZ_ASSERT(aProxy);
++  if (aProxy->GetWrapper()) {
++    return;
++  }
++  auto* iface = new QtAccessible(aProxy, nullptr);
++  QAccessible::registerAccessibleInterface(iface);
++  aProxy->SetWrapper(reinterpret_cast<uintptr_t>(iface));
++}
++
++void a11y::ProxyDestroyed(RemoteAccessible* aProxy) {
++  auto wrap = aProxy->GetWrapper();
++  if (!wrap) {
++    return;
++  }
++  auto* iface = reinterpret_cast<QtAccessible*>(wrap);
++  iface->ClearAcc();
++  const QAccessible::Id id = QAccessible::uniqueId(iface);
++  if (id) {
++    QAccessible::deleteAccessibleInterface(id);
++  }
++  aProxy->SetWrapper(0);
++}
++
++static void FireQtEvent(Accessible* aTarget, QAccessible::Event aEvent) {
++  QAccessibleInterface* iface = WrapperFor(aTarget);
++  if (!iface) {
++    return;
++  }
++  QAccessibleEvent event(iface, aEvent);
++  QAccessible::updateAccessibility(&event);
++}
++
++void a11y::PlatformEvent(Accessible* aTarget, uint32_t aEventType) {
++  if (!aTarget) {
++    return;
++  }
++  switch (aEventType) {
++    case nsIAccessibleEvent::EVENT_NAME_CHANGE:
++      FireQtEvent(aTarget, QAccessible::NameChanged);
++      break;
++    case nsIAccessibleEvent::EVENT_DESCRIPTION_CHANGE:
++      FireQtEvent(aTarget, QAccessible::DescriptionChanged);
++      break;
++    case nsIAccessibleEvent::EVENT_VALUE_CHANGE:
++    case nsIAccessibleEvent::EVENT_TEXT_VALUE_CHANGE: {
++      QAccessibleInterface* iface = WrapperFor(aTarget);
++      if (!iface) {
++        break;
++      }
++      nsAutoString value;
++      aTarget->Value(value);
++      QAccessibleValueChangeEvent event(
++          iface, QString::fromUtf16(
++                     reinterpret_cast<const char16_t*>(value.BeginReading()),
++                     int(value.Length())));
++      QAccessible::updateAccessibility(&event);
++      break;
++    }
++    case nsIAccessibleEvent::EVENT_DOCUMENT_LOAD_COMPLETE:
++      FireQtEvent(aTarget, QAccessible::DocumentLoadComplete);
++      break;
++    case nsIAccessibleEvent::EVENT_DOCUMENT_RELOAD:
++      FireQtEvent(aTarget, QAccessible::DocumentReload);
++      break;
++    case nsIAccessibleEvent::EVENT_DOCUMENT_LOAD_STOPPED:
++      FireQtEvent(aTarget, QAccessible::DocumentLoadStopped);
++      break;
++    case nsIAccessibleEvent::EVENT_MENUPOPUP_START:
++      FireQtEvent(aTarget, QAccessible::PopupMenuStart);
++      break;
++    case nsIAccessibleEvent::EVENT_MENUPOPUP_END:
++      FireQtEvent(aTarget, QAccessible::PopupMenuEnd);
++      break;
++    case nsIAccessibleEvent::EVENT_ALERT:
++      FireQtEvent(aTarget, QAccessible::Alert);
++      break;
++    case nsIAccessibleEvent::EVENT_REORDER:
++      FireQtEvent(aTarget, QAccessible::ObjectReorder);
++      break;
++    case nsIAccessibleEvent::EVENT_SELECTION:
++      FireQtEvent(aTarget, QAccessible::Selection);
++      break;
++    case nsIAccessibleEvent::EVENT_SELECTION_ADD:
++      FireQtEvent(aTarget, QAccessible::SelectionAdd);
++      break;
++    case nsIAccessibleEvent::EVENT_SELECTION_REMOVE:
++      FireQtEvent(aTarget, QAccessible::SelectionRemove);
++      break;
++    case nsIAccessibleEvent::EVENT_SELECTION_WITHIN:
++      FireQtEvent(aTarget, QAccessible::SelectionWithin);
++      break;
++    case nsIAccessibleEvent::EVENT_SCROLLING_START:
++      FireQtEvent(aTarget, QAccessible::ScrollingStart);
++      break;
++    case nsIAccessibleEvent::EVENT_SCROLLING_END:
++      FireQtEvent(aTarget, QAccessible::ScrollingEnd);
++      break;
++    default:
++      break;
++  }
++}
++
++void a11y::PlatformStateChangeEvent(Accessible* aTarget, uint64_t aState,
++                                    bool aEnabled) {
++  QAccessibleInterface* iface = WrapperFor(aTarget);
++  if (!iface) {
++    return;
++  }
++  QAccessible::State stateChange;
++  // Map the changed Gecko state bit onto the Qt state field.
++  if (aState & states::CHECKED) {
++    stateChange.checked = true;
++  }
++  if (aState & states::SELECTED) {
++    stateChange.selected = true;
++  }
++  if (aState & states::FOCUSED) {
++    stateChange.focused = true;
++  }
++  if (aState & states::EXPANDED) {
++    stateChange.expanded = true;
++  }
++  if (aState & states::COLLAPSED) {
++    stateChange.collapsed = true;
++  }
++  if (aState & states::BUSY) {
++    stateChange.busy = true;
++  }
++  if (aState & states::UNAVAILABLE) {
++    stateChange.disabled = true;
++  }
++  if (aState & states::INVISIBLE) {
++    stateChange.invisible = true;
++  }
++  if (aState & states::PRESSED) {
++    stateChange.pressed = true;
++  }
++  QAccessibleStateChangeEvent event(iface, stateChange);
++  // Qt uses the bitfield as a mask of changed states.
++  (void)aEnabled;
++  QAccessible::updateAccessibility(&event);
++}
++
++void a11y::PlatformFocusEvent(Accessible* aTarget) {
++  FireQtEvent(aTarget, QAccessible::Focus);
++}
++
++void a11y::PlatformCaretMoveEvent(Accessible* aTarget, int32_t aOffset,
++                                  bool aIsSelectionCollapsed,
++                                  int32_t aGranularity, bool aFromUser) {
++  QAccessibleInterface* iface = WrapperFor(aTarget);
++  if (!iface) {
++    return;
++  }
++  QAccessibleTextCursorEvent event(iface, aOffset);
++  QAccessible::updateAccessibility(&event);
++  if (!aIsSelectionCollapsed) {
++    QAccessibleTextSelectionEvent sel(iface, aOffset, aOffset);
++    QAccessible::updateAccessibility(&sel);
++  }
++  (void)aGranularity;
++  (void)aFromUser;
++}
++
++void a11y::PlatformTextChangeEvent(Accessible* aTarget, const nsAString& aStr,
++                                   int32_t aStart, uint32_t aLen, bool aIsInsert,
++                                   bool aFromUser) {
++  QAccessibleInterface* iface = WrapperFor(aTarget);
++  if (!iface) {
++    return;
++  }
++  const QString text = QString::fromUtf16(
++      reinterpret_cast<const char16_t*>(aStr.BeginReading()), int(aStr.Length()));
++  if (aIsInsert) {
++    QAccessibleTextInsertEvent event(iface, aStart, text);
++    QAccessible::updateAccessibility(&event);
++  } else {
++    QAccessibleTextRemoveEvent event(iface, aStart, text);
++    QAccessible::updateAccessibility(&event);
++  }
++  (void)aLen;
++  (void)aFromUser;
++}
++
++void a11y::PlatformShowHideEvent(Accessible* aTarget, Accessible* aParent,
++                                 bool aInsert, bool aFromUser) {
++  FireQtEvent(aTarget, aInsert ? QAccessible::ObjectShow : QAccessible::ObjectHide);
++  (void)aParent;
++  (void)aFromUser;
++}
++
++void a11y::PlatformSelectionEvent(Accessible* aTarget, Accessible* aWidget,
++                                  uint32_t aType) {
++  PlatformEvent(aTarget, aType);
++  (void)aWidget;
++}
++
++void a11y::PlatformAnnouncementEvent(Accessible* aTarget,
++                                     const nsAString& aAnnouncement,
++                                     uint16_t aPriority) {
++  QAccessibleInterface* iface = WrapperFor(aTarget);
++  if (!iface) {
++    return;
++  }
++  const QString msg = QString::fromUtf16(
++      reinterpret_cast<const char16_t*>(aAnnouncement.BeginReading()),
++      int(aAnnouncement.Length()));
++  QAccessibleAnnouncementEvent event(iface, msg);
++  if (aPriority) {
++    event.setPoliteness(QAccessible::AnnouncementPoliteness::Assertive);
++  }
++  QAccessible::updateAccessibility(&event);
++}
++
++bool a11y::ShouldA11yBeEnabled() {
++  EPlatformDisabledState disabledState = PlatformDisabledState();
++  if (disabledState == ePlatformIsDisabled) {
++    return false;
++  }
++  if (disabledState == ePlatformIsForceEnabled) {
++    return true;
++  }
++
++  if (const char* envValue = PR_GetEnv("GNOME_ACCESSIBILITY")) {
++    return !!atoi(envValue);
++  }
++  if (const char* envValue = PR_GetEnv("QT_ACCESSIBILITY")) {
++    return !!atoi(envValue);
++  }
++
++  if (sA11yCacheValid) {
++    return sA11yEnabled;
++  }
++
++  // Qt reports active once an AT client is connected via the AT-SPI bridge.
++  if (QAccessible::isActive()) {
++    sA11yEnabled = true;
++    sA11yCacheValid = true;
++    return true;
++  }
++
++  // Check FreeDesktop org.a11y.Status.IsEnabled (same bus GTK uses).
++  QDBusInterface iface(QStringLiteral("org.a11y.Bus"),
++                       QStringLiteral("/org/a11y/bus"),
++                       QStringLiteral("org.a11y.Status"),
++                       QDBusConnection::sessionBus());
++  if (iface.isValid()) {
++    QVariant v = iface.property("IsEnabled");
++    if (v.isValid()) {
++      sA11yEnabled = v.toBool();
++      sA11yCacheValid = true;
++      return sA11yEnabled;
++    }
++  }
++
++  sA11yEnabled = false;
++  sA11yCacheValid = true;
++  return false;
++}
++
++uint64_t a11y::GetCacheDomainsForKnownClients(uint64_t aCacheDomains) {
++  return aCacheDomains;
++}
++
++void a11y::GetHumanReadableInstantiatorStr(nsAString& aResult) {
++  aResult.Truncate();
++  if (QAccessible::isActive()) {
++    aResult.AssignLiteral("QtAccessible");
++  }
++}
+diff --git a/accessible/qt/QtAccessible.cpp b/accessible/qt/QtAccessible.cpp
+new file mode 100644
+index 000000000000..dc8ec692fb3f
+--- /dev/null
++++ b/accessible/qt/QtAccessible.cpp
+@@ -0,0 +1,1141 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "QtAccessible.h"
++#include "AccessibleWrap.h"
++
++#include "DocAccessible.h"
++#include "LocalAccessible-inl.h"
++#include "AccAttributes.h"
++#include "nsAccUtils.h"
++#include "nsAccessibilityService.h"
++#include "nsCoreUtils.h"
++#include "nsIWidget.h"
++#include "nsWindow.h"
++#include "QtWindowBridge.h"
++#include "RootAccessible.h"
++#include "States.h"
++#include "mozilla/PresShell.h"
++#include "mozilla/a11y/RemoteAccessible.h"
++#include "mozilla/a11y/Role.h"
++#include "mozilla/a11y/HyperTextAccessibleBase.h"
++#include "mozilla/a11y/TableAccessible.h"
++#include "mozilla/a11y/TableCellAccessible.h"
++#include "nsIAccessibleTypes.h"
++#include "nsString.h"
++
++#pragma GCC visibility push(default)
++#include <QGuiApplication>
++#include <QAccessible>
++#include <cmath>
++#pragma GCC visibility pop
++
++using namespace mozilla;
++using namespace mozilla::a11y;
++
++static QString ToQString(const nsAString& aStr) {
++  return QString::fromUtf16(reinterpret_cast<const char16_t*>(aStr.BeginReading()),
++                            int(aStr.Length()));
++}
++
++static nsString ToNsString(const QString& aStr) {
++  nsString out;
++  out.Assign(reinterpret_cast<const char16_t*>(aStr.utf16()), aStr.size());
++  return out;
++}
++
++// ---------------------------------------------------------------------------
++// Role / state mapping
++// ---------------------------------------------------------------------------
++
++QAccessible::Role QtAccessible::RoleFor(mozilla::a11y::role aRole) {
++  switch (aRole) {
++    case roles::MENUBAR:
++      return QAccessible::MenuBar;
++    case roles::SCROLLBAR:
++      return QAccessible::ScrollBar;
++    case roles::ALERT:
++      return QAccessible::AlertMessage;
++    case roles::MENUPOPUP:
++      return QAccessible::PopupMenu;
++    case roles::MENUITEM:
++    case roles::CHECK_MENU_ITEM:
++    case roles::RADIO_MENU_ITEM:
++    case roles::PARENT_MENUITEM:
++      return QAccessible::MenuItem;
++    case roles::TOOLTIP:
++      return QAccessible::ToolTip;
++    case roles::APPLICATION:
++      return QAccessible::Application;
++    case roles::DOCUMENT:
++      return QAccessible::WebDocument;
++    case roles::PANE:
++    case roles::INTERNAL_FRAME:
++      return QAccessible::Pane;
++    case roles::DIALOG:
++      return QAccessible::Dialog;
++    case roles::GROUPING:
++    case roles::FORM:
++      return QAccessible::Grouping;
++    case roles::SECTION:
++      return QAccessible::Section;
++    case roles::SEPARATOR:
++      return QAccessible::Separator;
++    case roles::TOOLBAR:
++      return QAccessible::ToolBar;
++    case roles::STATUSBAR:
++      return QAccessible::StatusBar;
++    case roles::TABLE:
++      return QAccessible::Table;
++    case roles::COLUMNHEADER:
++      return QAccessible::ColumnHeader;
++    case roles::ROWHEADER:
++      return QAccessible::RowHeader;
++    case roles::ROW:
++      return QAccessible::Row;
++    case roles::CELL:
++    case roles::GRID_CELL:
++    case roles::MATHML_CELL:
++      return QAccessible::Cell;
++    case roles::LINK:
++      return QAccessible::Link;
++    case roles::LIST:
++    case roles::LISTBOX:
++      return QAccessible::List;
++    case roles::LISTITEM:
++    case roles::OPTION:
++      return QAccessible::ListItem;
++    case roles::OUTLINE:
++    case roles::TREE_TABLE:
++      return QAccessible::Tree;
++    case roles::OUTLINEITEM:
++      return QAccessible::TreeItem;
++    case roles::PAGETAB:
++      return QAccessible::PageTab;
++    case roles::PAGETABLIST:
++      return QAccessible::PageTabList;
++    case roles::PROPERTYPAGE:
++      return QAccessible::PropertyPage;
++    case roles::GRAPHIC:
++    case roles::IMAGE_MAP:
++      return QAccessible::Graphic;
++    case roles::STATICTEXT:
++    case roles::LABEL:
++    case roles::TEXT_LEAF:
++      return QAccessible::StaticText;
++    case roles::WHITESPACE:
++      return QAccessible::Whitespace;
++    case roles::ENTRY:
++    case roles::PASSWORD_TEXT:
++    case roles::EDITCOMBOBOX:
++      return QAccessible::EditableText;
++    case roles::PUSHBUTTON:
++    case roles::TOGGLE_BUTTON:
++      return QAccessible::Button;
++    case roles::BUTTONDROPDOWN:
++      return QAccessible::ButtonDropDown;
++    case roles::BUTTONMENU:
++      return QAccessible::ButtonMenu;
++    case roles::CHECKBUTTON:
++      return QAccessible::CheckBox;
++    case roles::SWITCH:
++      return QAccessible::Switch;
++    case roles::RADIOBUTTON:
++      return QAccessible::RadioButton;
++    case roles::COMBOBOX:
++      return QAccessible::ComboBox;
++    case roles::PROGRESSBAR:
++    case roles::METER:
++      return QAccessible::ProgressBar;
++    case roles::SLIDER:
++      return QAccessible::Slider;
++    case roles::SPINBUTTON:
++      return QAccessible::SpinBox;
++    case roles::DIAGRAM:
++    case roles::CANVAS:
++      return QAccessible::Canvas;
++    case roles::ANIMATION:
++      return QAccessible::Animation;
++    case roles::FLAT_EQUATION:
++    case roles::MATHML_MATH:
++      return QAccessible::Equation;
++    case roles::PARAGRAPH:
++      return QAccessible::Paragraph;
++    case roles::HEADING:
++      return QAccessible::Heading;
++    case roles::NOTE:
++      return QAccessible::Notification;
++    case roles::CHROME_WINDOW:
++    case roles::APP_ROOT:
++      return QAccessible::Window;
++    case roles::NOTHING:
++    default:
++      return QAccessible::Client;
++  }
++}
++
++QAccessible::State QtAccessible::StateFor(uint64_t s) {
++  QAccessible::State st;
++  st.disabled = !!(s & states::UNAVAILABLE);
++  st.selected = !!(s & states::SELECTED);
++  st.focusable = !!(s & states::FOCUSABLE);
++  st.focused = !!(s & states::FOCUSED);
++  st.pressed = !!(s & states::PRESSED);
++  st.checkable = !!(s & states::CHECKABLE);
++  st.checked = !!(s & states::CHECKED);
++  st.checkStateMixed = !!(s & states::MIXED);
++  st.readOnly = !!(s & states::READONLY);
++  st.hotTracked = !!(s & states::HOTTRACKED);
++  st.defaultButton = !!(s & states::DEFAULT);
++  st.expanded = !!(s & states::EXPANDED);
++  st.collapsed = !!(s & states::COLLAPSED);
++  st.busy = !!(s & states::BUSY);
++  st.expandable = !!(s & states::EXPANDABLE);
++  st.invisible = !!(s & states::INVISIBLE);
++  st.offscreen = !!(s & states::OFFSCREEN);
++  st.selectable = !!(s & states::SELECTABLE);
++  st.multiSelectable = !!(s & states::MULTISELECTABLE);
++  st.extSelectable = !!(s & states::EXTSELECTABLE);
++  st.passwordEdit = !!(s & states::PROTECTED);
++  st.hasPopup = !!(s & states::HASPOPUP);
++  st.modal = !!(s & states::MODAL);
++  st.editable = !!(s & states::EDITABLE);
++  st.multiLine = !!(s & states::MULTI_LINE);
++  st.selectableText = !!(s & states::SELECTABLE_TEXT);
++  st.invalid = !!(s & states::DEFUNCT);
++  st.linked = !!(s & states::LINKED);
++  st.traversed = !!(s & states::TRAVERSED);
++  st.sizeable = !!(s & states::SIZEABLE);
++  return st;
++}
++
++// ---------------------------------------------------------------------------
++// Window lookup
++// ---------------------------------------------------------------------------
++
++QWindow* QtAccessible::WindowFor(Accessible* aAcc) {
++  if (!aAcc) {
++    return nullptr;
++  }
++  LocalAccessible* local = aAcc->AsLocal();
++  if (!local) {
++    Accessible* p = aAcc;
++    while (p && p->IsRemote()) {
++      p = p->Parent();
++    }
++    local = p ? p->AsLocal() : nullptr;
++  }
++  if (!local) {
++    return nullptr;
++  }
++  DocAccessible* doc = local->Document();
++  if (!doc || !doc->PresShellPtr()) {
++    return nullptr;
++  }
++  nsIWidget* widget = doc->PresShellPtr()->GetRootWidget();
++  if (!widget) {
++    return nullptr;
++  }
++  auto* win = static_cast<nsWindow*>(widget);
++  if (!win) {
++    return nullptr;
++  }
++  return static_cast<QWindow*>(win->GetQtWindow());
++}
++
++// ---------------------------------------------------------------------------
++// Interface lookup
++// ---------------------------------------------------------------------------
++
++QAccessibleInterface* QtAccessible::InterfaceFor(Accessible* aAcc) {
++  if (!aAcc) {
++    return nullptr;
++  }
++  if (LocalAccessible* local = aAcc->AsLocal()) {
++    if (local->IsDefunct()) {
++      return nullptr;
++    }
++  }
++  if (aAcc->IsRemote()) {
++    auto* remote = aAcc->AsRemote();
++    if (uintptr_t wrap = remote->GetWrapper()) {
++      return reinterpret_cast<QtAccessible*>(wrap);
++    }
++    return nullptr;
++  }
++  void* p = nullptr;
++  aAcc->AsLocal()->GetNativeInterface(&p);
++  return static_cast<QAccessibleInterface*>(p);
++}
++
++// ---------------------------------------------------------------------------
++// Construction
++// ---------------------------------------------------------------------------
++
++QtAccessible::QtAccessible(Accessible* aAcc, QObject* aObject)
++    : mAcc(aAcc), mObject(aObject) {}
++
++bool QtAccessible::isValid() const {
++  if (!mAcc) {
++    return false;
++  }
++  if (LocalAccessible* local = mAcc->AsLocal()) {
++    return !local->IsDefunct();
++  }
++  return !(mAcc->State() & states::DEFUNCT);
++}
++
++QObject* QtAccessible::object() const { return mObject; }
++
++QWindow* QtAccessible::window() const {
++  if (auto* w = qobject_cast<QWindow*>(mObject)) {
++    return w;
++  }
++  return WindowFor(mAcc);
++}
++
++// ---------------------------------------------------------------------------
++// Hierarchy
++// ---------------------------------------------------------------------------
++
++QAccessibleInterface* QtAccessible::parent() const {
++  if (!isValid()) {
++    return nullptr;
++  }
++  Accessible* p = mAcc->Parent();
++  if (!p) {
++    // Root's parent is the QWindow shell (via object association) or null.
++    if (mObject) {
++      return nullptr;
++    }
++    return nullptr;
++  }
++  return InterfaceFor(p);
++}
++
++int QtAccessible::childCount() const {
++  if (!isValid()) {
++    return 0;
++  }
++  return int(mAcc->ChildCount());
++}
++
++QAccessibleInterface* QtAccessible::child(int index) const {
++  if (!isValid() || index < 0 || uint32_t(index) >= mAcc->ChildCount()) {
++    return nullptr;
++  }
++  return InterfaceFor(mAcc->ChildAt(uint32_t(index)));
++}
++
++int QtAccessible::indexOfChild(const QAccessibleInterface* child) const {
++  if (!isValid() || !child) {
++    return -1;
++  }
++  auto* qtChild = static_cast<const QtAccessible*>(child);
++  if (!qtChild->mAcc) {
++    return -1;
++  }
++  return qtChild->mAcc->IndexInParent();
++}
++
++QAccessibleInterface* QtAccessible::childAt(int x, int y) const {
++  if (!isValid()) {
++    return nullptr;
++  }
++  Accessible* found =
++      mAcc->ChildAtPoint(x, y, Accessible::EWhichChildAtPoint::DeepestChild);
++  if (!found || found == mAcc) {
++    // Direct child fallback.
++    found = mAcc->ChildAtPoint(x, y, Accessible::EWhichChildAtPoint::DirectChild);
++  }
++  if (!found || found == mAcc) {
++    return nullptr;
++  }
++  return InterfaceFor(found);
++}
++
++QAccessibleInterface* QtAccessible::focusChild() const {
++  if (!isValid()) {
++    return nullptr;
++  }
++  // Walk focused descendant if any.
++  if (mAcc->State() & states::FOCUSED) {
++    return const_cast<QtAccessible*>(this);
++  }
++  const uint32_t n = mAcc->ChildCount();
++  for (uint32_t i = 0; i < n; ++i) {
++    if (QAccessibleInterface* c = child(int(i))) {
++      if (QAccessibleInterface* f = c->focusChild()) {
++        return f;
++      }
++    }
++  }
++  return nullptr;
++}
++
++// ---------------------------------------------------------------------------
++// Properties
++// ---------------------------------------------------------------------------
++
++QString QtAccessible::text(QAccessible::Text t) const {
++  if (!isValid()) {
++    return {};
++  }
++  nsAutoString str;
++  switch (t) {
++    case QAccessible::Name:
++      mAcc->Name(str);
++      break;
++    case QAccessible::Description:
++      mAcc->Description(str);
++      break;
++    case QAccessible::Value:
++      mAcc->Value(str);
++      break;
++    case QAccessible::Help:
++      break;
++    case QAccessible::Accelerator: {
++      // Keyboard shortcut if any — Accessible has AccessKey / KeyboardShortcut.
++      mAcc->AccessKey().ToString(str);
++      break;
++    }
++    default:
++      break;
++  }
++  return ToQString(str);
++}
++
++void QtAccessible::setText(QAccessible::Text t, const QString& value) {
++  if (!isValid() || t != QAccessible::Value) {
++    return;
++  }
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    if (mAcc->State() & states::EDITABLE) {
++      ht->ReplaceText(ToNsString(value));
++    }
++  }
++}
++
++QRect QtAccessible::rect() const {
++  if (!isValid()) {
++    return {};
++  }
++  LayoutDeviceIntRect r = mAcc->Bounds();
++  return QRect(r.X(), r.Y(), r.Width(), r.Height());
++}
++
++QAccessible::Role QtAccessible::role() const {
++  if (!isValid()) {
++    return QAccessible::NoRole;
++  }
++  return RoleFor(mAcc->Role());
++}
++
++QAccessible::State QtAccessible::state() const {
++  if (!isValid()) {
++    QAccessible::State st;
++    st.invalid = true;
++    return st;
++  }
++  return StateFor(mAcc->State());
++}
++
++// ---------------------------------------------------------------------------
++// Optional interfaces
++// ---------------------------------------------------------------------------
++
++HyperTextAccessibleBase* QtAccessible::AsHyperText() const {
++  return mAcc ? mAcc->AsHyperTextBase() : nullptr;
++}
++
++TableAccessible* QtAccessible::AsTable() const {
++  return mAcc ? mAcc->AsTable() : nullptr;
++}
++
++TableCellAccessible* QtAccessible::AsTableCell() const {
++  return mAcc ? mAcc->AsTableCell() : nullptr;
++}
++
++bool QtAccessible::HasTextInterface() const {
++  return AsHyperText() != nullptr;
++}
++
++bool QtAccessible::HasValueInterface() const {
++  if (!mAcc) {
++    return false;
++  }
++  // Numeric value if min != max or role is value-like.
++  const double minV = mAcc->MinValue();
++  const double maxV = mAcc->MaxValue();
++  if (!std::isnan(minV) && !std::isnan(maxV) && minV != maxV) {
++    return true;
++  }
++  switch (mAcc->Role()) {
++    case roles::SLIDER:
++    case roles::SPINBUTTON:
++    case roles::PROGRESSBAR:
++    case roles::METER:
++    case roles::SCROLLBAR:
++      return true;
++    default:
++      return false;
++  }
++}
++
++bool QtAccessible::HasActionInterface() const {
++  return mAcc &&
++         (mAcc->ActionCount() > 0 || (mAcc->State() & states::FOCUSABLE));
++}
++
++bool QtAccessible::HasTableInterface() const { return AsTable() != nullptr; }
++
++bool QtAccessible::HasTableCellInterface() const {
++  return AsTableCell() != nullptr;
++}
++
++void* QtAccessible::interface_cast(QAccessible::InterfaceType type) {
++  switch (type) {
++    case QAccessible::ActionInterface:
++      if (HasActionInterface()) {
++        return static_cast<QAccessibleActionInterface*>(this);
++      }
++      break;
++    case QAccessible::TextInterface:
++      if (HasTextInterface()) {
++        return static_cast<QAccessibleTextInterface*>(this);
++      }
++      break;
++    case QAccessible::EditableTextInterface:
++      if (HasTextInterface() && mAcc && (mAcc->State() & states::EDITABLE)) {
++        return static_cast<QAccessibleEditableTextInterface*>(this);
++      }
++      break;
++    case QAccessible::ValueInterface:
++      if (HasValueInterface()) {
++        return static_cast<QAccessibleValueInterface*>(this);
++      }
++      break;
++    case QAccessible::TableInterface:
++      if (HasTableInterface()) {
++        return static_cast<QAccessibleTableInterface*>(this);
++      }
++      break;
++    case QAccessible::TableCellInterface:
++      if (HasTableCellInterface()) {
++        return static_cast<QAccessibleTableCellInterface*>(this);
++      }
++      break;
++    default:
++      break;
++  }
++  return nullptr;
++}
++
++// ---------------------------------------------------------------------------
++// Action
++// ---------------------------------------------------------------------------
++
++QStringList QtAccessible::actionNames() const {
++  QStringList names;
++  if (!isValid()) {
++    return names;
++  }
++  const uint8_t count = mAcc->ActionCount();
++  for (uint8_t i = 0; i < count; ++i) {
++    nsAutoString name;
++    mAcc->ActionNameAt(i, name);
++    if (name.IsEmpty()) {
++      names << QStringLiteral("default");
++    } else {
++      names << ToQString(name);
++    }
++  }
++  if (names.isEmpty() && (mAcc->State() & states::FOCUSABLE)) {
++    names << QAccessibleActionInterface::setFocusAction();
++  }
++  return names;
++}
++
++QString QtAccessible::localizedActionDescription(const QString& name) const {
++  return name;
++}
++
++void QtAccessible::doAction(const QString& actionName) {
++  if (!isValid()) {
++    return;
++  }
++  if (actionName == QAccessibleActionInterface::setFocusAction()) {
++    mAcc->TakeFocus();
++    return;
++  }
++  const uint8_t count = mAcc->ActionCount();
++  for (uint8_t i = 0; i < count; ++i) {
++    nsAutoString name;
++    mAcc->ActionNameAt(i, name);
++    if (ToQString(name) == actionName ||
++        (name.IsEmpty() && actionName == QLatin1String("default"))) {
++      mAcc->DoAction(i);
++      return;
++    }
++  }
++  if (count > 0) {
++    mAcc->DoAction(0);
++  }
++}
++
++QStringList QtAccessible::keyBindingsForAction(const QString&) const {
++  return {};
++}
++
++// ---------------------------------------------------------------------------
++// Text
++// ---------------------------------------------------------------------------
++
++void QtAccessible::selection(int selectionIndex, int* startOffset,
++                             int* endOffset) const {
++  if (startOffset) {
++    *startOffset = 0;
++  }
++  if (endOffset) {
++    *endOffset = 0;
++  }
++  HyperTextAccessibleBase* ht = AsHyperText();
++  if (!ht || selectionIndex != 0) {
++    return;
++  }
++  int32_t start = 0, end = 0;
++  if (ht->SelectionBoundsAt(0, &start, &end)) {
++    if (startOffset) {
++      *startOffset = start;
++    }
++    if (endOffset) {
++      *endOffset = end;
++    }
++  }
++}
++
++int QtAccessible::selectionCount() const {
++  HyperTextAccessibleBase* ht = AsHyperText();
++  if (!ht) {
++    return 0;
++  }
++  int32_t start = 0, end = 0;
++  return ht->SelectionBoundsAt(0, &start, &end) && start != end ? 1 : 0;
++}
++
++void QtAccessible::addSelection(int startOffset, int endOffset) {
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    ht->SetSelectionBoundsAt(-1, startOffset, endOffset);
++  }
++}
++
++void QtAccessible::removeSelection(int selectionIndex) {
++  if (selectionIndex != 0) {
++    return;
++  }
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    const int32_t caret = ht->CaretOffset();
++    ht->SetSelectionBoundsAt(0, caret, caret);
++  }
++}
++
++void QtAccessible::setSelection(int selectionIndex, int startOffset,
++                                int endOffset) {
++  if (selectionIndex != 0) {
++    return;
++  }
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    ht->SetSelectionBoundsAt(0, startOffset, endOffset);
++  }
++}
++
++int QtAccessible::cursorPosition() const {
++  HyperTextAccessibleBase* ht = AsHyperText();
++  return ht ? ht->CaretOffset() : 0;
++}
++
++void QtAccessible::setCursorPosition(int position) {
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    ht->SetCaretOffset(position);
++  }
++}
++
++QString QtAccessible::text(int startOffset, int endOffset) const {
++  HyperTextAccessibleBase* ht = AsHyperText();
++  if (!ht) {
++    return {};
++  }
++  nsAutoString str;
++  ht->TextSubstring(startOffset, endOffset, str);
++  return ToQString(str);
++}
++
++int QtAccessible::characterCount() const {
++  HyperTextAccessibleBase* ht = AsHyperText();
++  return ht ? int(ht->CharacterCount()) : 0;
++}
++
++QRect QtAccessible::characterRect(int offset) const {
++  HyperTextAccessibleBase* ht = AsHyperText();
++  if (!ht) {
++    return rect();
++  }
++  LayoutDeviceIntRect r =
++      ht->CharBounds(offset, nsIAccessibleCoordinateType::COORDTYPE_SCREEN_RELATIVE);
++  return QRect(r.x, r.y, r.width, r.height);
++}
++
++int QtAccessible::offsetAtPoint(const QPoint& point) const {
++  HyperTextAccessibleBase* ht = AsHyperText();
++  if (!ht) {
++    return -1;
++  }
++  return ht->OffsetAtPoint(point.x(), point.y(),
++                           nsIAccessibleCoordinateType::COORDTYPE_SCREEN_RELATIVE);
++}
++
++void QtAccessible::scrollToSubstring(int startIndex, int endIndex) {
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    ht->ScrollSubstringTo(startIndex, endIndex,
++                          nsIAccessibleScrollType::SCROLL_TYPE_ANYWHERE);
++  }
++}
++
++QString QtAccessible::attributes(int offset, int* startOffset,
++                                  int* endOffset) const {
++  // QAccessible expects "key:value;key:value;" (same shape as IA2).
++  if (startOffset) {
++    *startOffset = 0;
++  }
++  if (endOffset) {
++    *endOffset = 0;
++  }
++  HyperTextAccessibleBase* ht = AsHyperText();
++  if (!ht) {
++    if (endOffset) {
++      *endOffset = characterCount();
++    }
++    return {};
++  }
++  int32_t start = 0;
++  int32_t end = 0;
++  RefPtr<AccAttributes> attrs =
++      ht->TextAttributes(/* aIncludeDefAttrs */ true, offset, &start, &end);
++  if (startOffset) {
++    *startOffset = start;
++  }
++  if (endOffset) {
++    *endOffset = end;
++  }
++  if (!attrs) {
++    return {};
++  }
++  QString out;
++  for (auto iter : *attrs) {
++    nsAutoString name;
++    nsAutoString value;
++    iter.NameAsString(name);
++    iter.ValueAsString(value);
++    // Escape ':', ';', '=', ',', '\\' for attribute parsers.
++    auto escape = [](const nsAString& in) {
++      nsString s(in);
++      for (uint32_t i = 0; i < s.Length();) {
++        const char16_t c = s[i];
++        if (c == u':' || c == u';' || c == u'=' || c == u',' || c == u'\\') {
++          s.Insert(u'\\', i);
++          i += 2;
++        } else {
++          ++i;
++        }
++      }
++      return ToQString(s);
++    };
++    out += escape(name);
++    out += QLatin1Char(':');
++    out += escape(value);
++    out += QLatin1Char(';');
++  }
++  return out;
++}
++
++// ---------------------------------------------------------------------------
++// Editable text
++// ---------------------------------------------------------------------------
++
++void QtAccessible::deleteText(int startOffset, int endOffset) {
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    ht->DeleteText(startOffset, endOffset);
++  }
++}
++
++void QtAccessible::insertText(int offset, const QString& value) {
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    ht->InsertText(ToNsString(value), offset);
++  }
++}
++
++void QtAccessible::replaceText(int startOffset, int endOffset,
++                               const QString& value) {
++  if (HyperTextAccessibleBase* ht = AsHyperText()) {
++    ht->DeleteText(startOffset, endOffset);
++    ht->InsertText(ToNsString(value), startOffset);
++  }
++}
++
++// ---------------------------------------------------------------------------
++// Value
++// ---------------------------------------------------------------------------
++
++QVariant QtAccessible::currentValue() const {
++  if (!isValid()) {
++    return {};
++  }
++  const double v = mAcc->CurValue();
++  return std::isnan(v) ? QVariant{} : QVariant(v);
++}
++
++void QtAccessible::setCurrentValue(const QVariant& value) {
++  if (!isValid()) {
++    return;
++  }
++  bool ok = false;
++  const double v = value.toDouble(&ok);
++  if (ok) {
++    mAcc->SetCurValue(v);
++  }
++}
++
++QVariant QtAccessible::maximumValue() const {
++  if (!isValid()) {
++    return {};
++  }
++  const double v = mAcc->MaxValue();
++  return std::isnan(v) ? QVariant{} : QVariant(v);
++}
++
++QVariant QtAccessible::minimumValue() const {
++  if (!isValid()) {
++    return {};
++  }
++  const double v = mAcc->MinValue();
++  return std::isnan(v) ? QVariant{} : QVariant(v);
++}
++
++QVariant QtAccessible::minimumStepSize() const {
++  if (!isValid()) {
++    return {};
++  }
++  const double v = mAcc->Step();
++  return std::isnan(v) ? QVariant{} : QVariant(v);
++}
++
++// ---------------------------------------------------------------------------
++// Table
++// ---------------------------------------------------------------------------
++
++QAccessibleInterface* QtAccessible::caption() const {
++  TableAccessible* table = AsTable();
++  if (!table) {
++    return nullptr;
++  }
++  return InterfaceFor(table->Caption());
++}
++
++QAccessibleInterface* QtAccessible::summary() const {
++  // Gecko exposes summary as a string, not a separate accessible.
++  return nullptr;
++}
++
++QAccessibleInterface* QtAccessible::cellAt(int row, int column) const {
++  TableAccessible* table = AsTable();
++  if (!table || row < 0 || column < 0) {
++    return nullptr;
++  }
++  return InterfaceFor(table->CellAt(uint32_t(row), uint32_t(column)));
++}
++
++int QtAccessible::selectedCellCount() const {
++  TableAccessible* table = AsTable();
++  return table ? int(table->SelectedCellCount()) : 0;
++}
++
++QList<QAccessibleInterface*> QtAccessible::selectedCells() const {
++  QList<QAccessibleInterface*> out;
++  TableAccessible* table = AsTable();
++  if (!table) {
++    return out;
++  }
++  nsTArray<Accessible*> cells;
++  table->SelectedCells(&cells);
++  for (Accessible* cell : cells) {
++    if (QAccessibleInterface* iface = InterfaceFor(cell)) {
++      out.append(iface);
++    }
++  }
++  return out;
++}
++
++QString QtAccessible::columnDescription(int column) const {
++  TableAccessible* table = AsTable();
++  if (!table || column < 0) {
++    return {};
++  }
++  nsAutoString desc;
++  table->ColDescription(uint32_t(column), desc);
++  return ToQString(desc);
++}
++
++QString QtAccessible::rowDescription(int row) const {
++  TableAccessible* table = AsTable();
++  if (!table || row < 0) {
++    return {};
++  }
++  nsAutoString desc;
++  table->RowDescription(uint32_t(row), desc);
++  return ToQString(desc);
++}
++
++int QtAccessible::selectedColumnCount() const {
++  TableAccessible* table = AsTable();
++  return table ? int(table->SelectedColCount()) : 0;
++}
++
++int QtAccessible::selectedRowCount() const {
++  TableAccessible* table = AsTable();
++  return table ? int(table->SelectedRowCount()) : 0;
++}
++
++int QtAccessible::columnCount() const {
++  TableAccessible* table = AsTable();
++  return table ? int(table->ColCount()) : 0;
++}
++
++int QtAccessible::rowCount() const {
++  TableAccessible* table = AsTable();
++  return table ? int(table->RowCount()) : 0;
++}
++
++QList<int> QtAccessible::selectedColumns() const {
++  QList<int> out;
++  TableAccessible* table = AsTable();
++  if (!table) {
++    return out;
++  }
++  nsTArray<uint32_t> cols;
++  table->SelectedColIndices(&cols);
++  for (uint32_t c : cols) {
++    out.append(int(c));
++  }
++  return out;
++}
++
++QList<int> QtAccessible::selectedRows() const {
++  QList<int> out;
++  TableAccessible* table = AsTable();
++  if (!table) {
++    return out;
++  }
++  nsTArray<uint32_t> rows;
++  table->SelectedRowIndices(&rows);
++  for (uint32_t r : rows) {
++    out.append(int(r));
++  }
++  return out;
++}
++
++bool QtAccessible::isColumnSelected(int column) const {
++  TableAccessible* table = AsTable();
++  return table && column >= 0 && table->IsColSelected(uint32_t(column));
++}
++
++bool QtAccessible::isRowSelected(int row) const {
++  TableAccessible* table = AsTable();
++  return table && row >= 0 && table->IsRowSelected(uint32_t(row));
++}
++
++bool QtAccessible::selectRow(int row) {
++  TableAccessible* table = AsTable();
++  if (!table || row < 0 || uint32_t(row) >= table->RowCount()) {
++    return false;
++  }
++  const uint32_t cols = table->ColCount();
++  bool any = false;
++  for (uint32_t col = 0; col < cols; ++col) {
++    if (Accessible* cell = table->CellAt(uint32_t(row), col)) {
++      cell->SetSelected(true);
++      any = true;
++    }
++  }
++  return any;
++}
++
++bool QtAccessible::selectColumn(int column) {
++  TableAccessible* table = AsTable();
++  if (!table || column < 0 || uint32_t(column) >= table->ColCount()) {
++    return false;
++  }
++  const uint32_t rows = table->RowCount();
++  bool any = false;
++  for (uint32_t row = 0; row < rows; ++row) {
++    if (Accessible* cell = table->CellAt(row, uint32_t(column))) {
++      cell->SetSelected(true);
++      any = true;
++    }
++  }
++  return any;
++}
++
++bool QtAccessible::unselectRow(int row) {
++  TableAccessible* table = AsTable();
++  if (!table || row < 0 || uint32_t(row) >= table->RowCount()) {
++    return false;
++  }
++  const uint32_t cols = table->ColCount();
++  bool any = false;
++  for (uint32_t col = 0; col < cols; ++col) {
++    if (Accessible* cell = table->CellAt(uint32_t(row), col)) {
++      cell->SetSelected(false);
++      any = true;
++    }
++  }
++  return any;
++}
++
++bool QtAccessible::unselectColumn(int column) {
++  TableAccessible* table = AsTable();
++  if (!table || column < 0 || uint32_t(column) >= table->ColCount()) {
++    return false;
++  }
++  const uint32_t rows = table->RowCount();
++  bool any = false;
++  for (uint32_t row = 0; row < rows; ++row) {
++    if (Accessible* cell = table->CellAt(row, uint32_t(column))) {
++      cell->SetSelected(false);
++      any = true;
++    }
++  }
++  return any;
++}
++
++void QtAccessible::modelChange(QAccessibleTableModelChangeEvent*) {}
++
++// ---------------------------------------------------------------------------
++// Table cell
++// ---------------------------------------------------------------------------
++
++bool QtAccessible::isSelected() const {
++  TableCellAccessible* cell = AsTableCell();
++  return cell && cell->Selected();
++}
++
++QList<QAccessibleInterface*> QtAccessible::columnHeaderCells() const {
++  QList<QAccessibleInterface*> out;
++  TableCellAccessible* cell = AsTableCell();
++  if (!cell) {
++    return out;
++  }
++  nsTArray<Accessible*> headers;
++  cell->ColHeaderCells(&headers);
++  for (Accessible* h : headers) {
++    if (QAccessibleInterface* iface = InterfaceFor(h)) {
++      out.append(iface);
++    }
++  }
++  return out;
++}
++
++QList<QAccessibleInterface*> QtAccessible::rowHeaderCells() const {
++  QList<QAccessibleInterface*> out;
++  TableCellAccessible* cell = AsTableCell();
++  if (!cell) {
++    return out;
++  }
++  nsTArray<Accessible*> headers;
++  cell->RowHeaderCells(&headers);
++  for (Accessible* h : headers) {
++    if (QAccessibleInterface* iface = InterfaceFor(h)) {
++      out.append(iface);
++    }
++  }
++  return out;
++}
++
++int QtAccessible::columnIndex() const {
++  TableCellAccessible* cell = AsTableCell();
++  return cell ? int(cell->ColIdx()) : -1;
++}
++
++int QtAccessible::rowIndex() const {
++  TableCellAccessible* cell = AsTableCell();
++  return cell ? int(cell->RowIdx()) : -1;
++}
++
++int QtAccessible::columnExtent() const {
++  TableCellAccessible* cell = AsTableCell();
++  return cell ? int(cell->ColExtent()) : 1;
++}
++
++int QtAccessible::rowExtent() const {
++  TableCellAccessible* cell = AsTableCell();
++  return cell ? int(cell->RowExtent()) : 1;
++}
++
++QAccessibleInterface* QtAccessible::table() const {
++  TableCellAccessible* cell = AsTableCell();
++  if (!cell) {
++    return nullptr;
++  }
++  TableAccessible* table = cell->Table();
++  return table ? InterfaceFor(table->AsAccessible()) : nullptr;
++}
++
++// ---------------------------------------------------------------------------
++// Factory / lifecycle
++// ---------------------------------------------------------------------------
++
++static bool sFactoryInstalled = false;
++
++QAccessibleInterface* a11y::QtWindowAccessibleFactory(const QString& className,
++                                                      QObject* object) {
++  if (!object) {
++    return nullptr;
++  }
++  // QtWindowBridge is our QWindow subclass (Q_OBJECT).
++  if (className != QLatin1String("QtWindowBridge") &&
++      !object->inherits("QtWindowBridge")) {
++    return nullptr;
++  }
++  auto* bridge = static_cast<QtWindowBridge*>(object);
++  nsWindow* win = bridge->GetWidget();
++  if (!win) {
++    return nullptr;
++  }
++  LocalAccessible* root = win->GetRootAccessible();
++  if (!root) {
++    return nullptr;
++  }
++  auto* wrap = static_cast<AccessibleWrap*>(root);
++  if (QtAccessible* existing = wrap->GetQtAccessible()) {
++    existing->SetObject(object);
++    // Already registered — return null so Qt keeps the cached entry; if none,
++    // fall through by returning existing (Qt 6 tolerates re-query).
++    return existing;
++  }
++  auto* iface = new QtAccessible(root, object);
++  wrap->AdoptQtAccessible(iface);
++  return iface;
++}
++
++void a11y::InitQtAccessibility() {
++  if (!sFactoryInstalled) {
++    QAccessible::installFactory(QtWindowAccessibleFactory);
++    sFactoryInstalled = true;
++  }
++  QAccessible::setActive(true);
++}
++
++void a11y::ShutdownQtAccessibility() {
++  // Leave factory installed; a11y may re-init. Deactivate.
++  QAccessible::setActive(false);
++}
+diff --git a/accessible/qt/QtAccessible.h b/accessible/qt/QtAccessible.h
+new file mode 100644
+index 000000000000..4240af3e31f1
+--- /dev/null
++++ b/accessible/qt/QtAccessible.h
+@@ -0,0 +1,159 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef mozilla_a11y_QtAccessible_h_
++#define mozilla_a11y_QtAccessible_h_
++
++#include "Accessible.h"
++#include "mozilla/a11y/Role.h"
++
++#pragma GCC visibility push(default)
++#include <QAccessible>
++#include <QAccessibleInterface>
++#include <QObject>
++#include <QString>
++#include <QRect>
++#include <QWindow>
++#pragma GCC visibility pop
++
++namespace mozilla {
++namespace a11y {
++
++/**
++ * QAccessibleInterface bridging a Gecko Accessible (local or remote).
++ * Also implements Action / Text / EditableText / Value / Table / TableCell
++ * when applicable.
++ */
++class QtAccessible final : public QAccessibleInterface,
++                           public QAccessibleActionInterface,
++                           public QAccessibleTextInterface,
++                           public QAccessibleEditableTextInterface,
++                           public QAccessibleValueInterface,
++                           public QAccessibleTableInterface,
++                           public QAccessibleTableCellInterface {
++ public:
++  explicit QtAccessible(Accessible* aAcc, QObject* aObject = nullptr);
++  // Not public destructor — destroyed via QAccessible::deleteAccessibleInterface
++
++  Accessible* Acc() const { return mAcc; }
++  void ClearAcc() { mAcc = nullptr; }
++  void SetObject(QObject* aObject) { mObject = aObject; }
++
++  // QAccessibleInterface
++  bool isValid() const override;
++  QObject* object() const override;
++  QWindow* window() const override;
++  QAccessibleInterface* childAt(int x, int y) const override;
++  QAccessibleInterface* parent() const override;
++  QAccessibleInterface* child(int index) const override;
++  int childCount() const override;
++  int indexOfChild(const QAccessibleInterface* child) const override;
++  QString text(QAccessible::Text t) const override;
++  void setText(QAccessible::Text t, const QString& text) override;
++  QRect rect() const override;
++  QAccessible::Role role() const override;
++  QAccessible::State state() const override;
++  QAccessibleInterface* focusChild() const override;
++  void* interface_cast(QAccessible::InterfaceType type) override;
++
++  // QAccessibleActionInterface
++  QStringList actionNames() const override;
++  QString localizedActionDescription(const QString& name) const override;
++  void doAction(const QString& actionName) override;
++  QStringList keyBindingsForAction(const QString& actionName) const override;
++
++  // QAccessibleTextInterface
++  void selection(int selectionIndex, int* startOffset,
++                 int* endOffset) const override;
++  int selectionCount() const override;
++  void addSelection(int startOffset, int endOffset) override;
++  void removeSelection(int selectionIndex) override;
++  void setSelection(int selectionIndex, int startOffset,
++                    int endOffset) override;
++  int cursorPosition() const override;
++  void setCursorPosition(int position) override;
++  QString text(int startOffset, int endOffset) const override;
++  int characterCount() const override;
++  QRect characterRect(int offset) const override;
++  int offsetAtPoint(const QPoint& point) const override;
++  void scrollToSubstring(int startIndex, int endIndex) override;
++  QString attributes(int offset, int* startOffset,
++                     int* endOffset) const override;
++
++  // QAccessibleEditableTextInterface
++  void deleteText(int startOffset, int endOffset) override;
++  void insertText(int offset, const QString& text) override;
++  void replaceText(int startOffset, int endOffset,
++                   const QString& text) override;
++
++  // QAccessibleValueInterface
++  QVariant currentValue() const override;
++  void setCurrentValue(const QVariant& value) override;
++  QVariant maximumValue() const override;
++  QVariant minimumValue() const override;
++  QVariant minimumStepSize() const override;
++
++  // QAccessibleTableInterface
++  QAccessibleInterface* caption() const override;
++  QAccessibleInterface* summary() const override;
++  QAccessibleInterface* cellAt(int row, int column) const override;
++  int selectedCellCount() const override;
++  QList<QAccessibleInterface*> selectedCells() const override;
++  QString columnDescription(int column) const override;
++  QString rowDescription(int row) const override;
++  int selectedColumnCount() const override;
++  int selectedRowCount() const override;
++  int columnCount() const override;
++  int rowCount() const override;
++  QList<int> selectedColumns() const override;
++  QList<int> selectedRows() const override;
++  bool isColumnSelected(int column) const override;
++  bool isRowSelected(int row) const override;
++  bool selectRow(int row) override;
++  bool selectColumn(int column) override;
++  bool unselectRow(int row) override;
++  bool unselectColumn(int column) override;
++  void modelChange(QAccessibleTableModelChangeEvent* event) override;
++
++  // QAccessibleTableCellInterface
++  bool isSelected() const override;
++  QList<QAccessibleInterface*> columnHeaderCells() const override;
++  QList<QAccessibleInterface*> rowHeaderCells() const override;
++  int columnIndex() const override;
++  int rowIndex() const override;
++  int columnExtent() const override;
++  int rowExtent() const override;
++  QAccessibleInterface* table() const override;
++
++  static QAccessibleInterface* InterfaceFor(Accessible* aAcc);
++  static QAccessible::Role RoleFor(mozilla::a11y::role aRole);
++  static QAccessible::State StateFor(uint64_t aState);
++  static QWindow* WindowFor(Accessible* aAcc);
++
++ private:
++  ~QtAccessible() override = default;
++
++  HyperTextAccessibleBase* AsHyperText() const;
++  TableAccessible* AsTable() const;
++  TableCellAccessible* AsTableCell() const;
++  bool HasTextInterface() const;
++  bool HasValueInterface() const;
++  bool HasActionInterface() const;
++  bool HasTableInterface() const;
++  bool HasTableCellInterface() const;
++
++  Accessible* mAcc = nullptr;
++  QObject* mObject = nullptr;
++};
++
++// Install factory / activate Qt a11y bridge.
++void InitQtAccessibility();
++void ShutdownQtAccessibility();
++QAccessibleInterface* QtWindowAccessibleFactory(const QString& className,
++                                                QObject* object);
++
++}  // namespace a11y
++}  // namespace mozilla
++
++#endif
+diff --git a/accessible/qt/RootAccessibleWrap.h b/accessible/qt/RootAccessibleWrap.h
+new file mode 100644
+index 000000000000..0c70479847f3
+--- /dev/null
++++ b/accessible/qt/RootAccessibleWrap.h
+@@ -0,0 +1,18 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef mozilla_a11y_RootAccessibleWrap_h_
++#define mozilla_a11y_RootAccessibleWrap_h_
++
++#include "RootAccessible.h"
++
++namespace mozilla {
++namespace a11y {
++
++typedef RootAccessible RootAccessibleWrap;
++
++}  // namespace a11y
++}  // namespace mozilla
++
++#endif
+diff --git a/accessible/qt/moz.build b/accessible/qt/moz.build
+new file mode 100644
+index 000000000000..9f7b17dd8334
+--- /dev/null
++++ b/accessible/qt/moz.build
+@@ -0,0 +1,37 @@
++# This Source Code Form is subject to the terms of the Mozilla Public
++# License, v. 2.0. If a copy of the MPL was not distributed with this
++# file, You can obtain one at http://mozilla.org/MPL/2.0/.
++
++EXPORTS.mozilla.a11y += [
++    "AccessibleWrap.h",
++    "QtAccessible.h",
++]
++
++SOURCES += [
++    "AccessibleWrap.cpp",
++    "Platform.cpp",
++    "QtAccessible.cpp",
++]
++
++LOCAL_INCLUDES += [
++    "/accessible/base",
++    "/accessible/basetypes",
++    "/accessible/generic",
++    "/accessible/html",
++    "/accessible/ipc",
++    "/accessible/xpcom",
++    "/accessible/xul",
++    "/layout/generic",
++    "/widget",
++    "/widget/qt",
++]
++
++FINAL_LIBRARY = "xul"
++
++CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
++OS_LIBS += CONFIG["MOZ_QT6_LIBS"]
++
++# Qt headers conflict with -fvisibility=hidden wrappers.
++NoVisibilityFlags()
++
++include("/ipc/chromium/chromium-config.mozbuild")
+diff --git a/accessible/xpcom/moz.build b/accessible/xpcom/moz.build
+index 30646ef2868f..523b447f0906 100644
+--- a/accessible/xpcom/moz.build
++++ b/accessible/xpcom/moz.build
+@@ -61,6 +61,10 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
+     LOCAL_INCLUDES += [
+         "/accessible/ios",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    LOCAL_INCLUDES += [
++        "/accessible/qt",
++    ]
+ else:
+     LOCAL_INCLUDES += [
+         "/accessible/other",
+diff --git a/accessible/xul/moz.build b/accessible/xul/moz.build
+index 7164b337866f..ca15939f5a42 100644
+--- a/accessible/xul/moz.build
++++ b/accessible/xul/moz.build
+@@ -48,6 +48,10 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
+     LOCAL_INCLUDES += [
+         "/accessible/ios",
+     ]
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    LOCAL_INCLUDES += [
++        "/accessible/qt",
++    ]
+ else:
+     LOCAL_INCLUDES += [
+         "/accessible/other",
+-- 
+2.55.0
+

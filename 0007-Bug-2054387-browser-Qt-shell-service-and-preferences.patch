@@ -1,0 +1,1235 @@
+From 43f71d243f8b5775be76cbf6f6ddf05ebbbef28e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:35 +0200
+Subject: [PATCH 07/10] Bug 2054387 - browser: Qt shell service and preferences
+ integration. r?#desktop-theme-reviewers,Gijs
+
+Add nsQtShellService, wire ShellService/Downloads/taskbar for Qt, and
+guard shell-service preferences when HAVE_SHELL_SERVICE is false.
+
+Differential Revision: https://phabricator.services.mozilla.com/D311741
+---
+ browser/base/content/pageinfo/pageInfo.css    |  28 +
+ browser/components/StartupTelemetry.sys.mjs   |   7 +
+ browser/components/build/components.conf      |  10 +
+ .../downloads/DownloadsTaskbar.sys.mjs        |  34 +-
+ browser/components/preferences/main.js        | 217 +++---
+ browser/components/shell/ShellService.sys.mjs |  12 +-
+ browser/components/shell/moz.build            |  13 +
+ .../components/shell/nsIUnixShellService.idl  |  24 +
+ browser/components/shell/nsQtShellService.cpp | 616 ++++++++++++++++++
+ browser/components/shell/nsQtShellService.h   |  50 ++
+ .../browser/browser_quit_close_current_tab.js |   4 +-
+ xpfe/appshell/AppWindow.cpp                   |   2 +-
+ xpfe/appshell/nsAppShellService.cpp           |   5 +-
+ 13 files changed, 910 insertions(+), 112 deletions(-)
+ create mode 100644 browser/components/shell/nsIUnixShellService.idl
+ create mode 100644 browser/components/shell/nsQtShellService.cpp
+ create mode 100644 browser/components/shell/nsQtShellService.h
+
+diff --git a/browser/base/content/pageinfo/pageInfo.css b/browser/base/content/pageinfo/pageInfo.css
+index a02f28e2e8fc..2e3095bece98 100644
+--- a/browser/base/content/pageinfo/pageInfo.css
++++ b/browser/base/content/pageinfo/pageInfo.css
+@@ -88,3 +88,31 @@ td > input,
+   flex: 1;
+   margin-top: 1px; /* same margin as adjacent label */
+ }
++
++/* Keep permission radios/checkboxes inside the window: the trailing
++ * radiogroup is right-aligned via a flex spacer and used to overflow when
++ * indicators take space. */
++#permList .permission > hbox {
++  min-width: 0;
++}
++
++#permList radiogroup {
++  flex-shrink: 1;
++  min-width: 0;
++  flex-wrap: wrap;
++  justify-content: flex-end;
++}
++
++#permList radio {
++  flex-shrink: 0;
++}
++
++/* When "Use Default" is checked the radios are disabled (command broadcaster).
++ * Make that obvious: muted controls, no pointer affordance. */
++#permList radio[disabled] {
++  opacity: 0.55;
++}
++
++#permList radio[disabled] > .radio-check {
++  opacity: 0.9;
++}
+diff --git a/browser/components/StartupTelemetry.sys.mjs b/browser/components/StartupTelemetry.sys.mjs
+index e230201da379..8936f566e5d5 100644
+--- a/browser/components/StartupTelemetry.sys.mjs
++++ b/browser/components/StartupTelemetry.sys.mjs
+@@ -514,6 +514,13 @@ export let StartupTelemetry = {
+   },
+ 
+   desktopEntryStatus(gioServiceForTestingOnly) {
++    // Desktop-entry visibility is a GNOME/GIO concept. Exclusive Qt builds
++    // do not implement nsIGNOMEShellService — skip rather than throw.
++    if (AppConstants.MOZ_WIDGET_QT) {
++      Glean.osEnvironment.desktopEntryExists.set("other");
++      return;
++    }
++
+     // Get it here so it can be mocked out.
+     let gioService =
+       gioServiceForTestingOnly ??
+diff --git a/browser/components/build/components.conf b/browser/components/build/components.conf
+index 968241943771..d4b1c6e42484 100644
+--- a/browser/components/build/components.conf
++++ b/browser/components/build/components.conf
+@@ -21,6 +21,16 @@ if TOOLKIT == 'gtk':
+             'init_method': 'Init',
+         },
+     ]
++elif TOOLKIT == 'qt':
++    Classes += [
++        {
++            'cid': '{63c7b9f4-0cc8-43f8-b666-0a661655cb73}',
++            'contract_ids': shell_service_contracts,
++            'type': 'nsQtShellService',
++            'headers': ['/browser/components/shell/nsQtShellService.h'],
++            'init_method': 'Init',
++        },
++    ]
+ elif TOOLKIT == 'cocoa':
+     Classes += [
+         {
+diff --git a/browser/components/downloads/DownloadsTaskbar.sys.mjs b/browser/components/downloads/DownloadsTaskbar.sys.mjs
+index dabc7df9b7d9..492a365fcbe6 100644
+--- a/browser/components/downloads/DownloadsTaskbar.sys.mjs
++++ b/browser/components/downloads/DownloadsTaskbar.sys.mjs
+@@ -56,12 +56,20 @@ defineResettableGetter(gInterfaces, "macTaskbarProgress", function () {
+ });
+ 
+ defineResettableGetter(gInterfaces, "gtkTaskbarProgress", function () {
+-  return (
+-    "@mozilla.org/widget/taskbarprogress/gtk;1" in Cc &&
+-    Cc["@mozilla.org/widget/taskbarprogress/gtk;1"].getService(
++  // GTK and Qt Linux both expose nsIGtkTaskbarProgress (setPrimaryWindow).
++  // Qt also registers taskbarprogress/qt;1; prefer gtk;1 when present (both
++  // toolkits register that contract on their build).
++  if ("@mozilla.org/widget/taskbarprogress/gtk;1" in Cc) {
++    return Cc["@mozilla.org/widget/taskbarprogress/gtk;1"].getService(
+       Ci.nsIGtkTaskbarProgress
+-    )
+-  );
++    );
++  }
++  if ("@mozilla.org/widget/taskbarprogress/qt;1" in Cc) {
++    return Cc["@mozilla.org/widget/taskbarprogress/qt;1"].getService(
++      Ci.nsIGtkTaskbarProgress
++    );
++  }
++  return null;
+ });
+ 
+ /**
+@@ -260,6 +268,20 @@ class DownloadsTaskbarInstance {
+     }
+   }
+ 
++  #updateActiveCount() {
++    const count = this.#summary ? this.#summary.activeDownloadCount || 0 : 0;
++    for (let progress of this.#taskbarProgresses) {
++      try {
++        // Linux (GTK/Qt) nsIGtkTaskbarProgress; other platforms no-op / throw.
++        progress.QueryInterface(Ci.nsIGtkTaskbarProgress).setActiveDownloadCount(
++          count
++        );
++      } catch (e) {
++        // Backend without setActiveDownloadCount.
++      }
++    }
++  }
++
+   // DownloadSummary view
+ 
+   onSummaryChanged() {
+@@ -268,6 +290,8 @@ class DownloadsTaskbarInstance {
+       return;
+     }
+ 
++    this.#updateActiveCount();
++
+     if (this.#summary.allHaveStopped || this.#summary.progressTotalBytes == 0) {
+       this.updateProgress(Ci.nsITaskbarProgress.STATE_NO_PROGRESS, 0, 0);
+     } else if (this.#summary.allUnknownSize) {
+diff --git a/browser/components/preferences/main.js b/browser/components/preferences/main.js
+--- a/browser/components/preferences/main.js
++++ b/browser/components/preferences/main.js
+@@ -507,64 +507,68 @@
+   },
+ };
+ 
+-Preferences.addSetting({
+-  id: "alwaysCheckDefault",
+-  pref: "browser.shell.checkDefaultBrowser",
+-  setup: emitChange => {
+-    if (!DefaultBrowserHelper.canCheck) {
+-      return;
+-    }
+-    DefaultBrowserHelper.pollForDefaultChanges(emitChange);
+-    // eslint-disable-next-line consistent-return
+-    return () => DefaultBrowserHelper.clearPollingForDefaultChanges();
+-  },
+-  /**
+-   * Show button for setting browser as default browser or information that
+-   * browser is already the default browser.
+-   */
+-  visible: () => DefaultBrowserHelper.canCheck,
+-  disabled: (_, setting) =>
+-    !DefaultBrowserHelper.canCheck ||
+-    setting.locked ||
+-    DefaultBrowserHelper.isBrowserDefault,
+-});
+-
+-Preferences.addSetting({
+-  id: "isDefaultPane",
+-  deps: ["alwaysCheckDefault"],
+-  visible: () =>
+-    DefaultBrowserHelper.canCheck && DefaultBrowserHelper.isBrowserDefault,
+-});
+-
+-Preferences.addSetting({
+-  id: "isNotDefaultPane",
+-  deps: ["alwaysCheckDefault"],
+-  visible: () =>
+-    DefaultBrowserHelper.canCheck && !DefaultBrowserHelper.isBrowserDefault,
+-  onUserClick: (e, { alwaysCheckDefault }) => {
+-    if (!DefaultBrowserHelper.canCheck) {
+-      return;
+-    }
+-    const setDefaultButton = /** @type {MozButton} */ (e.target);
+-
+-    if (!setDefaultButton) {
+-      return;
+-    }
+-    if (setDefaultButton.disabled) {
+-      return;
+-    }
+-
++// Shell-service settings require a platform shell service (HAVE_SHELL_SERVICE).
++// Without it, Preferences.addSetting throws and aborts main.js load.
++if (AppConstants.HAVE_SHELL_SERVICE) {
++  Preferences.addSetting({
++    id: "alwaysCheckDefault",
++    pref: "browser.shell.checkDefaultBrowser",
++    setup: emitChange => {
++      if (!DefaultBrowserHelper.canCheck) {
++        return;
++      }
++      DefaultBrowserHelper.pollForDefaultChanges(emitChange);
++      // eslint-disable-next-line consistent-return
++      return () => DefaultBrowserHelper.clearPollingForDefaultChanges();
++    },
+     /**
+-     * Disable the set default button, so that the user
+-     * doesn't try to hit it again while browser is being set to default.
++     * Show button for setting browser as default browser or information that
++     * browser is already the default browser.
+      */
+-    setDefaultButton.disabled = true;
+-    alwaysCheckDefault.value = true;
+-    DefaultBrowserHelper.setDefaultBrowser().finally(() => {
+-      setDefaultButton.disabled = false;
+-    });
+-  },
+-});
++    visible: () => DefaultBrowserHelper.canCheck,
++    disabled: (_, setting) =>
++      !DefaultBrowserHelper.canCheck ||
++      setting.locked ||
++      DefaultBrowserHelper.isBrowserDefault,
++  });
++
++  Preferences.addSetting({
++    id: "isDefaultPane",
++    deps: ["alwaysCheckDefault"],
++    visible: () =>
++      DefaultBrowserHelper.canCheck && DefaultBrowserHelper.isBrowserDefault,
++  });
++
++  Preferences.addSetting({
++    id: "isNotDefaultPane",
++    deps: ["alwaysCheckDefault"],
++    visible: () =>
++      DefaultBrowserHelper.canCheck && !DefaultBrowserHelper.isBrowserDefault,
++    onUserClick: (e, { alwaysCheckDefault }) => {
++      if (!DefaultBrowserHelper.canCheck) {
++        return;
++      }
++      const setDefaultButton = /** @type {MozButton} */ (e.target);
++
++      if (!setDefaultButton) {
++        return;
++      }
++      if (setDefaultButton.disabled) {
++        return;
++      }
++
++      /**
++       * Disable the set default button, so that the user
++       * doesn't try to hit it again while browser is being set to default.
++       */
++      setDefaultButton.disabled = true;
++      alwaysCheckDefault.value = true;
++      DefaultBrowserHelper.setDefaultBrowser().finally(() => {
++        setDefaultButton.disabled = false;
++      });
++    },
++  });
++}
+ 
+ // AI Control pref settings
+ Preferences.addSetting({
+@@ -647,67 +651,80 @@
+ }
+ 
+ function createStartupConfig(hidden = false) {
++  /** @type {object[]} */
++  const items = [
++    {
++      id: "browserRestoreSession",
++      l10nId: "startup-restore-windows-and-tabs",
++      items: [
++        {
++          id: "sessionRestoreNewTab",
++          l10nId: "windows-launch-on-login-open-new-tab",
++        },
++      ],
++    },
++    {
++      id: "windowsLaunchOnLogin",
++      l10nId: "windows-launch-on-login",
++    },
++    {
++      id: "windowsLaunchOnLoginDisabledBox",
++      control: "moz-message-bar",
++      controlAttrs: {
++        role: "status",
++      },
++      options: [
++        {
++          control: "span",
++          l10nId: "windows-launch-on-login-disabled",
++          slot: "message",
++          options: [
++            {
++              control: "a",
++              controlAttrs: {
++                "data-l10n-name": "startup-link",
++                href: "ms-settings:startupapps",
++                target: "_self",
++              },
++            },
++          ],
++        },
++      ],
++    },
++    {
++      id: "windowsLaunchOnLoginDisabledProfileBox",
++      control: "moz-message-bar",
++      l10nId: "startup-windows-launch-on-login-profile-disabled",
++      controlAttrs: {
++        role: "status",
++      },
++    },
++  ];
++  if (AppConstants.HAVE_SHELL_SERVICE) {
++    items.push({
++      id: "alwaysCheckDefault",
++      l10nId: "always-check-default",
++    });
++  }
+   return {
+     l10nId: "startup-group",
+     headingLevel: 2,
+     hidden,
+-    items: [
+-      {
+-        id: "browserRestoreSession",
+-        l10nId: "startup-restore-windows-and-tabs",
+-        items: [
+-          {
+-            id: "sessionRestoreNewTab",
+-            l10nId: "windows-launch-on-login-open-new-tab",
+-          },
+-        ],
+-      },
+-      {
+-        id: "windowsLaunchOnLogin",
+-        l10nId: "windows-launch-on-login",
+-      },
+-      {
+-        id: "windowsLaunchOnLoginDisabledBox",
+-        control: "moz-message-bar",
+-        controlAttrs: {
+-          role: "status",
+-        },
+-        options: [
+-          {
+-            control: "span",
+-            l10nId: "windows-launch-on-login-disabled",
+-            slot: "message",
+-            options: [
+-              {
+-                control: "a",
+-                controlAttrs: {
+-                  "data-l10n-name": "startup-link",
+-                  href: "ms-settings:startupapps",
+-                  target: "_self",
+-                },
+-              },
+-            ],
+-          },
+-        ],
+-      },
+-      {
+-        id: "windowsLaunchOnLoginDisabledProfileBox",
+-        control: "moz-message-bar",
+-        l10nId: "startup-windows-launch-on-login-profile-disabled",
+-        controlAttrs: {
+-          role: "status",
+-        },
+-      },
+-      {
+-        id: "alwaysCheckDefault",
+-        l10nId: "always-check-default",
+-      },
+-    ],
++    items,
+   };
+ }
+ 
+ SettingGroupManager.registerGroups({
+-  defaultBrowser: createDefaultBrowserConfig(),
++  // Without a shell service the settings are not registered; keep a hidden
++  // empty group so <setting-group groupid="defaultBrowser"> does not throw.
++  defaultBrowser: AppConstants.HAVE_SHELL_SERVICE
++    ? createDefaultBrowserConfig()
++    : {
++        l10nId: "home-default-browser-title",
++        headingLevel: 2,
++        items: [],
++        hidden: true,
++      },
+   startup: createStartupConfig(
+     Services.prefs.getBoolPref("browser-settings-redesign.enabled", false)
+   ),
+diff --git a/browser/components/shell/ShellService.sys.mjs b/browser/components/shell/ShellService.sys.mjs
+index b372b9adc728..0946c7c464e3 100644
+--- a/browser/components/shell/ShellService.sys.mjs
++++ b/browser/components/shell/ShellService.sys.mjs
+@@ -106,6 +106,12 @@ let ShellServiceInternal = {
+ 
+     if (AppConstants.platform == "linux") {
+       if (this.shellService) {
++        if (AppConstants.MOZ_WIDGET_QT) {
++          let unixShellService = this.shellService.QueryInterface(
++            Ci.nsIUnixShellService
++          );
++          return unixShellService.canSetDesktopBackground;
++        }
+         let linuxShellService = this.shellService.QueryInterface(
+           Ci.nsIGNOMEShellService
+         );
+@@ -1269,7 +1275,11 @@ switch (AppConstants.platform) {
+     shellInterface = Ci.nsIMacShellService;
+     break;
+   case "linux":
+-    shellInterface = Ci.nsIGNOMEShellService;
++    // GTK: nsIGNOMEShellService. Qt/Plasma: nsIUnixShellService
++    // (xdg-settings / KDE BrowserApplication, plasma wallpaper — no GIO).
++    shellInterface = AppConstants.MOZ_WIDGET_QT
++      ? Ci.nsIUnixShellService
++      : Ci.nsIGNOMEShellService;
+     break;
+   default:
+     lazy.log.warn(
+diff --git a/browser/components/shell/moz.build b/browser/components/shell/moz.build
+index 119f0843ad3f..d1a1d0a6ade0 100644
+--- a/browser/components/shell/moz.build
++++ b/browser/components/shell/moz.build
+@@ -58,6 +58,19 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+         ]
+         include("/ipc/chromium/chromium-config.mozbuild")
+ 
++elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
++    # FreeDesktop + Plasma: xdg-settings/xdg-mime, plasma wallpaper.
++    XPIDL_SOURCES += [
++        "nsIUnixShellService.idl",
++    ]
++    SOURCES += [
++        "nsQtShellService.cpp",
++    ]
++    CXXFLAGS += CONFIG["MOZ_QT6_CFLAGS"]
++    OS_LIBS += CONFIG["MOZ_QT6_LIBS"]
++    # Qt headers conflict with -fvisibility=hidden wrappers.
++    NoVisibilityFlags()
++
+ elif CONFIG["OS_ARCH"] == "WINNT":
+     XPIDL_SOURCES += [
+         "nsILimitedAccessFeature.idl",
+diff --git a/browser/components/shell/nsIUnixShellService.idl b/browser/components/shell/nsIUnixShellService.idl
+new file mode 100644
+index 000000000000..b292900f1069
+--- /dev/null
++++ b/browser/components/shell/nsIUnixShellService.idl
+@@ -0,0 +1,24 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "nsIShellService.idl"
++
++/**
++ * FreeDesktop / Plasma extensions to nsIShellService for the Qt toolkit.
++ */
++[scriptable, uuid(7c8e2a11-4f3d-4b6a-9e2c-1d0b8f4a9c01)]
++interface nsIUnixShellService : nsIShellService
++{
++  /**
++   * Whether "Set as desktop background" is available on this session
++   * (true on Plasma when plasma-apply-wallpaperimage is present).
++   */
++  readonly attribute boolean canSetDesktopBackground;
++
++  /**
++   * True if this browser is the FreeDesktop default handler for aScheme
++   * (e.g. "http", "https", "mailto").
++   */
++  boolean isDefaultForScheme(in AUTF8String aScheme);
++};
+diff --git a/browser/components/shell/nsQtShellService.cpp b/browser/components/shell/nsQtShellService.cpp
+new file mode 100644
+index 000000000000..9577f5042609
+--- /dev/null
++++ b/browser/components/shell/nsQtShellService.cpp
+@@ -0,0 +1,616 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "nsQtShellService.h"
++
++#include "imgIContainer.h"
++#include "imgIRequest.h"
++#include "mozilla/dom/Element.h"
++#include "mozilla/gfx/2D.h"
++#include "nsCOMPtr.h"
++#include "nsComponentManagerUtils.h"
++#include "nsIImageLoadingContent.h"
++#include "nsIPrefBranch.h"
++#include "nsIPrefService.h"
++#include "mozilla/Components.h"
++#include "nsIStringBundle.h"
++#include "nsReadableUtils.h"
++#include "nsServiceManagerUtils.h"
++#include "nsShellService.h"
++#include "nsString.h"
++#include "prenv.h"
++
++#include <fcntl.h>
++#include <spawn.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <sys/wait.h>
++#include <unistd.h>
++
++#pragma GCC visibility push(default)
++#include <QColor>
++#include <QGuiApplication>
++#include <QImage>
++#include <QPalette>
++#include <QStandardPaths>
++#include <QString>
++#pragma GCC visibility pop
++
++#include "nsPrintfCString.h"
++
++// From glibc / POSIX: environ for posix_spawnp.
++extern char** environ;
++
++using mozilla::gfx::DataSourceSurface;
++using mozilla::gfx::SourceSurface;
++using mozilla::gfx::SurfaceFormat;
++
++NS_IMPL_ISUPPORTS(nsQtShellService, nsIUnixShellService, nsIShellService,
++                  nsIToolkitShellService)
++
++// Last solid color applied via SetDesktopBackgroundColor (Plasma has no
++// stable public API to read wallpaper Color back).
++static bool sHaveDesktopBgColor = false;
++static uint32_t sDesktopBgColor = 0;
++
++static void AppendLiteral(nsTArray<nsCString>& aArgs, const char* aLit) {
++  aArgs.AppendElement()->Assign(aLit);
++}
++
++/* static */
++nsresult nsQtShellService::RunProcess(const char* aExecutable,
++                                      const nsTArray<nsCString>& aArgs,
++                                      nsACString* aStdout, int* aExitStatus) {
++  if (aExitStatus) {
++    *aExitStatus = -1;
++  }
++  if (aStdout) {
++    aStdout->Truncate();
++  }
++
++  nsTArray<const char*> argv;
++  argv.AppendElement(aExecutable);
++  for (const auto& arg : aArgs) {
++    argv.AppendElement(arg.get());
++  }
++  argv.AppendElement(nullptr);
++
++  int pipefd[2] = {-1, -1};
++  if (aStdout && pipe(pipefd) != 0) {
++    return NS_ERROR_FAILURE;
++  }
++
++  posix_spawn_file_actions_t actions;
++  posix_spawn_file_actions_init(&actions);
++  if (aStdout) {
++    posix_spawn_file_actions_addclose(&actions, pipefd[0]);
++    posix_spawn_file_actions_adddup2(&actions, pipefd[1], STDOUT_FILENO);
++    posix_spawn_file_actions_addclose(&actions, pipefd[1]);
++  } else {
++    posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, "/dev/null",
++                                     O_WRONLY, 0);
++  }
++  posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null",
++                                   O_WRONLY, 0);
++
++  pid_t pid = 0;
++  const int spawnRv =
++      posix_spawnp(&pid, aExecutable, &actions, nullptr,
++                   const_cast<char* const*>(argv.Elements()), environ);
++  posix_spawn_file_actions_destroy(&actions);
++
++  if (aStdout) {
++    close(pipefd[1]);
++  }
++
++  if (spawnRv != 0) {
++    if (aStdout) {
++      close(pipefd[0]);
++    }
++    return NS_ERROR_NOT_AVAILABLE;
++  }
++
++  if (aStdout) {
++    char buf[512];
++    ssize_t n;
++    while ((n = read(pipefd[0], buf, sizeof(buf))) > 0) {
++      aStdout->Append(buf, n);
++    }
++    close(pipefd[0]);
++  }
++
++  int status = 0;
++  if (waitpid(pid, &status, 0) < 0) {
++    return NS_ERROR_FAILURE;
++  }
++  if (aExitStatus) {
++    *aExitStatus = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
++  }
++  return NS_OK;
++}
++
++/* static */
++nsresult nsQtShellService::RunXdgSettings(const nsTArray<nsCString>& aArgs,
++                                          nsACString* aStdout,
++                                          int* aExitStatus) {
++  return RunProcess("xdg-settings", aArgs, aStdout, aExitStatus);
++}
++
++/* static */
++bool nsQtShellService::IsPlasmaSession() {
++  if (const char* desktop = PR_GetEnv("XDG_CURRENT_DESKTOP")) {
++    if (strstr(desktop, "KDE") || strstr(desktop, "Plasma")) {
++      return true;
++    }
++  }
++  if (const char* session = PR_GetEnv("DESKTOP_SESSION")) {
++    if (strstr(session, "plasma") || strstr(session, "kde")) {
++      return true;
++    }
++  }
++  return false;
++}
++
++/* static */
++bool nsQtShellService::HasPlasmaWallpaperTool() {
++  return !QStandardPaths::findExecutable(
++              QStringLiteral("plasma-apply-wallpaperimage"))
++              .isEmpty();
++}
++
++/* static */
++bool nsQtShellService::ResolveDesktopId(nsACString& aDesktopId) {
++  if (const char* envDesktop = PR_GetEnv("MOZ_DESKTOP_FILE_NAME")) {
++    aDesktopId.Assign(envDesktop);
++    if (!StringEndsWith(aDesktopId, ".desktop"_ns)) {
++      aDesktopId.AppendLiteral(".desktop");
++    }
++    return true;
++  }
++
++  static const char* kCandidates[] = {
++      MOZ_APP_NAME ".desktop",
++      "org.mozilla." MOZ_APP_NAME ".desktop",
++      MOZ_APP_NAME "-esr.desktop",
++  };
++
++  for (const char* candidate : kCandidates) {
++    nsTArray<nsCString> args;
++    AppendLiteral(args, "check");
++    AppendLiteral(args, "default-web-browser");
++    nsCString cand;
++    cand.Assign(candidate);
++    args.AppendElement(cand);
++
++    nsAutoCString output;
++    int exitStatus = -1;
++    if (NS_SUCCEEDED(RunXdgSettings(args, &output, &exitStatus))) {
++      if (StringBeginsWith(output, "yes"_ns) ||
++          StringBeginsWith(output, "no"_ns)) {
++        aDesktopId.Assign(candidate);
++        return true;
++      }
++    }
++  }
++
++  aDesktopId.AssignLiteral(MOZ_APP_NAME ".desktop");
++  return true;
++}
++
++nsresult nsQtShellService::Init() {
++  if (!ResolveDesktopId(mDesktopId)) {
++    return NS_ERROR_NOT_AVAILABLE;
++  }
++  return NS_OK;
++}
++
++bool nsQtShellService::DesktopIdMatchesHandler(
++    const nsACString& aHandlerId) const {
++  if (aHandlerId.IsEmpty()) {
++    return false;
++  }
++  if (mDesktopId.Equals(aHandlerId)) {
++    return true;
++  }
++  // Compare basenames without .desktop
++  auto strip = [](const nsACString& id) {
++    nsAutoCString s(id);
++    if (StringEndsWith(s, ".desktop"_ns)) {
++      s.Truncate(s.Length() - strlen(".desktop"));
++    }
++    return s;
++  };
++  return strip(mDesktopId).Equals(strip(aHandlerId));
++}
++
++NS_IMETHODIMP
++nsQtShellService::IsDefaultBrowser(bool /*aForAllTypes*/,
++                                   bool* aIsDefaultBrowser) {
++  NS_ENSURE_ARG_POINTER(aIsDefaultBrowser);
++  *aIsDefaultBrowser = false;
++
++  nsTArray<nsCString> args;
++  AppendLiteral(args, "check");
++  AppendLiteral(args, "default-web-browser");
++  args.AppendElement(mDesktopId);
++
++  nsAutoCString output;
++  int exitStatus = -1;
++  nsresult rv = RunXdgSettings(args, &output, &exitStatus);
++  if (NS_FAILED(rv) || exitStatus != 0) {
++    return NS_OK;
++  }
++  *aIsDefaultBrowser = StringBeginsWith(output, "yes"_ns);
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsQtShellService::SetDefaultBrowser(bool aForAllUsers) {
++#ifdef DEBUG
++  if (aForAllUsers) {
++    NS_WARNING(
++        "Setting the default browser for all users is not supported on Linux");
++  }
++#else
++  (void)aForAllUsers;
++#endif
++
++  nsTArray<nsCString> args;
++  AppendLiteral(args, "set");
++  AppendLiteral(args, "default-web-browser");
++  args.AppendElement(mDesktopId);
++
++  int exitStatus = -1;
++  nsresult rv = RunXdgSettings(args, nullptr, &exitStatus);
++  if (NS_FAILED(rv) || exitStatus != 0) {
++    return NS_ERROR_FAILURE;
++  }
++
++  // Web MIME + schemes (matches KDE System Settings "Web Browser").
++  {
++    nsTArray<nsCString> mimeArgs;
++    AppendLiteral(mimeArgs, "default");
++    mimeArgs.AppendElement(mDesktopId);
++    AppendLiteral(mimeArgs, "text/html");
++    AppendLiteral(mimeArgs, "application/xhtml+xml");
++    AppendLiteral(mimeArgs, "x-scheme-handler/http");
++    AppendLiteral(mimeArgs, "x-scheme-handler/https");
++    int mimeStatus = -1;
++    (void)RunProcess("xdg-mime", mimeArgs, nullptr, &mimeStatus);
++  }
++
++  // Also claim common browser schemes via xdg-settings when supported.
++  for (const char* scheme : {"http", "https"}) {
++    nsTArray<nsCString> schemeArgs;
++    AppendLiteral(schemeArgs, "set");
++    AppendLiteral(schemeArgs, "default-url-scheme-handler");
++    schemeArgs.AppendElement()->Assign(scheme);
++    schemeArgs.AppendElement(mDesktopId);
++    int st = -1;
++    (void)RunXdgSettings(schemeArgs, nullptr, &st);
++  }
++
++  // Plasma: ensure BrowserApplication matches (xdg-settings usually does this).
++  if (IsPlasmaSession()) {
++    for (const char* bin : {"kwriteconfig6", "kwriteconfig5"}) {
++      nsTArray<nsCString> kargs;
++      AppendLiteral(kargs, "--file");
++      AppendLiteral(kargs, "kdeglobals");
++      AppendLiteral(kargs, "--group");
++      AppendLiteral(kargs, "General");
++      AppendLiteral(kargs, "--key");
++      AppendLiteral(kargs, "BrowserApplication");
++      kargs.AppendElement(mDesktopId);
++      int st = -1;
++      if (NS_SUCCEEDED(RunProcess(bin, kargs, nullptr, &st)) && st == 0) {
++        break;
++      }
++    }
++  }
++
++  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID));
++  if (prefs) {
++    (void)prefs->SetBoolPref(PREF_CHECKDEFAULTBROWSER, true);
++    (void)prefs->SetIntPref(PREF_DEFAULTBROWSERCHECKCOUNT, 0);
++  }
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsQtShellService::GetCanSetDesktopBackground(bool* aResult) {
++  NS_ENSURE_ARG_POINTER(aResult);
++  *aResult = IsPlasmaSession() && HasPlasmaWallpaperTool();
++  return NS_OK;
++}
++
++/* static */
++nsresult nsQtShellService::WriteElementImageToPng(
++    mozilla::dom::Element* aElement, const nsACString& aPath) {
++  nsCOMPtr<nsIImageLoadingContent> imageContent = do_QueryInterface(aElement);
++  if (!imageContent) {
++    return NS_ERROR_FAILURE;
++  }
++
++  nsCOMPtr<imgIRequest> request;
++  imageContent->GetRequest(nsIImageLoadingContent::CURRENT_REQUEST,
++                           getter_AddRefs(request));
++  if (!request) {
++    return NS_ERROR_FAILURE;
++  }
++  nsCOMPtr<imgIContainer> container;
++  request->GetImage(getter_AddRefs(container));
++  if (!container) {
++    return NS_ERROR_FAILURE;
++  }
++
++  const uint32_t flags =
++      imgIContainer::FLAG_SYNC_DECODE | imgIContainer::FLAG_ASYNC_NOTIFY;
++  RefPtr<SourceSurface> surface =
++      container->GetFrame(imgIContainer::FRAME_CURRENT, flags);
++  if (!surface) {
++    surface =
++        container->GetFrame(imgIContainer::FRAME_CURRENT, imgIContainer::FLAG_NONE);
++  }
++  if (!surface) {
++    return NS_ERROR_FAILURE;
++  }
++
++  RefPtr<DataSourceSurface> data = surface->GetDataSurface();
++  if (!data) {
++    return NS_ERROR_FAILURE;
++  }
++
++  DataSourceSurface::ScopedMap map(data, DataSourceSurface::READ);
++  if (!map.IsMapped()) {
++    return NS_ERROR_FAILURE;
++  }
++
++  const int width = data->GetSize().width;
++  const int height = data->GetSize().height;
++  if (width <= 0 || height <= 0) {
++    return NS_ERROR_FAILURE;
++  }
++
++  // Convert to RGBA8888 for QImage.
++  QImage image(width, height, QImage::Format_RGBA8888);
++  if (image.isNull()) {
++    return NS_ERROR_OUT_OF_MEMORY;
++  }
++
++  const SurfaceFormat fmt = data->GetFormat();
++  const uint8_t* src = map.GetData();
++  const int32_t srcStride = map.GetStride();
++
++  for (int y = 0; y < height; ++y) {
++    const uint8_t* row = src + y * srcStride;
++    uint8_t* dst = image.scanLine(y);
++    for (int x = 0; x < width; ++x) {
++      uint8_t r = 0, g = 0, b = 0, a = 255;
++      switch (fmt) {
++        case SurfaceFormat::B8G8R8A8:
++        case SurfaceFormat::B8G8R8X8: {
++          b = row[x * 4 + 0];
++          g = row[x * 4 + 1];
++          r = row[x * 4 + 2];
++          a = row[x * 4 + 3];
++          break;
++        }
++        case SurfaceFormat::R8G8B8A8:
++        case SurfaceFormat::R8G8B8X8: {
++          r = row[x * 4 + 0];
++          g = row[x * 4 + 1];
++          b = row[x * 4 + 2];
++          a = row[x * 4 + 3];
++          break;
++        }
++        default: {
++          // Best-effort BGRA (covers OS_RGBA / A8R8G8B8_UINT32 on LE).
++          b = row[x * 4 + 0];
++          g = row[x * 4 + 1];
++          r = row[x * 4 + 2];
++          a = row[x * 4 + 3];
++          break;
++        }
++      }
++      dst[x * 4 + 0] = r;
++      dst[x * 4 + 1] = g;
++      dst[x * 4 + 2] = b;
++      dst[x * 4 + 3] = a;
++    }
++  }
++
++  if (!image.save(QString::fromUtf8(PromiseFlatCString(aPath).get()), "PNG")) {
++    return NS_ERROR_FAILURE;
++  }
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsQtShellService::SetDesktopBackground(mozilla::dom::Element* aElement,
++                                       int32_t aPosition,
++                                       const nsACString& /*aImageName*/) {
++  if (!IsPlasmaSession() || !HasPlasmaWallpaperTool()) {
++    return NS_ERROR_NOT_AVAILABLE;
++  }
++
++  // Write wallpaper under $HOME (same pattern as GNOME shell service).
++  const char* home = PR_GetEnv("HOME");
++  if (!home || !*home) {
++    return NS_ERROR_FAILURE;
++  }
++
++  nsAutoString brandName;
++  if (nsCOMPtr<nsIStringBundleService> bundleService =
++          mozilla::components::StringBundle::Service()) {
++    nsCOMPtr<nsIStringBundle> brandBundle;
++    if (NS_SUCCEEDED(bundleService->CreateBundle(
++            SHELL_BRAND_PROPERTIES_URI, getter_AddRefs(brandBundle))) &&
++        brandBundle) {
++      brandBundle->GetStringFromName("brandShortName", brandName);
++    }
++  }
++  if (brandName.IsEmpty()) {
++    brandName.AssignLiteral("Firefox");
++  }
++
++  nsAutoCString filePath(home);
++  filePath.Append('/');
++  filePath.Append(NS_ConvertUTF16toUTF8(brandName));
++  filePath.AppendLiteral("_wallpaper.png");
++
++  nsresult rv = WriteElementImageToPng(aElement, filePath);
++  NS_ENSURE_SUCCESS(rv, rv);
++
++  // Map nsIShellService position flags to plasma-apply-wallpaperimage fill modes.
++  const char* fillMode = "preserveAspectCrop";
++  switch (aPosition) {
++    case BACKGROUND_TILE:
++      fillMode = "tile";
++      break;
++    case BACKGROUND_STRETCH:
++      fillMode = "stretch";
++      break;
++    case BACKGROUND_FILL:
++      fillMode = "preserveAspectCrop";
++      break;
++    case BACKGROUND_FIT:
++      fillMode = "preserveAspectFit";
++      break;
++    case BACKGROUND_SPAN:
++      fillMode = "preserveAspectCrop";
++      break;
++    case BACKGROUND_CENTER:
++    default:
++      fillMode = "pad";
++      break;
++  }
++
++  nsTArray<nsCString> args;
++  AppendLiteral(args, "-f");
++  args.AppendElement()->Assign(fillMode);
++  args.AppendElement(filePath);
++
++  int exitStatus = -1;
++  rv = RunProcess("plasma-apply-wallpaperimage", args, nullptr, &exitStatus);
++  if (NS_FAILED(rv) || exitStatus != 0) {
++    // Retry without fill mode for older tools.
++    nsTArray<nsCString> plain;
++    plain.AppendElement(filePath);
++    exitStatus = -1;
++    rv = RunProcess("plasma-apply-wallpaperimage", plain, nullptr, &exitStatus);
++    if (NS_FAILED(rv) || exitStatus != 0) {
++      return NS_ERROR_FAILURE;
++    }
++  }
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsQtShellService::GetDesktopBackgroundColor(uint32_t* aColor) {
++  NS_ENSURE_ARG_POINTER(aColor);
++  if (sHaveDesktopBgColor) {
++    *aColor = sDesktopBgColor;
++    return NS_OK;
++  }
++  // Best-effort: session palette window color (Plasma theme / system UI).
++  // Solid wallpaper Color is containment-specific and not a stable public API.
++#pragma GCC visibility push(default)
++  {
++    QColor c = QGuiApplication::palette().color(QPalette::Window);
++    *aColor = (uint32_t(c.red()) << 16) | (uint32_t(c.green()) << 8) |
++              uint32_t(c.blue());
++  }
++#pragma GCC visibility pop
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsQtShellService::SetDesktopBackgroundColor(uint32_t aColor) {
++  if (!IsPlasmaSession()) {
++    return NS_ERROR_NOT_AVAILABLE;
++  }
++  // Apply solid color wallpaper via PlasmaShell JS (org.kde.color plugin).
++  const uint8_t r = (aColor >> 16) & 0xff;
++  const uint8_t g = (aColor >> 8) & 0xff;
++  const uint8_t b = aColor & 0xff;
++  nsPrintfCString hex("#%02x%02x%02x", r, g, b);
++  nsPrintfCString script(
++      "var allDesktops = desktops();"
++      "for (var i = 0; i < allDesktops.length; i++) {"
++      "  var d = allDesktops[i];"
++      "  d.wallpaperPlugin = 'org.kde.color';"
++      "  d.currentConfigGroup = Array('Wallpaper', 'org.kde.color', 'General');"
++      "  d.writeConfig('Color', '%s');"
++      "}",
++      hex.get());
++  nsTArray<nsCString> args;
++  AppendLiteral(args, "org.kde.plasmashell");
++  AppendLiteral(args, "/PlasmaShell");
++  AppendLiteral(args, "org.kde.PlasmaShell.evaluateScript");
++  args.AppendElement(script);
++  int exitStatus = -1;
++  nsresult rv = RunProcess("qdbus", args, nullptr, &exitStatus);
++  if (NS_FAILED(rv) || exitStatus != 0) {
++    // Plasma 6 often uses qdbus6 / qdbus-qt6.
++    bool ok = false;
++    for (const char* bin : {"qdbus6", "qdbus-qt6"}) {
++      rv = RunProcess(bin, args, nullptr, &exitStatus);
++      if (NS_SUCCEEDED(rv) && exitStatus == 0) {
++        ok = true;
++        break;
++      }
++    }
++    if (!ok) {
++      return NS_ERROR_FAILURE;
++    }
++  }
++  sDesktopBgColor = aColor & 0x00ffffff;
++  sHaveDesktopBgColor = true;
++  return NS_OK;
++}
++
++NS_IMETHODIMP
++nsQtShellService::IsDefaultForScheme(const nsACString& aScheme,
++                                     bool* aIsDefault) {
++  NS_ENSURE_ARG_POINTER(aIsDefault);
++  *aIsDefault = false;
++
++  nsAutoCString scheme(aScheme);
++  // xdg-settings check default-url-scheme-handler SCHEME DESKTOP
++  {
++    nsTArray<nsCString> args;
++    AppendLiteral(args, "check");
++    AppendLiteral(args, "default-url-scheme-handler");
++    args.AppendElement(scheme);
++    args.AppendElement(mDesktopId);
++    nsAutoCString output;
++    int exitStatus = -1;
++    if (NS_SUCCEEDED(RunXdgSettings(args, &output, &exitStatus)) &&
++        exitStatus == 0 && StringBeginsWith(output, "yes"_ns)) {
++      *aIsDefault = true;
++      return NS_OK;
++    }
++  }
++
++  // Fallback: xdg-mime query default x-scheme-handler/SCHEME
++  {
++    nsAutoCString mime("x-scheme-handler/");
++    mime.Append(scheme);
++    nsTArray<nsCString> args;
++    AppendLiteral(args, "query");
++    AppendLiteral(args, "default");
++    args.AppendElement(mime);
++    nsAutoCString output;
++    int exitStatus = -1;
++    if (NS_SUCCEEDED(RunProcess("xdg-mime", args, &output, &exitStatus)) &&
++        exitStatus == 0) {
++      output.Trim(" \t\r\n", true, true);
++      *aIsDefault = DesktopIdMatchesHandler(output);
++      return NS_OK;
++    }
++  }
++
++  return NS_OK;
++}
+diff --git a/browser/components/shell/nsQtShellService.h b/browser/components/shell/nsQtShellService.h
+new file mode 100644
+index 000000000000..a71e0792079d
+--- /dev/null
++++ b/browser/components/shell/nsQtShellService.h
+@@ -0,0 +1,50 @@
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef nsQtShellService_h_
++#define nsQtShellService_h_
++
++#include "nsIUnixShellService.h"
++#include "nsToolkitShellService.h"
++#include "nsString.h"
++
++/**
++ * Linux/Qt shell service: FreeDesktop + Plasma integration.
++ *
++ * - Default browser: xdg-settings (KDE BrowserApplication) + xdg-mime
++ * - Per-scheme defaults: xdg-mime / xdg-settings
++ * - Wallpaper: plasma-apply-wallpaperimage when available
++ * No GIO/GTK.
++ */
++class nsQtShellService final : public nsIUnixShellService,
++                               public nsToolkitShellService {
++ public:
++  nsQtShellService() = default;
++
++  NS_DECL_ISUPPORTS
++  NS_DECL_NSISHELLSERVICE
++  NS_DECL_NSIUNIXSHELLSERVICE
++
++  nsresult Init();
++
++ private:
++  ~nsQtShellService() = default;
++
++  // Desktop file id used with xdg-settings (e.g. "firefox.desktop").
++  nsCString mDesktopId;
++
++  static nsresult RunProcess(const char* aExecutable,
++                             const nsTArray<nsCString>& aArgs,
++                             nsACString* aStdout, int* aExitStatus);
++  static nsresult RunXdgSettings(const nsTArray<nsCString>& aArgs,
++                                 nsACString* aStdout, int* aExitStatus);
++  static bool ResolveDesktopId(nsACString& aDesktopId);
++  static bool IsPlasmaSession();
++  static bool HasPlasmaWallpaperTool();
++  static nsresult WriteElementImageToPng(mozilla::dom::Element* aElement,
++                                         const nsACString& aPath);
++  bool DesktopIdMatchesHandler(const nsACString& aHandlerId) const;
++};
++
++#endif
+diff --git a/browser/components/tests/browser/browser_quit_close_current_tab.js b/browser/components/tests/browser/browser_quit_close_current_tab.js
+index d59173ee5508..b2fe4218a5d4 100644
+--- a/browser/components/tests/browser/browser_quit_close_current_tab.js
++++ b/browser/components/tests/browser/browser_quit_close_current_tab.js
+@@ -16,8 +16,8 @@ add_task(async function test_close_current_tab() {
+       dialogElement.buttonBox.getElementsByTagName("button")
+     );
+ 
+-    // button reordering only happens on Unix
+-    if (AppConstants.XP_UNIX) {
++    // Primary-on-right layouts put Cancel before Accept.
++    if (!Services.appinfo.dialogPrimaryButtonOnLeft) {
+       is(
+         buttons[2].label,
+         dialogElement.getButton("cancel").label,
+diff --git a/xpfe/appshell/AppWindow.cpp b/xpfe/appshell/AppWindow.cpp
+index 8ce7a79d6f1d..3432b1278456 100644
+--- a/xpfe/appshell/AppWindow.cpp
++++ b/xpfe/appshell/AppWindow.cpp
+@@ -78,7 +78,7 @@
+ 
+ #include "mozilla/dom/DocumentL10n.h"
+ 
+-#if defined(XP_MACOSX) || defined(MOZ_WIDGET_GTK)
++#if defined(XP_MACOSX) || defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
+ #  include "mozilla/widget/NativeMenuSupport.h"
+ #  define USE_NATIVE_MENUS
+ #endif
+diff --git a/xpfe/appshell/nsAppShellService.cpp b/xpfe/appshell/nsAppShellService.cpp
+index 98b22e50756f..6939abe04d47 100644
+--- a/xpfe/appshell/nsAppShellService.cpp
++++ b/xpfe/appshell/nsAppShellService.cpp
+@@ -503,9 +503,8 @@ nsresult nsAppShellService::JustCreateTopWindow(
+     widgetInitData.mHasRemoteContent = true;
+   }
+ 
+-#if defined(MOZ_WIDGET_GTK) || defined(XP_WIN)
+-  // Windows/Gtk PIP window support. It's Chrome dialog window, always on top
+-  // and without any bar.
++#if defined(MOZ_WIDGET_GTK) || defined(XP_WIN) || defined(MOZ_WIDGET_QT)
++  // Windows/Gtk/Qt PIP window support. Chrome dialog, always on top, no bars.
+   uint32_t pipMask = nsIWebBrowserChrome::CHROME_ALWAYS_ON_TOP |
+                      nsIWebBrowserChrome::CHROME_OPENAS_CHROME |
+                      nsIWebBrowserChrome::CHROME_WINDOW_RESIZE;
+-- 
+2.55.0
+

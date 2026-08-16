@@ -1,0 +1,81 @@
+From: OpenMandriva
+Subject: [PATCH] Bug 2054387 - sandbox: allow write to user fontconfig cache
+
+Content (and other) processes load fonts via fontconfig. The broker only
+granted read access to ~/.cache/fontconfig, so fontconfig always logs:
+
+  Fontconfig error: No writable cache directories
+        /var/cache/fontconfig
+        $HOME/.cache/fontconfig
+        $HOME/.fontconfig
+
+even when directory permissions on disk are correct -- open(O_WRONLY) is
+denied by the sandbox, not by chmod.
+
+Allow write+create only on the user fontconfig cache trees
+($XDG_CACHE_HOME/fontconfig or ~/.cache/fontconfig, and legacy
+~/.fontconfig). System /var/cache/fontconfig stays read-only.
+
+This is unrelated to HiDPI half-size rendering, but removes the noise and
+lets sandboxed processes refresh caches when missing/stale.
+
+--- a/security/sandbox/linux/broker/SandboxBrokerPolicyFactory.cpp
++++ b/security/sandbox/linux/broker/SandboxBrokerPolicyFactory.cpp
+@@ -543,12 +543,12 @@
+     policy->AddFutureDir(rdonly, PromiseFlatCString(fontPath).get());
+   }
+ 
+-  // Extra configuration/cache dirs in the homedir that we want to allow read
+-  // access to.
++  // Extra configuration dirs in the homedir that we want to allow read
++  // access to. Fontconfig cache dirs are handled separately with write
++  // permission (see below) so content processes can update caches.
+   std::vector<const char*> extraConfDirsAllow = {
+       ".themes",
+       ".fonts",
+-      ".cache/fontconfig",
+   };
+ 
+   // Fallback if XDG_CONFIG_HOME isn't set
+@@ -576,6 +576,41 @@
+       }
+     }
+ 
++    // Fontconfig cache dirs need write+create. Upstream grants only read
++    // access, which is enough when caches already exist but produces
++    // "Fontconfig error: No writable cache directories" from every sandboxed
++    // process that loads fonts (content, utility, ...). Directory permissions
++    // on disk look correct; the broker simply denies open(O_WRONLY/O_CREAT).
++    // Keep the scope tight: only the fontconfig cache trees, never ~/.cache
++    // as a whole. System /var/cache/fontconfig stays read-only above.
++    auto addWritableFontconfigCache = [&](const char* relativeToHome) {
++      nsCOMPtr<nsIFile> cacheDir;
++      nsresult r = homeDir->Clone(getter_AddRefs(cacheDir));
++      if (NS_FAILED(r)) {
++        return;
++      }
++      r = cacheDir->AppendRelativeNativePath(nsDependentCString(relativeToHome));
++      if (NS_FAILED(r)) {
++        return;
++      }
++      nsAutoCString tmpPath;
++      r = cacheDir->GetNativePath(tmpPath);
++      if (NS_SUCCEEDED(r)) {
++        // AddFutureDir: dir may be missing on first run; allow create.
++        policy->AddFutureDir(rdwrcr, tmpPath.get());
++      }
++    };
++    nsAutoCString xdgCacheHome(PathFromEnvIfAbsolute("XDG_CACHE_HOME"));
++    if (!xdgCacheHome.IsEmpty()) {
++      nsAutoCString fcCache(xdgCacheHome);
++      fcCache.AppendLiteral("/fontconfig");
++      policy->AddFutureDir(rdwrcr, fcCache.get());
++    } else {
++      addWritableFontconfigCache(".cache/fontconfig");
++    }
++    // Legacy path still listed by fontconfig as a cache candidate.
++    addWritableFontconfigCache(".fontconfig");
++
+     // ~/.config/mozilla/ needs to be manually blocked, because the previous
+     // loop will allow for ~/.config/ access.
+     {

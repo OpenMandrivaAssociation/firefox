@@ -1,0 +1,248 @@
+From 2fc28fa359bf4f368a9aa1124d842f532fe7902f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bernhard=20Rosenkr=C3=A4nzer?= <bero@lindev.ch>
+Date: Sun, 12 Jul 2026 18:23:25 +0200
+Subject: [PATCH 05/10] Bug 2054387 - widget/gtk: share DMABuf/helpers with Qt
+ builds. r?stransky
+
+Allow Qt to reuse toolkit-neutral DMABuf and related Linux helpers that
+live under widget/gtk without requiring a GTK widget toolkit.
+
+Differential Revision: https://phabricator.services.mozilla.com/D311739
+---
+ widget/gtk/DMABufDevice.cpp    | 10 ++++++++--
+ widget/gtk/DMABufFormats.cpp   |  2 +-
+ widget/gtk/DMABufSurface.cpp   | 17 ++++++++++++++++-
+ widget/gtk/GRefPtr.h           | 18 ++++++++++++++++--
+ widget/gtk/GUniquePtr.h        |  8 ++++++--
+ widget/gtk/TaskbarProgress.cpp |  6 ++++++
+ widget/gtk/nsAppShell.cpp      |  2 +-
+ widget/gtk/vaapitest/moz.build | 10 ++++++----
+ 8 files changed, 60 insertions(+), 13 deletions(-)
+
+diff --git a/widget/gtk/DMABufDevice.cpp b/widget/gtk/DMABufDevice.cpp
+index 15fefe6b7840..6eeb92c7e5a5 100644
+--- a/widget/gtk/DMABufDevice.cpp
++++ b/widget/gtk/DMABufDevice.cpp
+@@ -13,10 +13,12 @@
+ #include "mozilla/StaticPrefs_widget.h"
+ #include "mozilla/StaticPrefs_media.h"
+ #include "mozilla/gfx/gfxVars.h"
+-#include "WidgetUtilsGtk.h"
++#ifdef MOZ_WIDGET_GTK
++#  include "WidgetUtilsGtk.h"
++#endif
+ #include "gfxConfig.h"
+ #include "nsIGfxInfo.h"
+-#include "GfxInfo.h"
++#include "GfxDriverInfo.h"
+ #include "mozilla/Components.h"
+ #include "mozilla/ClearOnShutdown.h"
+ 
+@@ -29,6 +31,10 @@
+ 
+ using namespace mozilla::gfx;
+ 
++// Defined here so both GTK and Qt toolkits share the same log module when
++// compiling the DMABuf sources.
++mozilla::LazyLogModule gDmabufLog("Dmabuf");
++
+ namespace mozilla {
+ namespace widget {
+ 
+diff --git a/widget/gtk/DMABufFormats.cpp b/widget/gtk/DMABufFormats.cpp
+index 52817db4535d..8a648753587e 100644
+--- a/widget/gtk/DMABufFormats.cpp
++++ b/widget/gtk/DMABufFormats.cpp
+@@ -436,7 +436,7 @@ bool GlobalDMABufFormats::ConfigureFormat(RefPtr<DMABufFormats> aFormats,
+ 
+ void GlobalDMABufFormats::SetModifiersToGfxVars() {
+   RefPtr<DMABufFormats> formats;
+-#ifdef MOZ_WAYLAND
++#if defined(MOZ_WAYLAND) && defined(MOZ_WIDGET_GTK)
+   if (GdkIsWaylandDisplay()) {
+     formats = WaylandDisplayGet()->GetDMABufFormats();
+   }
+diff --git a/widget/gtk/DMABufSurface.cpp b/widget/gtk/DMABufSurface.cpp
+index 4b569c72208b..866c8cbba1d2 100644
+--- a/widget/gtk/DMABufSurface.cpp
++++ b/widget/gtk/DMABufSurface.cpp
+@@ -54,7 +54,18 @@
+ #include "ScopedGLHelpers.h"
+ #include "GLBlitHelper.h"
+ #include "GLReadTexImageHelper.h"
+-#include "nsGtkUtils.h"
++#ifdef MOZ_WIDGET_GTK
++#  include "nsGtkUtils.h"
++#else
++// Minimal clear helper when building without GTK glib helpers.
++template <class T>
++static inline void MozClearPointer(T*& pointer, void (*destroy)(T*)) {
++  if (pointer) {
++    destroy(pointer);
++    pointer = nullptr;
++  }
++}
++#endif
+ #include "ImageContainer.h"
+ #include "mozilla/layers/LayersSurfaces.h"
+ #include "mozilla/ScopeExit.h"
+@@ -1482,6 +1493,7 @@ void DMABufSurfaceRGBA::DumpToFile(const char* aFile) {
+ #  if 0
+ // A direct mapping version without GL.
+ void DMABufSurfaceRGBA::DumpToFile(const char* pFile) {
++#  if defined(MOZ_WIDGET_GTK)
+   uint32_t stride;
+ 
+   if (!MapReadOnly(&stride)) {
+@@ -1502,6 +1514,9 @@ void DMABufSurfaceRGBA::DumpToFile(const char* pFile) {
+   if (cairo_surface_status(surface) == CAIRO_STATUS_SUCCESS) {
+     cairo_surface_write_to_png(surface, pFile);
+   }
++#  else
++  (void)pFile;
++#  endif
+ }
+ #  endif
+ #endif
+diff --git a/widget/gtk/GRefPtr.h b/widget/gtk/GRefPtr.h
+index 3405a9a7070e..bdb1aee62224 100644
+--- a/widget/gtk/GRefPtr.h
++++ b/widget/gtk/GRefPtr.h
+@@ -7,10 +7,12 @@
+ 
+ // Allows to use RefPtr<T> with various kinds of GObjects
+ 
+-#include <gdk/gdk.h>
+ #include <gio/gio.h>
+-#include <gtk/gtk.h>
+ #include <gio/gdesktopappinfo.h>
++#ifdef MOZ_WIDGET_GTK
++#  include <gdk/gdk.h>
++#  include <gtk/gtk.h>
++#endif
+ #include "mozilla/RefPtr.h"
+ 
+ typedef struct _DbusmenuMenuitem DbusmenuMenuitem;
+@@ -30,7 +32,9 @@ struct GObjectRefPtrTraits {
+ 
+ GOBJECT_TRAITS(DbusmenuMenuitem)
+ GOBJECT_TRAITS(DbusmenuServer)
++#ifdef MOZ_WIDGET_GTK
+ GOBJECT_TRAITS(GtkWidget)
++#endif
+ GOBJECT_TRAITS(GFile)
+ GOBJECT_TRAITS(GFileMonitor)
+ GOBJECT_TRAITS(GMenu)
+@@ -41,16 +45,26 @@ GOBJECT_TRAITS(GDBusProxy)
+ GOBJECT_TRAITS(GAppInfo)
+ GOBJECT_TRAITS(GDesktopAppInfo)
+ GOBJECT_TRAITS(GAppLaunchContext)
++#ifdef MOZ_WIDGET_GTK
+ GOBJECT_TRAITS(GdkDragContext)
++#endif
+ GOBJECT_TRAITS(GDBusMessage)
++#ifdef MOZ_WIDGET_GTK
+ GOBJECT_TRAITS(GdkPixbuf)
++#endif
+ GOBJECT_TRAITS(GCancellable)
++#ifdef MOZ_WIDGET_GTK
+ GOBJECT_TRAITS(GtkIMContext)
++#endif
+ GOBJECT_TRAITS(GUnixFDList)
++#ifdef MOZ_WIDGET_GTK
+ GOBJECT_TRAITS(GtkCssProvider)
++#endif
+ GOBJECT_TRAITS(GDBusMethodInvocation)
++#ifdef MOZ_WIDGET_GTK
+ GOBJECT_TRAITS(GdkWindow)
+ GOBJECT_TRAITS(GtkIconInfo)
++#endif
+ GOBJECT_TRAITS(GIcon)
+ GOBJECT_TRAITS(::GSettings)
+ GOBJECT_TRAITS(GDBusConnection)
+diff --git a/widget/gtk/GUniquePtr.h b/widget/gtk/GUniquePtr.h
+index 58ed817b410d..cd1d79c3831c 100644
+--- a/widget/gtk/GUniquePtr.h
++++ b/widget/gtk/GUniquePtr.h
+@@ -8,21 +8,25 @@
+ // Provides GUniquePtr to g_free a given pointer.
+ 
+ #include <glib.h>
+-#include <gtk/gtk.h>
++#ifdef MOZ_WIDGET_GTK
++#  include <gtk/gtk.h>
++#endif
+ #include "mozilla/UniquePtr.h"
+ 
+ namespace mozilla {
+ 
+ struct GFreeDeleter {
+   constexpr GFreeDeleter() = default;
++#ifdef MOZ_WIDGET_GTK
+   void operator()(GdkEventCrossing* aPtr) const {
+     gdk_event_free((GdkEvent*)aPtr);
+   }
+   void operator()(GdkEventKey* aPtr) const { gdk_event_free((GdkEvent*)aPtr); }
+   void operator()(GdkEvent* aPtr) const { gdk_event_free(aPtr); }
++  void operator()(GtkPaperSize* aPtr) const { gtk_paper_size_free(aPtr); }
++#endif
+   void operator()(GError* aPtr) const { g_error_free(aPtr); }
+   void operator()(void* aPtr) const { g_free(aPtr); }
+-  void operator()(GtkPaperSize* aPtr) const { gtk_paper_size_free(aPtr); }
+   void operator()(gchar** aPtr) const { g_strfreev(aPtr); }
+   void operator()(GInputStream* aPtr) const {
+     g_input_stream_close(aPtr, nullptr, nullptr);
+diff --git a/widget/gtk/TaskbarProgress.cpp b/widget/gtk/TaskbarProgress.cpp
+index 8f6947b4bd07..d97b131a9cc4 100644
+--- a/widget/gtk/TaskbarProgress.cpp
++++ b/widget/gtk/TaskbarProgress.cpp
+@@ -73,6 +73,12 @@ TaskbarProgress::SetProgressState(nsTaskbarProgressState aState,
+   return NS_OK;
+ }
+ 
++NS_IMETHODIMP
++TaskbarProgress::SetActiveDownloadCount(uint32_t) {
++  // GTK XApp progress has no badge count; Qt implements this for Plasma.
++  return NS_OK;
++}
++
+ NS_IMETHODIMP
+ TaskbarProgress::SetPrimaryWindow(mozIDOMWindowProxy* aWindow) {
+   NS_ENSURE_TRUE(aWindow != nullptr, NS_ERROR_ILLEGAL_VALUE);
+diff --git a/widget/gtk/nsAppShell.cpp b/widget/gtk/nsAppShell.cpp
+index 76daa7fdac83..aa07d8600f52 100644
+--- a/widget/gtk/nsAppShell.cpp
++++ b/widget/gtk/nsAppShell.cpp
+@@ -52,7 +52,7 @@ LazyLogModule gWidgetDragLog("WidgetDrag");
+ LazyLogModule gWidgetWaylandLog("WidgetWayland");
+ LazyLogModule gWidgetPopupLog("WidgetPopup");
+ LazyLogModule gWidgetVsync("WidgetVSync");
+-LazyLogModule gDmabufLog("Dmabuf");
++// gDmabufLog is defined in DMABufDevice.cpp (shared with Qt).
+ LazyLogModule gWidgetCompositorLog("WidgetCompositor");
+ 
+ #undef LOGW
+diff --git a/widget/gtk/vaapitest/moz.build b/widget/gtk/vaapitest/moz.build
+index 7b3fa5b49d79..346c595b0ce1 100644
+--- a/widget/gtk/vaapitest/moz.build
++++ b/widget/gtk/vaapitest/moz.build
+@@ -9,10 +9,12 @@ Program("vaapitest")
+ SOURCES += [
+     "vaapitest.cpp",
+ ]
+-CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+-CXXFLAGS += CONFIG["MOZ_PANGO_CFLAGS"]
+-OS_LIBS += CONFIG["MOZ_X11_LIBS"]
+-OS_LIBS += CONFIG["MOZ_GTK3_LIBS"]
++# GTK flags are historical; the probe itself only needs libva + DRM.
++if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
++    CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
++    CXXFLAGS += CONFIG["MOZ_PANGO_CFLAGS"]
++    OS_LIBS += CONFIG["MOZ_X11_LIBS"]
++    OS_LIBS += CONFIG["MOZ_GTK3_LIBS"]
+ 
+ USE_LIBS += ["mozva"]
+ LOCAL_INCLUDES += ["/media/mozva"]
+-- 
+2.55.0
+
