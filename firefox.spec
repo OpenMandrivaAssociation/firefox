@@ -67,7 +67,7 @@
 %define xpidir https://ftp.mozilla.org/pub/firefox/releases/%{version}%{?beta:%{beta}}/linux-x86_64/xpi/
 
 # Supported l10n language lists
-%define langlist af ar ast bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
+%define langlist af ar ast bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
 
 # Disabled l10n languages, for any reason
 # - no locales-XX package:
@@ -153,6 +153,8 @@
 %define langname_id Indonesian
 %define language_is is
 %define langname_is Icelandic
+%define language_it it
+%define langname_it Italian
 %define language_ja ja
 %define langname_ja Japanese
 %define language_kk kk
