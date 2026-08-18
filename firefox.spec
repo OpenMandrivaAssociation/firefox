@@ -34,6 +34,19 @@
 # currently enabled as updating all rust deps would take eons
 %global use_bundled_cbindgen  1
 
+# Optional Qt 6 build. The default (GTK) build is always done; enabling Qt
+# results in a WebKitGTK-style double build producing a separate firefox-qt
+# package with its own tree (toolkit is compiled into libxul):
+#   rpmbuild -bb --with qt ...
+#   abb build --define=_with_qt=1
+%bcond_with qt
+
+%if %{with qt}
+# Qt build installs to a separate tree, the default (GTK) build keeps
+# the original %%{mozillalibdir} path.
+%define mozillalibdir_qt %{_libdir}/%{name}-qt-%{version}
+%endif
+
 %bcond_with valgrind
 
 # pgo seems to cause segfault on znver1
@@ -240,7 +253,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	152.0.6
+Version:	153.0.4
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -277,52 +290,103 @@ Patch51:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/0001-GLIBCXX-f
 #Patch52:	0003-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
 Patch61:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1196777.patch
 Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-1516803.patch
-Patch63:	mozilla-2040125.patch
+# GetSystemProxyDirect is already upstream in 153+
+#Patch63:	mozilla-2040125.patch
+
+# Restore --with-system-harfbuzz (removed upstream; always vendor otherwise).
+# Disabled for now: system lib + -fvisibility=hidden produces
+# "undefined hidden symbol: hb_*" at libxul link time. Revisit later.
+#Patch70:	firefox-system-harfbuzz.patch
+
+# In-tree HarfBuzz: Clang 23 promotes -Wunused-template via -Wunused error pragma
+Patch71:	firefox-harfbuzz-clang-unused-template.patch
+
+%if %{with qt}
+# Qt support
+Patch100:	0001-Bug-2054387-Build-system-add-cairo-qt-toolkit-option.patch
+Patch101:	0002-Bug-2054387-widget-qt-add-exclusive-Qt-6-widget-back.patch
+Patch102:	0003-Bug-2054387-IPC-wire-Chromium-message-pump-for-Qt.-r.patch
+Patch103:	0004-Bug-2054387-gfx-Qt-platform-GL-EGL-and-WebRender-int.patch
+Patch104:	0005-Bug-2054387-widget-gtk-share-DMABuf-helpers-with-Qt-.patch
+Patch105:	0006-Bug-2054387-a11y-add-Qt-accessibility-backend.-r-acc.patch
+Patch106:	0007-Bug-2054387-browser-Qt-shell-service-and-preferences.patch
+Patch107:	0008-Bug-2054387-media-enable-VAAPI-DMABuf-and-WebRTC-pat.patch
+Patch108:	0009-Bug-2054387-toolkit-FreeDesktop-services-and-portals.patch
+Patch109:	0010-Bug-2054387-sandbox-and-misc-Qt-support-cleanups.-r-.patch
+# Wire real fontconfig/Qt font options (AA, hinting, subpixel); 0004 left stubs.
+Patch110:	0011-Bug-2054387-Qt-font-options-from-fontconfig.patch
+# Fractional DPR: keep stable device size so pages do not 1px-shake on reflow.
+Patch111:	0012-Bug-2054387-Qt-stabilize-DPR-size-round-trip.patch
+# Overlay scrollbars: avoid layout shift when ads cross overflow threshold.
+Patch112:	0013-Bug-2054387-Qt-force-overlay-scrollbars.patch
+# Wayland HiDPI: re-read devicePixelRatio after map; notify Gecko on scale change.
+Patch113:	0014-Bug-2054387-Qt-handle-devicePixelRatio-scale-changes.patch
+# Content sandbox: writable user fontconfig cache (fixes "No writable cache dirs").
+Patch114:	0015-Bug-2054387-sandbox-writable-user-fontconfig-cache.patch
+# Wayland activation reclaim series (shared with Thunderbird toolkit patches;
+# numbering matches TB 0017–0024 — skip 0016 which is TB-only mail shell).
+Patch115:	0017-Bug-2054387-Qt-keep-chrome-active-with-nofocus-popups.patch
+Patch116:	0018-Bug-2054387-Qt-reclaim-activation-after-nofocus-popups.patch
+Patch117:	0019-Bug-2054387-Qt-reclaim-after-dialog-idle-activation.patch
+Patch118:	0020-Bug-2054387-Qt-stop-activation-reclaim-input-thrash.patch
+Patch119:	0021-Bug-2054387-Qt-never-reclaim-activation-from-focus-handlers.patch
+Patch120:	0022-Bug-2054387-Qt-clear-WindowTransparentForInput-on-Enable.patch
+Patch121:	0023-Bug-2054387-Qt-safe-stacking-reclaim-without-focus-loops.patch
+# Modal/dialog present, secondary top-level SW present, theme/tooltip paint,
+# geometry deadband, mouse button state (from TB in-tree validation).
+Patch122:	0024-Bug-2054387-Qt-modal-compose-theme-and-geometry-stabilization.patch
+%endif
 
 BuildRequires:	doxygen
+BuildRequires:	gnutar
 BuildRequires:	makedepend
 BuildRequires:	make
 BuildRequires:	glibc-static-devel
 BuildRequires:	pkgconfig(python3)
 %if %{with system_python}
-BuildRequires:	python3dist(aiohttp)
-BuildRequires:	python3dist(attrs)
-BuildRequires:	python3dist(argparse)
-BuildRequires:	python3dist(traceback2)
-BuildRequires:	python3dist(certifi)
-BuildRequires:	python3dist(cffi)
-BuildRequires:	python3dist(chardet)
-BuildRequires:	python3dist(colorama)
-BuildRequires:	python3dist(distro)
-BuildRequires:	python3dist(idna)
-BuildRequires:	python3dist(jsonschema)
-BuildRequires:	python3dist(multidict)
-BuildRequires:	python3dist(packaging)
-BuildRequires:	python3dist(pip)
-BuildRequires:	python3dist(ply)
-BuildRequires:	python3dist(pyparsing)
-BuildRequires:	python3dist(pyrsistent)
-BuildRequires:	python3dist(requests)
-BuildRequires:	python3dist(setuptools)
-BuildRequires:	python3dist(six)
-BuildRequires:	python3dist(urllib3)
-BuildRequires:	python3dist(wheel)
-BuildRequires:	python3dist(yarl)
-BuildRequires:	python3dist(zipp)
+BuildRequires:	python%{pyver}dist(aiohttp)
+BuildRequires:	python%{pyver}dist(attrs)
+BuildRequires:	python%{pyver}dist(argparse)
+BuildRequires:	python%{pyver}dist(traceback2)
+BuildRequires:	python%{pyver}dist(certifi)
+BuildRequires:	python%{pyver}dist(cffi)
+BuildRequires:	python%{pyver}dist(chardet)
+BuildRequires:	python%{pyver}dist(colorama)
+BuildRequires:	python%{pyver}dist(distro)
+BuildRequires:	python%{pyver}dist(idna)
+BuildRequires:	python%{pyver}dist(jsonschema)
+BuildRequires:	python%{pyver}dist(multidict)
+BuildRequires:	python%{pyver}dist(packaging)
+BuildRequires:	python%{pyver}dist(pip)
+BuildRequires:	python%{pyver}dist(ply)
+BuildRequires:	python%{pyver}dist(pyparsing)
+BuildRequires:	python%{pyver}dist(pyrsistent)
+BuildRequires:	python%{pyver}dist(requests)
+BuildRequires:	python%{pyver}dist(setuptools)
+BuildRequires:	python%{pyver}dist(six)
+BuildRequires:	python%{pyver}dist(urllib3)
+BuildRequires:	python%{pyver}dist(wheel)
+BuildRequires:	python%{pyver}dist(yarl)
+BuildRequires:	python%{pyver}dist(zipp)
 %endif
-BuildRequires:	python3dist(pyyaml)
+BuildRequires:	python%{pyver}dist(pyyaml)
 BuildRequires:	rootcerts >= 1:20110830.00
 BuildRequires:	unzip
 BuildRequires:	wget
 BuildRequires:	zip
 BuildRequires:	pkgconfig(bzip2)
 BuildRequires:	pkgconfig(libjpeg)
-BuildRequires:	pkgconfig(harfbuzz)
+# Only needed if/when --with-system-harfbuzz is re-enabled (Patch70).
+#BuildRequires:	pkgconfig(harfbuzz)
+#BuildRequires:	pkgconfig(harfbuzz-subset)
 BuildRequires:	pkgconfig(alsa)
 BuildRequires:	pkgconfig(dbus-glib-1)
 BuildRequires:	pkgconfig(glib-2.0)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(libdrm)
+BuildRequires:	pkgconfig(gbm)
+BuildRequires:	pkgconfig(libpipewire-0.3)
+BuildRequires:	pkgconfig(libspa-0.2)
 BuildRequires:	pkgconfig(gtk+-3.0)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
@@ -334,6 +398,13 @@ BuildRequires:	pkgconfig(libpulse)
 BuildRequires:	pkgconfig(libstartup-notification-1.0)
 BuildRequires:	pkgconfig(nspr) >= 4.32.0
 BuildRequires:	pkgconfig(nss) >= 3.123.1
+BuildRequires:	pkgconfig(libevent)
+BuildRequires:	pkgconfig(icu-uc) >= 78.1
+BuildRequires:	pkgconfig(icu-i18n) >= 78.1
+BuildRequires:	pkgconfig(libwebp) >= 1.0.2
+BuildRequires:	pkgconfig(libwebpdemux) >= 1.0.2
+BuildRequires:	pkgconfig(aom) >= 3.0.0
+BuildRequires:	pkgconfig(dav1d) >= 1.2.1
 BuildRequires:	pkgconfig(ogg)
 BuildRequires:	pkgconfig(opus)
 BuildRequires:	pkgconfig(libpulse)
@@ -344,8 +415,18 @@ BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
+%if %{with qt}
+BuildRequires:	pkgconfig(Qt6Core)
+BuildRequires:	pkgconfig(Qt6DBus)
+BuildRequires:	pkgconfig(Qt6Gui)
+BuildRequires:	pkgconfig(Qt6Widgets)
+BuildRequires:	pkgconfig(Qt6OpenGL)
+BuildRequires:	pkgconfig(Qt6PrintSupport)
+# System cairo for gfxFcPlatformFontList desktop font options (tree cairo is separate).
+BuildRequires:	pkgconfig(cairo)
+%endif
 %if !0%{?use_bundled_cbindgen}
-BuildRequires:	cbindgen >= 0.29.1
+BuildRequires:	cbindgen >= 0.29.4
 %endif
 BuildRequires:	nss-static-devel
 BuildRequires:	clang-devel
@@ -399,6 +480,23 @@ Firefox also includes  features like 'tabbed browsing' (opening several web
 sites as sections within the same window) and methods for controlling pop-up
 windows, cookies and downloaded files.
 
+%if %{with qt}
+%package qt
+Summary:	Firefox built with the Qt 6 toolkit
+Group:		Networking/WWW
+Requires:	indexhtml
+Requires:	mailcap
+Requires:	xdg-utils
+Requires(post):	distro-release-desktop
+Suggests:	%{_lib}canberra0
+Suggests:	%{_lib}cups2
+
+%description qt
+Firefox web browser built against the Qt 6 toolkit (cairo-qt).
+This is an alternative build to the default GTK based firefox package,
+installed to its own tree and started with /usr/bin/firefox-qt.
+%endif
+
 %package devel
 Summary:	Development files for %{name}
 Group:		Development/Other
@@ -451,6 +549,7 @@ mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
 export MOZ_MAKE_FLAGS="$SMP_FLAGS"
 export MOZ_SERVICES_SYNC=1
+export TAR=gtar
 export PYTHON3=%build_py
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
@@ -462,13 +561,22 @@ ac_add_options --update-channel=%{update_channel}
 ac_add_options --enable-update-channel=%{update_channel}
 ac_add_options --with-distribution-id=org.openmandriva
 ac_add_options --enable-optimize="-O3"
+# Distro builds use system toolchains and libraries, not mach bootstrap
+# sysroots (which reject --with-system-nspr/nss among others).
+ac_add_options --disable-bootstrap
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
 ac_add_options --with-system-zlib
 ac_add_options --enable-necko-wifi
-ac_add_options --without-system-libevent
+ac_add_options --with-system-libevent
+ac_add_options --with-system-icu
 ac_add_options --with-system-libvpx
-ac_add_options --enable-system-pixman
+ac_add_options --with-system-webp
+ac_add_options --with-system-av1
+ac_add_options --with-system-pipewire
+ac_add_options --with-system-gbm
+ac_add_options --with-system-libdrm
+ac_add_options --with-system-pixman
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 ac_add_options --disable-debug
@@ -477,12 +585,14 @@ ac_add_options --enable-official-branding
 ac_add_options --enable-libproxy
 ac_add_options --with-system-jpeg
 ac_add_options --with-system-png
+# System HarfBuzz deferred (visibility/link issues with -fvisibility=hidden).
+#ac_add_options --with-system-harfbuzz
 ac_add_options --enable-jemalloc
 ac_add_options --enable-replace-malloc
 ac_add_options --disable-crashreporter
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-webrtc
-ac_add_options --enable-system-ffi
+ac_add_options --with-system-ffi
 ac_add_options --with-unsigned-addon-scopes=app,system
 ac_add_options --allow-addon-sideload
 ac_add_options --without-wasm-sandboxed-libraries
@@ -515,6 +625,13 @@ ac_add_options --disable-lto
 unset MOZ_STDCXX_COMPAT
 EOF
 
+%if %{with qt}
+# Second mozconfig for the Qt build: same options, different toolkit and objdir.
+sed -e 's!--enable-default-toolkit=cairo-gtk3-wayland!--enable-default-toolkit=cairo-qt!' \
+    -e 's!MOZ_OBJDIR=@TOPSRCDIR@/obj!MOZ_OBJDIR=@TOPSRCDIR@/obj-qt!' \
+    $MOZCONFIG > $MOZCONFIG-qt
+%endif
+
 %build
 %global optflags %{optflags} -g0
 
@@ -543,14 +660,10 @@ export PATH=$(pwd)/.cargo/bin:$PATH
 cd -
 %endif
 
-# Show the config just for debugging
-export MOZCONFIG=$(pwd)/mozconfig
-cat $MOZCONFIG
-
 export MOZ_NOSPAM=1
 export MOZ_SERVICES_SYNC=1
 export MACH_NO_WRITE_TIMES=1
-export LDFLAGS+="%{build_ldflags} -Wl,--no-keep-memory"
+export LDFLAGS="${LDFLAGS:+$LDFLAGS }%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
 # (tpg) re-use already existing user profile
@@ -567,10 +680,31 @@ export MACH_USE_SYSTEM_PYTHON=1
 rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
 %endif
 
+# Default (GTK) build
+# Show the config just for debugging
+export MOZCONFIG=$(pwd)/mozconfig
+cat $MOZCONFIG
+
 %if %{with pgo}
-GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat - || exit 1
+# pipefail: without it, "| cat -" makes the pipeline always succeed and
+# rpm proceeds to %%install with a half-built tree (ABF build 629385).
+set -o pipefail
+GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
 %else
 %build_py ./mach build -v
+%endif
+
+%if %{with qt}
+# Second, separate Qt build (double build, WebKitGTK-style)
+export MOZCONFIG=$(pwd)/mozconfig-qt
+cat $MOZCONFIG
+
+%if %{with pgo}
+set -o pipefail
+QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
+%else
+%build_py ./mach build -v
+%endif
 %endif
 
 %install
@@ -681,6 +815,12 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 %%firefox_extdir             %%(if [ "%%_target_cpu" = "noarch" ]; then echo %%{_datadir}/mozilla/extensions/%%{firefox_appid}; else echo %%{_libdir}/mozilla/extensions/%%{firefox_appid}; fi)
 FIN
 
+%if %{with qt}
+cat <<FIN >>%{buildroot}%{_sys_macros_dir}/%{name}.macros
+%%firefox_mozillapath_qt     %{mozillalibdir_qt}
+FIN
+%endif
+
 # Convert rpm macros to bash variables
 %{expand:%(for lang in %{langlist}; do echo "language_$lang=%%{language_$lang}"; done)}
 
@@ -699,6 +839,81 @@ done
 mkdir -p %{buildroot}%{mozillalibdir}/distribution
 cp %{SOURCE21} %{buildroot}%{mozillalibdir}/distribution
 
+%if %{with qt}
+# ---------------------------------------------------------------------------
+# Qt build: install the second (obj-qt) build into its own tree and apply the
+# same distro customizations as the default build.
+# ---------------------------------------------------------------------------
+
+# Make sure locale works for langpacks
+%{__cat} > obj-qt/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+pref("general.useragent.locale", "chrome://global/locale/intl.properties");
+EOF
+
+make -C obj-qt/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
+
+# Copy files to buildroot
+mkdir -p %{buildroot}%{mozillalibdir_qt}
+cp -rf obj-qt/dist/firefox/* %{buildroot}%{mozillalibdir_qt}
+
+cat > %{buildroot}%{_bindir}/firefox-qt <<'EOF'
+#!/bin/sh
+# (tpg) do not create new user profiles on each upgrade, use exsting one
+export MOZ_LEGACY_PROFILES=1
+exec %{mozillalibdir_qt}/firefox "$@"
+EOF
+chmod +x %{buildroot}%{_bindir}/firefox-qt
+
+mkdir -p %{buildroot}%{mozillalibdir_qt}/browser/defaults/preferences/
+install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir_qt}/browser/defaults/preferences/kde.js
+
+# (tpg) icons
+mkdir -p %{buildroot}/%{mozillalibdir_qt}/icons
+cp %{buildroot}%{mozillalibdir_qt}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir_qt}/icons/
+for i in 16 22 24 32 48 256; do
+# (cg) Not all icon sizes are installed with make install, so just redo it here.
+    install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir_qt}/browser/chrome/icons/default/default$i.png
+done
+
+# exclusions
+rm -f %{buildroot}%{mozillalibdir_qt}/README.txt
+rm -f %{buildroot}%{mozillalibdir_qt}/removed-files
+rm -f %{buildroot}%{mozillalibdir_qt}/precomplete
+
+# display icon for Firefox button
+mkdir -p %{buildroot}%{mozillalibdir_qt}/browser/defaults/profile/chrome
+cat << EOF > %{buildroot}%{mozillalibdir_qt}/browser/defaults/profile/chrome/userChrome.css
+#appmenu-toolbar-button {
+  list-style-image: url("chrome://branding/content/icon16.png");
+}
+EOF
+
+# Default firefox config
+install -Dvm644 %{SOURCE12} %{buildroot}%{mozillalibdir_qt}/browser/defaults/preferences/vendor.js
+
+# use the system myspell dictionaries
+rm -fr %{buildroot}%{mozillalibdir_qt}/dictionaries
+ln -s %{_datadir}/dict/mozilla/ %{buildroot}%{mozillalibdir_qt}/dictionaries
+
+# (lm) touch and %ghost bookmarks.html to a proper uninstall
+touch %{buildroot}%{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
+
+# search engines
+mkdir -p %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common
+cp -f %{SOURCE5} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/jamendo.xml
+cp -f %{SOURCE6} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/exalead.xml
+cp -f %{SOURCE8} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/askcom.xml
+cp -f %{SOURCE10} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/yandex.xml
+
+# Correct distro values on search engines
+sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/askcom.xml
+sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/exalead.xml
+
+# Add distribution.ini
+mkdir -p %{buildroot}%{mozillalibdir_qt}/distribution
+cp %{SOURCE21} %{buildroot}%{mozillalibdir_qt}/distribution
+%endif
+
 %pre
 if [ -d %{mozillalibdir}/dictionaries ]; then
     rm -fr %{mozillalibdir}/dictionaries
@@ -709,6 +924,19 @@ if [ "$(readlink %{mozillalibdir}/browser/defaults/profile/bookmarks.html)" != "
     rm -rf %{mozillalibdir}/browser/defaults/profile/bookmarks.html
     ln -s -f %{_datadir}/mdk/bookmarks/mozilla/bookmarks.html %{mozillalibdir}/browser/defaults/profile/bookmarks.html
 fi
+
+%if %{with qt}
+%pre qt
+if [ -d %{mozillalibdir_qt}/dictionaries ]; then
+    rm -fr %{mozillalibdir_qt}/dictionaries
+fi
+
+%post qt
+if [ "$(readlink %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html)" != "%{_datadir}/mdk/bookmarks/mozilla/bookmarks.html" ]; then
+    rm -rf %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
+    ln -s -f %{_datadir}/mdk/bookmarks/mozilla/bookmarks.html %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
+fi
+%endif
 
 %files
 %{_bindir}/%{name}
@@ -726,6 +954,12 @@ fi
 %dir %{_libdir}/mozilla/extensions
 %dir %{_libdir}/mozilla/extensions/%{firefox_appid}
 %dir %{_datadir}/mozilla/extensions/%{firefox_appid}
+
+%if %{with qt}
+%files qt
+%{_bindir}/firefox-qt
+%{mozillalibdir_qt}/
+%endif
 
 %files devel
 %{_sys_macros_dir}/%{name}.macros
