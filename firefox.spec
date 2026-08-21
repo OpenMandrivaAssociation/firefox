@@ -20,6 +20,7 @@
 
 %define firefox_appid \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 %define firefox_langdir %{_datadir}/mozilla/extensions/%{firefox_appid}
+%define mozillalibdir %{_libdir}/%{name}-%{version}
 %define pluginsdir %{_libdir}/mozilla/plugins
 
 # libxul.so is provided by libxulrunnner2.0.
@@ -33,26 +34,17 @@
 # currently enabled as updating all rust deps would take eons
 %global use_bundled_cbindgen  1
 
-# Dual toolkit by default. For faster local Qt-only iteration use a single
-# rpm define (abb treats a bare "gtk" argument as a project name to clone):
-#   abb build --define=_without_gtk=1
-#   rpmbuild -bb --without gtk …   # also fine with plain rpmbuild
-# Same with --define=_without_qt=1 / --without qt for GTK-only.
-%bcond_without gtk
-%bcond_without qt
+# Optional Qt 6 build. The default (GTK) build is always done; enabling Qt
+# results in a WebKitGTK-style double build producing a separate firefox-qt
+# package with its own tree (toolkit is compiled into libxul):
+#   rpmbuild -bb --with qt ...
+#   abb build --define=_with_qt=1
+%bcond_with qt
 
-%if !%{with gtk} && !%{with qt}
-%{error:Need at least one of --with gtk or --with qt}
-%endif
-
-# Toolkit builds install to separate trees (toolkit is compiled into libxul).
-%define mozillalibdir_qt  %{_libdir}/%{name}-qt-%{version}
-%define mozillalibdir_gtk %{_libdir}/%{name}-gtk-%{version}
-# Default path for rpm macros / extension packaging (prefer Qt when both built).
 %if %{with qt}
-%define mozillalibdir %{mozillalibdir_qt}
-%else
-%define mozillalibdir %{mozillalibdir_gtk}
+# Qt build installs to a separate tree, the default (GTK) build keeps
+# the original %%{mozillalibdir} path.
+%define mozillalibdir_qt %{_libdir}/%{name}-qt-%{version}
 %endif
 
 %bcond_with valgrind
@@ -261,7 +253,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	153.0.4
+Version:	154.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -309,6 +301,11 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 # In-tree HarfBuzz: Clang 23 promotes -Wunused-template via -Wunused error pragma
 Patch71:	firefox-harfbuzz-clang-unused-template.patch
 
+# https://phabricator.services.mozilla.com/D312871            
+# Drop with Firefox 156            
+Patch72:        https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire.patch
+
+%if %{with qt}
 # Qt support
 Patch100:	0001-Bug-2054387-Build-system-add-cairo-qt-toolkit-option.patch
 Patch101:	0002-Bug-2054387-widget-qt-add-exclusive-Qt-6-widget-back.patch
@@ -342,6 +339,7 @@ Patch121:	0023-Bug-2054387-Qt-safe-stacking-reclaim-without-focus-loops.patch
 # Modal/dialog present, secondary top-level SW present, theme/tooltip paint,
 # geometry deadband, mouse button state (from TB in-tree validation).
 Patch122:	0024-Bug-2054387-Qt-modal-compose-theme-and-geometry-stabilization.patch
+%endif
 
 BuildRequires:	doxygen
 BuildRequires:	gnutar
@@ -393,6 +391,7 @@ BuildRequires:	pkgconfig(libdrm)
 BuildRequires:	pkgconfig(gbm)
 BuildRequires:	pkgconfig(libpipewire-0.3)
 BuildRequires:	pkgconfig(libspa-0.2)
+BuildRequires:	pkgconfig(gtk+-3.0)
 BuildRequires:	pkgconfig(hunspell)
 BuildRequires:	pkgconfig(libffi)
 BuildRequires:	pkgconfig(libIDL-2.0)
@@ -420,9 +419,6 @@ BuildRequires:	pkgconfig(xinerama)
 BuildRequires:	pkgconfig(xscrnsaver)
 BuildRequires:	pkgconfig(xt)
 BuildRequires:	pkgconfig(zlib)
-%if %{with gtk}
-BuildRequires:	pkgconfig(gtk+-3.0)
-%endif
 %if %{with qt}
 BuildRequires:	pkgconfig(Qt6Core)
 BuildRequires:	pkgconfig(Qt6DBus)
@@ -467,18 +463,11 @@ Provides:	webclient
 
 Obsoletes:	firefox-ext-weave-sync
 Obsoletes:	firefox-beta < 11
+Obsoletes:	%{name}-gtk < %{EVRD}
 # (tpg) needed for bookmarks
 Requires(post):	distro-release-desktop
-# Need at least one toolkit binary for the neutral /usr/bin/firefox wrapper.
-%if %{with qt} && %{with gtk}
-Requires:	(%{name}-qt = %{EVRD} or %{name}-gtk = %{EVRD})
-Recommends:	(%{name}-qt = %{EVRD} if %{_lib}Qt6Widgets)
-Recommends:	(%{name}-gtk = %{EVRD} if %{_lib}gtk3_0)
-%elif %{with qt}
-Requires:	%{name}-qt = %{EVRD}
-%elif %{with gtk}
-Requires:	%{name}-gtk = %{EVRD}
-%endif
+# (tpg) fix bug https://issues.openmandriva.org/show_bug.cgi?id=1525
+Requires:	gtk3-modules
 
 %description
 The award-winning Web browser is now faster, more secure, and fully
@@ -496,38 +485,21 @@ Firefox also includes  features like 'tabbed browsing' (opening several web
 sites as sections within the same window) and methods for controlling pop-up
 windows, cookies and downloaded files.
 
-This package provides the shared launcher, desktop entry and icons. The actual
-browser builds are in the firefox-qt and/or firefox-gtk subpackages. The
-/usr/bin/firefox wrapper picks GTK on GNOME/MATE/Cinnamon/XFCE and Qt on other
-desktops, falling back to whichever toolkit is installed.
-
 %if %{with qt}
 %package qt
 Summary:	Firefox built with the Qt 6 toolkit
 Group:		Networking/WWW
-Requires:	%{name} = %{EVRD}
+Requires:	indexhtml
+Requires:	mailcap
+Requires:	xdg-utils
+Requires(post):	distro-release-desktop
 Suggests:	%{_lib}canberra0
 Suggests:	%{_lib}cups2
 
 %description qt
-Firefox web browser built against the Qt 6 toolkit (cairo-qt). On Plasma and
-other non-GTK desktops, /usr/bin/firefox selects this build by default.
-%endif
-
-%if %{with gtk}
-%package gtk
-Summary:	Firefox built with the GTK 3 toolkit
-Group:		Networking/WWW
-Requires:	%{name} = %{EVRD}
-# (tpg) fix bug https://issues.openmandriva.org/show_bug.cgi?id=1525
-Requires:	gtk3-modules
-Suggests:	%{_lib}canberra0
-Suggests:	%{_lib}cups2
-
-%description gtk
-Firefox web browser built against the GTK 3 toolkit (cairo-gtk3-wayland).
-On GNOME, MATE, Cinnamon and XFCE, /usr/bin/firefox selects this build by
-default.
+Firefox web browser built against the Qt 6 toolkit (cairo-qt).
+This is an alternative build to the default GTK based firefox package,
+installed to its own tree and started with /usr/bin/firefox-qt.
 %endif
 
 %package devel
@@ -584,6 +556,8 @@ export MOZ_MAKE_FLAGS="$SMP_FLAGS"
 export MOZ_SERVICES_SYNC=1
 export TAR=gtar
 export PYTHON3=%build_py
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
+ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options --with-mozilla-api-keyfile=$(pwd)/mozilla-api-key
 ac_add_options --with-google-location-service-api-keyfile=$(pwd)/google-api-key
 ac_add_options --with-google-safebrowsing-api-keyfile=$(pwd)/google-api-key
@@ -657,20 +631,16 @@ unset MOZ_STDCXX_COMPAT
 EOF
 
 %if %{with qt}
-cp -a $MOZCONFIG $MOZCONFIG-qt
-echo 'mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-qt' >>$MOZCONFIG-qt
-echo 'ac_add_options --enable-default-toolkit=cairo-qt' >>$MOZCONFIG-qt
-%endif
-%if %{with gtk}
-cp -a $MOZCONFIG $MOZCONFIG-gtk
-echo 'mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-gtk' >>$MOZCONFIG-gtk
-echo 'ac_add_options --enable-default-toolkit=cairo-gtk3-wayland' >>$MOZCONFIG-gtk
+# Second mozconfig for the Qt build: same options, different toolkit and objdir.
+sed -e 's!--enable-default-toolkit=cairo-gtk3-wayland!--enable-default-toolkit=cairo-qt!' \
+    -e 's!MOZ_OBJDIR=@TOPSRCDIR@/obj!MOZ_OBJDIR=@TOPSRCDIR@/obj-qt!' \
+    $MOZCONFIG > $MOZCONFIG-qt
 %endif
 
 %build
 %global optflags %{optflags} -g0
 
-%global optflags %{optflags} -Wno-error=c++11-narrowing-const-reference
+%global optflags %{optflags} -Wno-error=c++11-narrowing-const-reference 
 %global optflags %{optflags} -Qunused-arguments -g0 -fno-lto
 
 #(tpg) do not use serverbuild or serverbuild_hardened macros
@@ -695,247 +665,147 @@ export PATH=$(pwd)/.cargo/bin:$PATH
 cd -
 %endif
 
-MC=$(pwd)/mozconfig
-MOZCONFIGS=""
-%if %{with gtk}
-MOZCONFIGS="$MOZCONFIGS $MC-gtk"
-%endif
-%if %{with qt}
-MOZCONFIGS="$MOZCONFIGS $MC-qt"
-%endif
-
-# Append once before the dual-toolkit loop. Using LDFLAGS+= inside the loop
-# concatenated flags without a separator on the second pass
-# (…--no-keep-memory-Os), which breaks lld.
-export LDFLAGS="${LDFLAGS:+$LDFLAGS }%{build_ldflags} -Wl,--no-keep-memory"
-export RUSTFLAGS="-Cdebuginfo=0"
 export MOZ_NOSPAM=1
 export MOZ_SERVICES_SYNC=1
 export MACH_NO_WRITE_TIMES=1
+export LDFLAGS="${LDFLAGS:+$LDFLAGS }%{build_ldflags} -Wl,--no-keep-memory"
+export RUSTFLAGS="-Cdebuginfo=0"
 
-for MOZCONFIG in $MOZCONFIGS; do
-	export MOZCONFIG
-	# Show the config just for debugging
-	cat $MOZCONFIG
+# (tpg) re-use already existing user profile
+export MOZ_ALLOW_DOWNGRADE=1
 
-	# (tpg) re-use already existing user profile
-	export MOZ_ALLOW_DOWNGRADE=1
+%if %{with system_python}
+# FIXME We should enable system python, but need to sort out dependencies
+# Current status: builds locally on developer boxes, but fails inside abf
+# (tpg) use system python
+export MACH_USE_SYSTEM_PYTHON=1
+# FF seems to always sees its own in-tree stuff before system versions.
+# Remove obsolete bits and pieces that don't actually work with system
+# bits it does try to use...
+rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
+%endif
 
-	%if %{with system_python}
-		# FIXME We should enable system python, but need to sort out dependencies
-		# Current status: builds locally on developer boxes, but fails inside abf
-		# (tpg) use system python
-		export MACH_USE_SYSTEM_PYTHON=1
-		# FF seems to always sees its own in-tree stuff before system versions.
-		# Remove obsolete bits and pieces that don't actually work with system
-		# bits it does try to use...
-		rm -rf third_party/python/{aiohttp,colorama,jsonschema,multidict,pip,pip_tools,ply,pyrsistent,setuptools,wheel,yarl,zipp}
-	%endif
+# Default (GTK) build
+# Show the config just for debugging
+export MOZCONFIG=$(pwd)/mozconfig
+cat $MOZCONFIG
 
-	%if %{with pgo}
-		# pipefail: without it, "| cat -" makes the pipeline always succeed and
-		# rpm proceeds to %install with a half-built tree (ABF build 629385).
-		set -o pipefail
-		QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
-	%else
-		%build_py ./mach build -v
-	%endif
-done
+%if %{with pgo}
+# pipefail: without it, "| cat -" makes the pipeline always succeed and
+# rpm proceeds to %%install with a half-built tree (ABF build 629385).
+set -o pipefail
+GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
+%else
+%build_py ./mach build -v
+%endif
+
+%if %{with qt}
+# Second, separate Qt build (double build, WebKitGTK-style)
+export MOZCONFIG=$(pwd)/mozconfig-qt
+cat $MOZCONFIG
+
+%if %{with pgo}
+set -o pipefail
+QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | cat -
+%else
+%build_py ./mach build -v
+%endif
+%endif
 
 %install
-# Install one toolkit build into its libdir and apply shared distro customizations.
-install_toolkit() {
-	local toolkit="$1"
-	local libdir="$2"
-	local obj="obj-${toolkit}"
-
-	# Make sure locale works for langpacks
-	mkdir -p ${obj}/dist/bin/browser/defaults/preferences
-	cat > ${obj}/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+# Make sure locale works for langpacks
+%{__cat} > obj/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 EOF
 
-	make -C ${obj}/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
+make -C obj/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
 
-	mkdir -p %{buildroot}${libdir}
-	cp -a ${obj}/dist/firefox/* %{buildroot}${libdir}/
+# Copy files to buildroot
+mkdir -p %{buildroot}%{mozillalibdir}
+cp -rf obj/dist/firefox/* %{buildroot}%{mozillalibdir}
 
-	mkdir -p %{buildroot}${libdir}/browser/defaults/preferences
-	install -m 644 %{SOURCE9} %{buildroot}${libdir}/browser/defaults/preferences/kde.js
-	install -m 644 %{SOURCE12} %{buildroot}${libdir}/browser/defaults/preferences/vendor.js
+mkdir -p  %{buildroot}%{_bindir}
 
-	# (cg) Not all icon sizes are installed with make install, so just redo it here.
-	mkdir -p %{buildroot}${libdir}/icons
-	mkdir -p %{buildroot}${libdir}/browser/chrome/icons/default
-	for i in 16 22 24 32 48 256; do
-		install -m 644 browser/branding/official/default$i.png \
-			%{buildroot}${libdir}/browser/chrome/icons/default/default$i.png
-	done
-	cp %{buildroot}${libdir}/browser/chrome/icons/default/default16.png \
-		%{buildroot}${libdir}/icons/
-
-	# exclusions
-	rm -f %{buildroot}${libdir}/README.txt
-	rm -f %{buildroot}${libdir}/removed-files
-	rm -f %{buildroot}${libdir}/precomplete
-
-	# display icon for Firefox button
-	mkdir -p %{buildroot}${libdir}/browser/defaults/profile/chrome
-	cat > %{buildroot}${libdir}/browser/defaults/profile/chrome/userChrome.css << EOF
-#appmenu-toolbar-button {
-  list-style-image: url("chrome://branding/content/icon16.png");
-}
-EOF
-
-	# use the system myspell dictionaries
-	rm -fr %{buildroot}${libdir}/dictionaries
-	ln -s %{_datadir}/dict/mozilla/ %{buildroot}${libdir}/dictionaries
-
-	# (lm) touch and %ghost bookmarks.html to a proper uninstall
-	mkdir -p %{buildroot}${libdir}/browser/defaults/profile
-	touch %{buildroot}${libdir}/browser/defaults/profile/bookmarks.html
-
-	# search engines
-	mkdir -p %{buildroot}${libdir}/distribution/searchplugins/common
-	cp -f %{SOURCE5} %{buildroot}${libdir}/distribution/searchplugins/common/jamendo.xml
-	cp -f %{SOURCE6} %{buildroot}${libdir}/distribution/searchplugins/common/exalead.xml
-	cp -f %{SOURCE8} %{buildroot}${libdir}/distribution/searchplugins/common/askcom.xml
-	cp -f %{SOURCE10} %{buildroot}${libdir}/distribution/searchplugins/common/yandex.xml
-	sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}${libdir}/distribution/searchplugins/common/askcom.xml
-	sed -i 's/@DISTRO_VALUE@//' %{buildroot}${libdir}/distribution/searchplugins/common/exalead.xml
-
-	# Add distribution.ini
-	cp %{SOURCE21} %{buildroot}${libdir}/distribution
-}
-
-%if %{with qt}
-install_toolkit qt %{mozillalibdir_qt}
-%endif
-%if %{with gtk}
-install_toolkit gtk %{mozillalibdir_gtk}
-%endif
-
-mkdir -p %{buildroot}%{_bindir}
-
-# Toolkit-specific launchers
-%if %{with qt}
-cat > %{buildroot}%{_bindir}/firefox-qt << EOF
+cat > %{buildroot}%{_bindir}/firefox <<'EOF'
 #!/bin/sh
-# (tpg) do not create new user profiles on each upgrade, use existing one
+# (tpg) do not create new user profiles on each upgrade, use exsting one
 export MOZ_LEGACY_PROFILES=1
-exec %{mozillalibdir_qt}/firefox "\$@"
-EOF
-chmod +x %{buildroot}%{_bindir}/firefox-qt
-%endif
 
-%if %{with gtk}
-cat > %{buildroot}%{_bindir}/firefox-gtk << EOF
-#!/bin/sh
-# (tpg) do not create new user profiles on each upgrade, use existing one
-export MOZ_LEGACY_PROFILES=1
-if [ "\${XDG_SESSION_TYPE:-}" = wayland ]; then
+if [ "${XDG_SESSION_TYPE:-}" = wayland ]; then
 	export MOZ_ENABLE_WAYLAND=1
-	unset MOZ_DISABLE_WAYLAND
+	exec %{mozillalibdir}/firefox "$@"
 else
 	export MOZ_DISABLE_WAYLAND=1
-	unset MOZ_ENABLE_WAYLAND
+	exec %{mozillalibdir}/firefox "$@"
 fi
-exec %{mozillalibdir_gtk}/firefox "\$@"
-EOF
-chmod +x %{buildroot}%{_bindir}/firefox-gtk
-%endif
-
-# Neutral dispatcher: GTK on GNOME/MATE/Cinnamon/XFCE, Qt elsewhere;
-# fall back to whichever toolkit is installed.
-cat > %{buildroot}%{_bindir}/firefox << EOF
-#!/bin/sh
-# (tpg) do not create new user profiles on each upgrade, use existing one
-export MOZ_LEGACY_PROFILES=1
-
-GTK_BIN="%{mozillalibdir_gtk}/firefox"
-QT_BIN="%{mozillalibdir_qt}/firefox"
-
-prefer=qt
-# XDG_CURRENT_DESKTOP is often colon-separated, e.g. ubuntu:GNOME
-desktop=\$(printf '%s' "\${XDG_CURRENT_DESKTOP:-}" | tr '[:upper:]' '[:lower:]')
-oifs=\$IFS
-IFS=:
-for d in \$desktop; do
-	case "\$d" in
-	gnome|gnome-classic|gnome-flashback|unity|mate|cinnamon|x-cinnamon|xfce)
-		prefer=gtk
-		break
-		;;
-	esac
-done
-IFS=\$oifs
-
-# Fall back to DESKTOP_SESSION when XDG_CURRENT_DESKTOP is unset
-if [ -z "\${XDG_CURRENT_DESKTOP:-}" ]; then
-	case "\$(printf '%s' "\${DESKTOP_SESSION:-}" | tr '[:upper:]' '[:lower:]')" in
-	gnome*|mate*|cinnamon*|xfce*)
-		prefer=gtk
-		;;
-	esac
-fi
-
-run_gtk() {
-	if [ "\${XDG_SESSION_TYPE:-}" = wayland ]; then
-		export MOZ_ENABLE_WAYLAND=1
-		unset MOZ_DISABLE_WAYLAND
-	else
-		export MOZ_DISABLE_WAYLAND=1
-		unset MOZ_ENABLE_WAYLAND
-	fi
-	exec "\$GTK_BIN" "\$@"
-}
-
-run_qt() {
-	unset MOZ_ENABLE_WAYLAND
-	unset MOZ_DISABLE_WAYLAND
-	exec "\$QT_BIN" "\$@"
-}
-
-if [ "\$prefer" = gtk ]; then
-	if [ -x "\$GTK_BIN" ]; then
-		run_gtk "\$@"
-	elif [ -x "\$QT_BIN" ]; then
-		run_qt "\$@"
-	fi
-else
-	if [ -x "\$QT_BIN" ]; then
-		run_qt "\$@"
-	elif [ -x "\$GTK_BIN" ]; then
-		run_gtk "\$@"
-	fi
-fi
-
-echo "firefox: no toolkit binary found (install firefox-qt and/or firefox-gtk)" >&2
-exit 1
 EOF
 chmod +x %{buildroot}%{_bindir}/firefox
 
-ln -sf firefox %{buildroot}%{_bindir}/mozilla-firefox
+cd %{buildroot}%{_bindir}
+    ln -sf firefox mozilla-firefox
+cd -
+
+mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/preferences/
+install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/kde.js
 
 # Create and own %_libdir/mozilla/plugins & firefox extensions directories
 mkdir -p %{buildroot}%{pluginsdir}
 mkdir -p %{buildroot}%{_libdir}/mozilla/extensions/%{firefox_appid}
 mkdir -p %{buildroot}%{_datadir}/mozilla/extensions/%{firefox_appid}
 
-# (tpg) desktop entry (uses neutral /usr/bin/firefox)
+# (tpg) desktop entry
 mkdir -p %{buildroot}%{_datadir}/applications
 install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/applications/%{name}.desktop
 
-# Icons live in the main package so either toolkit can be removed independently
-mkdir -p %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
+# (tpg) icons
+mkdir -p %{buildroot}/%{mozillalibdir}/icons
+cp %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir}/icons/
 for i in 16 22 24 32 48 256; do
-	mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
-	install -m 644 browser/branding/official/default$i.png \
-		%{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png
+# (cg) Not all icon sizes are installed with make install, so just redo it here.
+    install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir}/browser/chrome/icons/default/default$i.png
+    mkdir -p %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps
+    ln -sf %{mozillalibdir}/browser/chrome/icons/default/default$i.png %{buildroot}%{_iconsdir}/hicolor/"$i"x"$i"/apps/%{name}.png ;
 done
-install -m 644 browser/branding/official/default48.png %{buildroot}%{_liconsdir}/%{name}.png
-install -m 644 browser/branding/official/default32.png %{buildroot}%{_iconsdir}/%{name}.png
-install -m 644 browser/branding/official/default16.png %{buildroot}%{_miconsdir}/%{name}.png
+
+mkdir -p %{buildroot}{%{_liconsdir},%{_iconsdir},%{_miconsdir}}
+ln -sf %{mozillalibdir}/browser/chrome/icons/default/default48.png %{buildroot}%{_liconsdir}/%{name}.png
+ln -sf %{mozillalibdir}/browser/chrome/icons/default/default32.png %{buildroot}%{_iconsdir}/%{name}.png
+ln -sf %{mozillalibdir}/browser/chrome/icons/default/default16.png %{buildroot}%{_miconsdir}/%{name}.png
+
+# exclusions
+rm -f %{buildroot}%{mozillalibdir}/README.txt
+rm -f %{buildroot}%{mozillalibdir}/removed-files
+rm -f %{buildroot}%{mozillalibdir}/precomplete
+
+# display icon for Firefox button
+mkdir -p %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome
+cat << EOF > %{buildroot}%{mozillalibdir}/browser/defaults/profile/chrome/userChrome.css
+#appmenu-toolbar-button {
+  list-style-image: url("chrome://branding/content/icon16.png");
+}
+EOF
+
+# Default firefox config
+install -Dvm644 %{SOURCE12} %{buildroot}%{mozillalibdir}/browser/defaults/preferences/vendor.js
+
+# use the system myspell dictionaries
+rm -fr %{buildroot}%{mozillalibdir}/dictionaries
+#ln -s %{_datadir}/hunspell %{buildroot}%{mozillalibdir}/dictionaries
+ln -s %{_datadir}/dict/mozilla/ %{buildroot}%{mozillalibdir}/dictionaries
+
+# (lm) touch and %ghost bookmarks.html to a proper uninstall
+touch %{buildroot}%{mozillalibdir}/browser/defaults/profile/bookmarks.html
+
+# search engines
+mkdir -p %{buildroot}%{mozillalibdir}/distribution/searchplugins/common
+cp -f %{SOURCE5} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/jamendo.xml
+cp -f %{SOURCE6} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/exalead.xml
+cp -f %{SOURCE8} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
+cp -f %{SOURCE10} %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/yandex.xml
+
+# Correct distro values on search engines
+sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/askcom.xml
+sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir}/distribution/searchplugins/common/exalead.xml
 
 ## (crazy) why the appid? not used since 57.0 or so
 ## also what is the magic of that _extdir ? does not make any sense..
@@ -945,12 +815,16 @@ cat <<FIN >%{buildroot}%{_sys_macros_dir}/%{name}.macros
 %%firefox_major              %{version}
 %%firefox_version            %{version}%{?beta:-0.%{beta}}
 %%firefox_mozillapath        %{mozillalibdir}
-%%firefox_mozillapath_qt     %{mozillalibdir_qt}
-%%firefox_mozillapath_gtk    %{mozillalibdir_gtk}
 %%firefox_pluginsdir         %{pluginsdir}
 %%firefox_appid              \{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 %%firefox_extdir             %%(if [ "%%_target_cpu" = "noarch" ]; then echo %%{_datadir}/mozilla/extensions/%%{firefox_appid}; else echo %%{_libdir}/mozilla/extensions/%%{firefox_appid}; fi)
 FIN
+
+%if %{with qt}
+cat <<FIN >>%{buildroot}%{_sys_macros_dir}/%{name}.macros
+%%firefox_mozillapath_qt     %{mozillalibdir_qt}
+FIN
+%endif
 
 # Convert rpm macros to bash variables
 %{expand:%(for lang in %{langlist}; do echo "language_$lang=%%{language_$lang}"; done)}
@@ -959,40 +833,113 @@ mkdir -p %{buildroot}%{firefox_langdir}/
 
 # Install all languages
 for lang in %{langlist}; do
-	language="language_$lang"
-	language=${!language}
+    language="language_$lang"
+    language=${!language}
 
 # l10n
-	cp %{_sourcedir}/${language}.xpi %{buildroot}%{firefox_langdir}/langpack-${language}@firefox.mozilla.org.xpi
+    cp %{_sourcedir}/${language}.xpi %{buildroot}%{firefox_langdir}/langpack-${language}@firefox.mozilla.org.xpi
 done
+
+# Add distribution.ini
+mkdir -p %{buildroot}%{mozillalibdir}/distribution
+cp %{SOURCE21} %{buildroot}%{mozillalibdir}/distribution
+
+%if %{with qt}
+# ---------------------------------------------------------------------------
+# Qt build: install the second (obj-qt) build into its own tree and apply the
+# same distro customizations as the default build.
+# ---------------------------------------------------------------------------
+
+# Make sure locale works for langpacks
+%{__cat} > obj-qt/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
+pref("general.useragent.locale", "chrome://global/locale/intl.properties");
+EOF
+
+make -C obj-qt/browser/installer STRIP=/bin/true MOZ_PKG_FATAL_WARNINGS=0
+
+# Copy files to buildroot
+mkdir -p %{buildroot}%{mozillalibdir_qt}
+cp -rf obj-qt/dist/firefox/* %{buildroot}%{mozillalibdir_qt}
+
+cat > %{buildroot}%{_bindir}/firefox-qt <<'EOF'
+#!/bin/sh
+# (tpg) do not create new user profiles on each upgrade, use exsting one
+export MOZ_LEGACY_PROFILES=1
+exec %{mozillalibdir_qt}/firefox "$@"
+EOF
+chmod +x %{buildroot}%{_bindir}/firefox-qt
+
+mkdir -p %{buildroot}%{mozillalibdir_qt}/browser/defaults/preferences/
+install -m 644 %{SOURCE9} %{buildroot}%{mozillalibdir_qt}/browser/defaults/preferences/kde.js
+
+# (tpg) icons
+mkdir -p %{buildroot}/%{mozillalibdir_qt}/icons
+cp %{buildroot}%{mozillalibdir_qt}/browser/chrome/icons/default/default16.png %{buildroot}/%{mozillalibdir_qt}/icons/
+for i in 16 22 24 32 48 256; do
+# (cg) Not all icon sizes are installed with make install, so just redo it here.
+    install -m 644 browser/branding/official/default$i.png %{buildroot}%{mozillalibdir_qt}/browser/chrome/icons/default/default$i.png
+done
+
+# exclusions
+rm -f %{buildroot}%{mozillalibdir_qt}/README.txt
+rm -f %{buildroot}%{mozillalibdir_qt}/removed-files
+rm -f %{buildroot}%{mozillalibdir_qt}/precomplete
+
+# display icon for Firefox button
+mkdir -p %{buildroot}%{mozillalibdir_qt}/browser/defaults/profile/chrome
+cat << EOF > %{buildroot}%{mozillalibdir_qt}/browser/defaults/profile/chrome/userChrome.css
+#appmenu-toolbar-button {
+  list-style-image: url("chrome://branding/content/icon16.png");
+}
+EOF
+
+# Default firefox config
+install -Dvm644 %{SOURCE12} %{buildroot}%{mozillalibdir_qt}/browser/defaults/preferences/vendor.js
+
+# use the system myspell dictionaries
+rm -fr %{buildroot}%{mozillalibdir_qt}/dictionaries
+ln -s %{_datadir}/dict/mozilla/ %{buildroot}%{mozillalibdir_qt}/dictionaries
+
+# (lm) touch and %ghost bookmarks.html to a proper uninstall
+touch %{buildroot}%{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
+
+# search engines
+mkdir -p %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common
+cp -f %{SOURCE5} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/jamendo.xml
+cp -f %{SOURCE6} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/exalead.xml
+cp -f %{SOURCE8} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/askcom.xml
+cp -f %{SOURCE10} %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/yandex.xml
+
+# Correct distro values on search engines
+sed -i 's/@DISTRO_VALUE@/ffx/' %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/askcom.xml
+sed -i 's/@DISTRO_VALUE@//' %{buildroot}%{mozillalibdir_qt}/distribution/searchplugins/common/exalead.xml
+
+# Add distribution.ini
+mkdir -p %{buildroot}%{mozillalibdir_qt}/distribution
+cp %{SOURCE21} %{buildroot}%{mozillalibdir_qt}/distribution
+%endif
+
+%pre
+if [ -d %{mozillalibdir}/dictionaries ]; then
+    rm -fr %{mozillalibdir}/dictionaries
+fi
+
+%post
+if [ "$(readlink %{mozillalibdir}/browser/defaults/profile/bookmarks.html)" != "%{_datadir}/mdk/bookmarks/mozilla/bookmarks.html" ]; then
+    rm -rf %{mozillalibdir}/browser/defaults/profile/bookmarks.html
+    ln -s -f %{_datadir}/mdk/bookmarks/mozilla/bookmarks.html %{mozillalibdir}/browser/defaults/profile/bookmarks.html
+fi
 
 %if %{with qt}
 %pre qt
 if [ -d %{mozillalibdir_qt}/dictionaries ]; then
-	rm -fr %{mozillalibdir_qt}/dictionaries
+    rm -fr %{mozillalibdir_qt}/dictionaries
 fi
 
 %post qt
-if [ -e %{mozillalibdir_qt}/browser/defaults/profile ]; then
-	if [ "$(readlink %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html)" != "%{_datadir}/mdk/bookmarks/mozilla/bookmarks.html" ]; then
-		rm -rf %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
-		ln -s -f %{_datadir}/mdk/bookmarks/mozilla/bookmarks.html %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
-	fi
-fi
-%endif
-
-%if %{with gtk}
-%pre gtk
-if [ -d %{mozillalibdir_gtk}/dictionaries ]; then
-	rm -fr %{mozillalibdir_gtk}/dictionaries
-fi
-
-%post gtk
-if [ -e %{mozillalibdir_gtk}/browser/defaults/profile ]; then
-	if [ "$(readlink %{mozillalibdir_gtk}/browser/defaults/profile/bookmarks.html)" != "%{_datadir}/mdk/bookmarks/mozilla/bookmarks.html" ]; then
-		rm -rf %{mozillalibdir_gtk}/browser/defaults/profile/bookmarks.html
-		ln -s -f %{_datadir}/mdk/bookmarks/mozilla/bookmarks.html %{mozillalibdir_gtk}/browser/defaults/profile/bookmarks.html
-	fi
+if [ "$(readlink %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html)" != "%{_datadir}/mdk/bookmarks/mozilla/bookmarks.html" ]; then
+    rm -rf %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
+    ln -s -f %{_datadir}/mdk/bookmarks/mozilla/bookmarks.html %{mozillalibdir_qt}/browser/defaults/profile/bookmarks.html
 fi
 %endif
 
@@ -1003,7 +950,10 @@ fi
 %{_miconsdir}/%{name}.png
 %{_iconsdir}/%{name}.png
 %{_liconsdir}/%{name}.png
-%{_datadir}/applications/%{name}.desktop
+%{_datadir}/applications/*.desktop
+%{_libdir}/%{name}-%{version}*
+# (tpg) it is already owned
+#%ghost %{mozillalibdir}/browser/defaults/profile/bookmarks.html
 %dir %{_libdir}/mozilla
 %dir %{pluginsdir}
 %dir %{_libdir}/mozilla/extensions
@@ -1014,12 +964,6 @@ fi
 %files qt
 %{_bindir}/firefox-qt
 %{mozillalibdir_qt}/
-%endif
-
-%if %{with gtk}
-%files gtk
-%{_bindir}/firefox-gtk
-%{mozillalibdir_gtk}/
 %endif
 
 %files devel
