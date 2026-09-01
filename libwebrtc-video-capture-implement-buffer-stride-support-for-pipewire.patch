@@ -1,49 +1,6 @@
-From 958cc9da5f101c1b4118cf6013e5a9ca15925019 Mon Sep 17 00:00:00 2001
-From: Robert Mader <robert.mader@collabora.com>
-Date: Mon, 17 Aug 2026 13:43:10 +0000
-Subject: [PATCH] Bug 2056029 - WebRTC backport: video_capture: Implement
- buffer stride support for Pipewire r=pehrsons,grulja
-
-Simple backport of https://webrtc-review.googlesource.com/c/src/+/491680
-
-Upstream commit: 5da5a6e4e00c69ef60c7643e99ef34f65f7af51a
-
-From the commit message:
-Add optional buffer stride support to VideoCaptureImpl and use it in
-VideoCaptureModulePipeWire, allowing us to drop the requirement for
-unpadded buffers. This notably improves compatibility with libcamera,
-which supports a wider range of devices than the V4L2 backend - some
-having hardware requirements for stride-alignment.
-
-Extending `ConvertToI420()` in libyuv was rejected on the grounds that
-there are various approaches to stride handling - using a single stride
-value for multiple planes, having explicit values for each one etc. - as
-well as the fact that we might well want to extend the helper further in
-the future - e.g. in order to better handle color spaces such as BT709
-(instead of always assuming BT601).
-
-Thus this patch now adds a local copy of `ConvertToI420()`, supporting
-implicit and a single explicit stride value for now.
-
-Differential Revision: https://phabricator.services.mozilla.com/D312871
----
- third_party/libwebrtc/common_video/BUILD.gn   |   4 +
- .../common_video/common_video_gn/moz.build    |   1 +
- .../libyuv/include/webrtc_libyuv.h            |  16 +
- .../common_video/libyuv/libyuv_unittest.cc    |  30 +-
- .../common_video/libyuv/webrtc_libyuv.cc      | 320 ++++++++++++++++++
- .../linux/video_capture_pipewire.cc           |  54 +--
- .../modules/video_capture/video_capture.h     |   3 +
- .../video_capture/video_capture_impl.cc       |  18 +-
- .../video_capture/video_capture_impl.h        |   6 +
- .../5da5a6e4e0.no-op-cherry-pick-msg          |   1 +
- 10 files changed, 393 insertions(+), 60 deletions(-)
- create mode 100644 third_party/libwebrtc/moz-patch-stack/5da5a6e4e0.no-op-cherry-pick-msg
-
-diff --git a/third_party/libwebrtc/common_video/BUILD.gn b/third_party/libwebrtc/common_video/BUILD.gn
-index 868d09a2eb1ea..eb3cc07f948ad 100644
---- a/third_party/libwebrtc/common_video/BUILD.gn
-+++ b/third_party/libwebrtc/common_video/BUILD.gn
+diff -up firefox-155.0/third_party/libwebrtc/common_video/BUILD.gn.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/common_video/BUILD.gn
+--- firefox-155.0/third_party/libwebrtc/common_video/BUILD.gn.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:58.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/common_video/BUILD.gn	2026-08-27 12:03:57.125421714 +0200
 @@ -97,6 +97,10 @@ rtc_library("common_video") {
        "../rtc_base/containers:flat_map",
      ]
@@ -55,10 +12,9 @@ index 868d09a2eb1ea..eb3cc07f948ad 100644
  }
  
  rtc_source_set("frame_counts") {
-diff --git a/third_party/libwebrtc/common_video/common_video_gn/moz.build b/third_party/libwebrtc/common_video/common_video_gn/moz.build
-index 731a68d3323c3..16645ce2d192c 100644
---- a/third_party/libwebrtc/common_video/common_video_gn/moz.build
-+++ b/third_party/libwebrtc/common_video/common_video_gn/moz.build
+diff -up firefox-155.0/third_party/libwebrtc/common_video/common_video_gn/moz.build.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/common_video/common_video_gn/moz.build
+--- firefox-155.0/third_party/libwebrtc/common_video/common_video_gn/moz.build.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:57.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/common_video/common_video_gn/moz.build	2026-08-27 12:03:57.125568098 +0200
 @@ -20,6 +20,7 @@ DEFINES["WEBRTC_LIBRARY_IMPL"] = True
  DEFINES["WEBRTC_MOZILLA_BUILD"] = True
  DEFINES["WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS"] = "0"
@@ -67,11 +23,10 @@ index 731a68d3323c3..16645ce2d192c 100644
  
  FINAL_LIBRARY = "xul"
  
-diff --git a/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h b/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h
-index b18957b6be686..a1899dba88b1c 100644
---- a/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h
-+++ b/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h
-@@ -84,6 +84,22 @@ int ConvertFromI420(const VideoFrame& src_frame,
+diff -up firefox-155.0/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h
+--- firefox-155.0/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:57.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/common_video/libyuv/include/webrtc_libyuv.h	2026-08-27 12:03:57.125648087 +0200
+@@ -84,6 +84,22 @@ int ConvertFromI420(const VideoFrame& sr
                      int dst_sample_size,
                      uint8_t* dst_frame);
  
@@ -94,10 +49,9 @@ index b18957b6be686..a1899dba88b1c 100644
  scoped_refptr<I420BufferInterface> ScaleVideoFrameBuffer(
      const I420BufferInterface& source,
      int dst_width,
-diff --git a/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc b/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc
-index 6b47ec65ea01e..448ace8dfcea1 100644
---- a/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc
-+++ b/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc
+diff -up firefox-155.0/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc
+--- firefox-155.0/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:57.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/common_video/libyuv/libyuv_unittest.cc	2026-08-27 12:03:57.125709162 +0200
 @@ -172,12 +172,12 @@ TEST_F(TestLibYuv, ConvertTest) {
    EXPECT_EQ(0, ConvertFromI420(*orig_frame_, VideoType::kRGB24, 0,
                                 res_rgb_buffer2.get()));
@@ -178,10 +132,9 @@ index 6b47ec65ea01e..448ace8dfcea1 100644
        ConvertVideoType(VideoType::kARGB));
  
    EXPECT_EQ(0, ret);
-diff --git a/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc b/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc
-index 9dd12b42f223f..8527f34163b4e 100644
---- a/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc
-+++ b/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc
+diff -up firefox-155.0/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc
+--- firefox-155.0/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:57.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/common_video/libyuv/webrtc_libyuv.cc	2026-08-27 12:03:57.125835468 +0200
 @@ -10,8 +10,10 @@
  
  #include "common_video/libyuv/include/webrtc_libyuv.h"
@@ -201,7 +154,7 @@ index 9dd12b42f223f..8527f34163b4e 100644
  #include "third_party/libyuv/include/libyuv/scale.h"
  #include "third_party/libyuv/include/libyuv/video_common.h"
  
-@@ -146,6 +149,323 @@ int ConvertFromI420(const VideoFrame& src_frame,
+@@ -146,6 +149,323 @@ int ConvertFromI420(const VideoFrame& sr
        ConvertVideoType(dst_video_type));
  }
  
@@ -525,11 +478,10 @@ index 9dd12b42f223f..8527f34163b4e 100644
  scoped_refptr<I420ABufferInterface> ScaleI420ABuffer(
      const I420ABufferInterface& buffer,
      int target_width,
-diff --git a/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc b/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc
-index 8118f5e2b2a67..5ca96108e9dd7 100644
---- a/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc
-+++ b/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc
-@@ -363,36 +363,6 @@ void VideoCaptureModulePipeWire::OnFormatChanged(const struct spa_pod* format) {
+diff -up firefox-155.0/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc
+--- firefox-155.0/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:59.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/modules/video_capture/linux/video_capture_pipewire.cc	2026-08-27 12:05:23.836837038 +0200
+@@ -375,36 +375,6 @@ void VideoCaptureModulePipeWire::OnForma
    spa_pod_builder_push_object(&builder, &frame, SPA_TYPE_OBJECT_ParamBuffers,
                                SPA_PARAM_Buffers);
  
@@ -566,7 +518,7 @@ index 8118f5e2b2a67..5ca96108e9dd7 100644
    const int buffer_types =
        (1 << SPA_DATA_DmaBuf) | (1 << SPA_DATA_MemFd) | (1 << SPA_DATA_MemPtr);
    spa_pod_builder_add(
-@@ -471,17 +441,6 @@ void VideoCaptureModulePipeWire::ProcessBuffers() {
+@@ -483,17 +453,6 @@ void VideoCaptureModulePipeWire::Process
      h = static_cast<struct spa_meta_header*>(
          spa_buffer_find_meta_data(spaBuffer, SPA_META_Header, sizeof(*h)));
  
@@ -581,10 +533,10 @@ index 8118f5e2b2a67..5ca96108e9dd7 100644
 -      SetApplyRotation(rotation != kVideoRotation_0);
 -    }
 -
-     if (h->flags & SPA_META_HEADER_FLAG_CORRUPTED) {
-       RTC_LOG(LS_INFO) << "Dropping corruped frame.";
+     if (h && (h->flags & SPA_META_HEADER_FLAG_CORRUPTED)) {
+       RTC_LOG(LS_INFO) << "Dropping corrupted frame.";
        pw_stream_queue_buffer(stream_, buffer);
-@@ -496,6 +455,19 @@ void VideoCaptureModulePipeWire::ProcessBuffers() {
+@@ -508,6 +467,19 @@ void VideoCaptureModulePipeWire::Process
        continue;
      }
  
@@ -604,11 +556,10 @@ index 8118f5e2b2a67..5ca96108e9dd7 100644
      if (spaBuffer->datas[0].type == SPA_DATA_DmaBuf ||
          spaBuffer->datas[0].type == SPA_DATA_MemFd) {
        ScopedBuf frame;
-diff --git a/third_party/libwebrtc/modules/video_capture/video_capture.h b/third_party/libwebrtc/modules/video_capture/video_capture.h
-index d88b63466eb28..563f00c3da462 100644
---- a/third_party/libwebrtc/modules/video_capture/video_capture.h
-+++ b/third_party/libwebrtc/modules/video_capture/video_capture.h
-@@ -155,6 +155,9 @@ class VideoCaptureModule : public RefCountInterface {
+diff -up firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture.h.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture.h
+--- firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture.h.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:57.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture.h	2026-08-27 12:03:57.126064427 +0200
+@@ -155,6 +155,9 @@ class VideoCaptureModule : public RefCou
    // Return whether the rotation is applied or left pending.
    virtual bool GetApplyRotation() = 0;
  
@@ -618,10 +569,9 @@ index d88b63466eb28..563f00c3da462 100644
    // Mozilla: TrackingId setter for use in profiler markers.
    virtual void SetTrackingId(uint32_t aTrackingIdProcId) {}
  
-diff --git a/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc b/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc
-index f4f9827ef55ad..ed83ab6e57c48 100644
---- a/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc
-+++ b/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc
+diff -up firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc
+--- firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:58.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.cc	2026-08-27 12:03:57.126118328 +0200
 @@ -31,7 +31,6 @@
  #include "rtc_base/time_utils.h"
  #include "rtc_base/trace_event.h"
@@ -630,7 +580,7 @@ index f4f9827ef55ad..ed83ab6e57c48 100644
  #include "third_party/libyuv/include/libyuv/rotate.h"
  
  namespace webrtc {
-@@ -94,6 +93,7 @@ VideoCaptureImpl::VideoCaptureImpl(Clock* clock)
+@@ -94,6 +93,7 @@ VideoCaptureImpl::VideoCaptureImpl(Clock
        _lastProcessFrameTimeNanos(clock->TimeInMicroseconds() * 1000),
        _rotateFrame(kVideoRotation_0),
        apply_rotation_(false),
@@ -638,7 +588,7 @@ index f4f9827ef55ad..ed83ab6e57c48 100644
        clock_(clock) {
    _requestedCapability.width = kDefaultWidth;
    _requestedCapability.height = kDefaultHeight;
-@@ -230,11 +230,11 @@ int32_t VideoCaptureImpl::IncomingFrame(uint8_t* videoFrame,
+@@ -230,11 +230,11 @@ int32_t VideoCaptureImpl::IncomingFrame(
      std::swap(dst_width, dst_height);
    }
  
@@ -653,7 +603,7 @@ index f4f9827ef55ad..ed83ab6e57c48 100644
        ConvertVideoType(frameInfo.videoType));
    if (conversionResult != 0) {
      RTC_LOG(LS_ERROR) << "Failed to convert capture frame from type "
-@@ -300,6 +300,16 @@ bool VideoCaptureImpl::GetApplyRotation() {
+@@ -300,6 +300,16 @@ bool VideoCaptureImpl::GetApplyRotation(
    return apply_rotation_;
  }
  
@@ -670,11 +620,10 @@ index f4f9827ef55ad..ed83ab6e57c48 100644
  void VideoCaptureImpl::UpdateFrameCount() {
    RTC_CHECK_RUNS_SERIALIZED(&capture_checker_);
  
-diff --git a/third_party/libwebrtc/modules/video_capture/video_capture_impl.h b/third_party/libwebrtc/modules/video_capture/video_capture_impl.h
-index ec404f098d4a3..3ad11498b9767 100644
---- a/third_party/libwebrtc/modules/video_capture/video_capture_impl.h
-+++ b/third_party/libwebrtc/modules/video_capture/video_capture_impl.h
-@@ -70,6 +70,8 @@ class RTC_EXPORT VideoCaptureImpl : public VideoCaptureModule {
+diff -up firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.h.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.h
+--- firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.h.libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire	2026-08-26 23:11:58.000000000 +0200
++++ firefox-155.0/third_party/libwebrtc/modules/video_capture/video_capture_impl.h	2026-08-27 12:03:57.126176457 +0200
+@@ -70,6 +70,8 @@ class RTC_EXPORT VideoCaptureImpl : publ
    int32_t SetCaptureRotation(VideoRotation rotation) override;
    bool SetApplyRotation(bool enable) override;
    bool GetApplyRotation() override;
@@ -683,7 +632,7 @@ index ec404f098d4a3..3ad11498b9767 100644
  
    const char* CurrentDeviceName() const override;
  
-@@ -131,6 +133,10 @@ class RTC_EXPORT VideoCaptureImpl : public VideoCaptureModule {
+@@ -131,6 +133,10 @@ class RTC_EXPORT VideoCaptureImpl : publ
    // Indicate whether rotation should be applied before delivered externally.
    bool apply_rotation_ RTC_GUARDED_BY(api_lock_);
  
@@ -694,3 +643,4 @@ index ec404f098d4a3..3ad11498b9767 100644
    Clock* const clock_;
  };
  }  // namespace videocapturemodule
+
