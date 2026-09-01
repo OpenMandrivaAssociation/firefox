@@ -581,8 +581,8 @@ index 8118f5e2b2a67..5ca96108e9dd7 100644
 -      SetApplyRotation(rotation != kVideoRotation_0);
 -    }
 -
-     if (h->flags & SPA_META_HEADER_FLAG_CORRUPTED) {
-       RTC_LOG(LS_INFO) << "Dropping corruped frame.";
+     if (h && (h->flags & SPA_META_HEADER_FLAG_CORRUPTED)) {
+       RTC_LOG(LS_INFO) << "Dropping corrupted frame.";
        pw_stream_queue_buffer(stream_, buffer);
 @@ -496,6 +455,19 @@ void VideoCaptureModulePipeWire::ProcessBuffers() {
        continue;
