@@ -253,7 +253,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	155.0
+Version:	156.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -300,10 +300,6 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 
 # In-tree HarfBuzz: Clang 23 promotes -Wunused-template via -Wunused error pragma
 Patch71:	firefox-harfbuzz-clang-unused-template.patch
-
-# https://phabricator.services.mozilla.com/D312871            
-# Drop with Firefox 156            
-Patch72:        https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire.patch
 
 %if %{with qt}
 # Qt support
