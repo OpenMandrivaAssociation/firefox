@@ -516,6 +516,11 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %autosetup -p1
+# Needed as of Firefox 156 and Rust 1.98.1, because build fail with:
+# checking for rust host triplet...
+# ERROR: Don't know how to translate x86_64-openmandriva-linux-gnu for rustc
+# *** Fix above errors and then restart with "./mach build"
+# worth to replace sed by patch.
 sed -i 's/vendor == "pc"/vendor in ("pc", "openmandriva")/' \
     build/moz.configure/rust.configure
 %if 0
