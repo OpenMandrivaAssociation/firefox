@@ -253,7 +253,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	155.0
+Version:	156.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -300,10 +300,6 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 
 # In-tree HarfBuzz: Clang 23 promotes -Wunused-template via -Wunused error pragma
 Patch71:	firefox-harfbuzz-clang-unused-template.patch
-
-# https://phabricator.services.mozilla.com/D312871            
-# Drop with Firefox 156            
-Patch72:        https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/libwebrtc-video-capture-implement-buffer-stride-support-for-pipewire.patch
 
 %if %{with qt}
 # Qt support
@@ -520,6 +516,13 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %autosetup -p1
+# Needed as of Firefox 156 and Rust 1.98.1, because build fail with:
+# checking for rust host triplet...
+# ERROR: Don't know how to translate x86_64-openmandriva-linux-gnu for rustc
+# *** Fix above errors and then restart with "./mach build"
+# worth to replace sed by patch.
+sed -i 's/vendor == "pc"/vendor in ("pc", "openmandriva")/' \
+    build/moz.configure/rust.configure
 %if 0
 # NOT YET, needs more work
 # Drop the gazillion of internalized ffmpeg copies,
