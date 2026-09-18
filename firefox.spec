@@ -516,6 +516,8 @@ Files and macros mainly for building Firefox extensions.
 
 %prep
 %autosetup -p1
+sed -i 's/vendor == "pc"/vendor in ("pc", "openmandriva")/' \
+    build/moz.configure/rust.configure
 %if 0
 # NOT YET, needs more work
 # Drop the gazillion of internalized ffmpeg copies,
