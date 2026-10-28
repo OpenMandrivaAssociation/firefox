@@ -671,6 +671,11 @@ cd -
 export MOZ_NOSPAM=1
 export MOZ_SERVICES_SYNC=1
 export MACH_NO_WRITE_TIMES=1
+# CPython 3.15 enables its experimental JIT by default. That JIT
+# segfaults in mozpack JarStruct while packager.py writes omni.ja
+# (ABF 682552 and 682553, _PyJIT_Entry). PYTHON_JIT=0 turns it off.
+# Passing -X jit=0 does not: unknown -X options stay enabled.
+export PYTHON_JIT=0
 export LDFLAGS="${LDFLAGS:+$LDFLAGS }%{build_ldflags} -Wl,--no-keep-memory"
 export RUSTFLAGS="-Cdebuginfo=0"
 
@@ -716,6 +721,10 @@ QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 xvfb-run %build_py ./mach build -v  2>&1 | c
 %endif
 
 %install
+# The build script's environment does not carry into this script.
+# packager.py hits the same CPython JIT segfault without this.
+export PYTHON_JIT=0
+
 # Make sure locale works for langpacks
 %{__cat} > obj/dist/bin/browser/defaults/preferences/firefox-l10n.js << EOF
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
