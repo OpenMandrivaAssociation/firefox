@@ -555,7 +555,10 @@ ac_add_options --prefix="%{_prefix}"
 ac_add_options --libdir="%{_libdir}"
 mk_add_options MOZILLA_OFFICIAL=1
 mk_add_options BUILD_OFFICIAL=1
-export MOZ_MAKE_FLAGS="$SMP_FLAGS"
+# mach's job count comes from mk_add_options. A shell export is ignored,
+# so cargo used every core (NUM_JOBS=32 on the x86_64 PGO build) and the
+# OOM killer killed force-cargo-library-build (ABF 684003).
+mk_add_options MOZ_MAKE_FLAGS="$SMP_FLAGS"
 export MOZ_SERVICES_SYNC=1
 export TAR=gtar
 export PYTHON3=%build_py
