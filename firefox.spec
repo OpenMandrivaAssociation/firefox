@@ -32,6 +32,9 @@
 
 # use bundled cbindgen
 # currently enabled as updating all rust deps would take eons
+# as of Firefox 160 and Rust 1.100, vendoring cbindgen changes and require now sync.
+# please use vendoring script from Fedora: gen_cbindgen-vendor.sh
+# or manually run cargo vendor but after it run additional synchronization step included in this script
 %global use_bundled_cbindgen  1
 
 # Optional Qt 6 build. The default (GTK) build is always done; enabling Qt
@@ -71,14 +74,14 @@
 %define xpidir https://ftp.mozilla.org/pub/firefox/releases/%{version}%{?beta:%{beta}}/linux-x86_64/xpi/
 
 # Supported l10n language lists
-%define langlist af ar ast bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
+%define langlist af ar ast be bg bn br bs ca cs cy da de el en_GB eo es_AR es_CL es_ES es_MX et eu fa fi fr fy ga_IE gd gl gu_IN he hi hr hu hy id is it ja kk ko km kn lt lv mk mr nb_NO nl nn_NO pa_IN pl pt_BR pt_PT ro ru si sk sl sq sr sv_SE ta te th tr uk vi zh_CN zh_TW
 
 # Disabled l10n languages, for any reason
 # - no locales-XX package:
 # uu ak rm son
 
 # Disabled hunspell dicts, for any reason (e.g. because there is no dictionary for the language)
-%define disabled_dict_langlist as ast be bs bn_BD bn_IN br es_AR es_CL fi gu_IN ja kk kn ko lg mai mk ml pa_IN ta_LK si sq sr te tr zh_CN zh_TW
+%define disabled_dict_langlist as ast bs bn_BD bn_IN br es_AR es_CL fi gu_IN ja kk kn ko lg mai mk ml pa_IN ta_LK si sq sr te tr zh_CN zh_TW
 
 # Language descriptions
 %define language_ak ak
@@ -253,7 +256,7 @@ Summary:	Next generation web browser
 Name:		firefox
 # IMPORTANT: When updating, you MUST also update the l10n files by running
 # download.sh after editing the version number
-Version:	160.0.1
+Version:	161.0
 Release:	%{?beta:0.%{beta}.}1
 License:	MPLv1+
 Group:		Networking/WWW
@@ -272,6 +275,7 @@ Source12:	firefox-omv-default-prefs.js
 Source13:	firefox-l10n-template.in
 Source21:	distribution.ini
 Source100:      firefox.rpmlintrc
+Source101:	https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/gen_cbindgen-vendor.sh
 # l10n sources
 %{expand:%(\
         i=500; \
