@@ -305,6 +305,10 @@ Patch62:	https://src.fedoraproject.org/rpms/firefox/raw/rawhide/f/mozilla-151680
 # In-tree HarfBuzz: Clang 23 promotes -Wunused-template via -Wunused error pragma
 Patch71:	firefox-harfbuzz-clang-unused-template.patch
 
+# System NSS 3.134 mozpkix headers must not shadow the in-tree mozpkix
+# Firefox actually links. Otherwise TrustDomain is abstract (ML-DSA virtuals).
+Patch72:	firefox-system-nss-mozpkix-include-order.patch
+
 %if %{with qt}
 # Qt support
 Patch100:	0001-Bug-2054387-Build-system-add-cairo-qt-toolkit-option.patch
